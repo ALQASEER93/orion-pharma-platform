@@ -1,0 +1,16 @@
+{
+  "name": "orion-pharma-platform",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.6.1",
+  "scripts": {
+    "lint": "corepack pnpm -r --if-present run lint",
+    "typecheck": "corepack pnpm -r --if-present run typecheck",
+    "test": "corepack pnpm -r --if-present run test",
+    "build": "corepack pnpm -r --if-present run build"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "typescript": "^5.7.3"
+  }
+}

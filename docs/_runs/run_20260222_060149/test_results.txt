@@ -1,0 +1,613 @@
+== Lint ==
+
+> orion-pharma-platform@0.1.0 lint D:\ORION_PHARMA_PLATFORM\orion-pharma-platform
+> corepack pnpm -r --if-present run lint
+
+Scope: 7 of 8 workspace projects
+apps/api lint$ eslint "{src,test}/**/*.ts"
+packages/auth lint$ echo lint:auth
+packages/accounting lint$ echo lint:accounting
+apps/web lint$ next lint
+packages/auth lint: lint:auth
+packages/accounting lint: lint:accounting
+packages/accounting lint: Done
+packages/auth lint: Done
+packages/core lint$ echo lint:core
+packages/intelligence lint$ echo lint:intelligence
+packages/core lint: lint:core
+packages/core lint: Done
+packages/inventory lint$ echo lint:inventory
+packages/intelligence lint: lint:intelligence
+packages/intelligence lint: Done
+packages/inventory lint: lint:inventory
+packages/inventory lint: Done
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\app.module.ts
+apps/api lint:    1:73  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:    2:47  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:    3:42  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:    4:49  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:    5:63  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:    6:55  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:    7:63  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:    8:70  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:    9:93  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   10:81  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   11:1   error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   12:10  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   13:81  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   14:35  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   15:15  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   16:6   error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   17:26  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   18:30  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   19:7   error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   20:6   error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   21:26  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   22:34  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   23:7   error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   24:5   error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   25:3   error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   26:47  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   27:50  error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint:   28:13  error  Replace `.apply(TenantIsolationMiddleware,·RoleCheckMiddleware).forRoutes('*');` with `␍⏎······.apply(TenantIsolationMiddleware,·RoleCheckMiddleware)␍⏎······.forRoutes('*');␍`  prettier/prettier
+apps/api lint:   29:4   error  Insert `␍`                                                                                                                                                                       prettier/prettier
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\auth\auth.controller.ts
+apps/api lint:    1:66  error  Insert `␍`                                                                                                                                                              prettier/prettier
+apps/api lint:    2:64  error  Insert `␍`                                                                                                                                                              prettier/prettier
+apps/api lint:    3:46  error  Insert `␍`                                                                                                                                                              prettier/prettier
+apps/api lint:    4:40  error  Insert `␍`                                                                                                                                                              prettier/prettier
+apps/api lint:    5:1   error  Insert `␍`                                                                                                                                                              prettier/prettier
+apps/api lint:    6:20  error  Insert `␍`                                                                                                                                                              prettier/prettier
+apps/api lint:    7:30  error  Insert `␍`                                                                                                                                                              prettier/prettier
+apps/api lint:    8:60  error  Insert `␍`                                                                                                                                                              prettier/prettier
+apps/api lint:    9:1   error  Insert `␍`                                                                                                                                                              prettier/prettier
+apps/api lint:   10:12  error  Insert `␍`                                                                                                                                                              prettier/prettier
+apps/api lint:   11:17  error  Insert `␍`                                                                                                                                                              prettier/prettier
+apps/api lint:   12:9   error  Replace `⏎····@Body()·dto:·LoginDto,⏎····@Headers('x-tenant-id')·tenantId?:·string,⏎··)·{` with `@Body()·dto:·LoginDto,·@Headers('x-tenant-id')·tenantId?:·string)·{␍`  prettier/prettier
+apps/api lint:   16:50  error  Insert `␍`                                                                                                                                                              prettier/prettier
+apps/api lint:   17:4   error  Insert `␍`                                                                                                                                                              prettier/prettier
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\auth\auth.module.ts
+apps/api lint:    1:41  error  Insert `␍`  prettier/prettier
+apps/api lint:    2:41  error  Insert `␍`  prettier/prettier
+apps/api lint:    3:51  error  Insert `␍`  prettier/prettier
+apps/api lint:    4:56  error  Insert `␍`  prettier/prettier
+apps/api lint:    5:52  error  Insert `␍`  prettier/prettier
+apps/api lint:    6:46  error  Insert `␍`  prettier/prettier
+apps/api lint:    7:46  error  Insert `␍`  prettier/prettier
+apps/api lint:    8:1   error  Insert `␍`  prettier/prettier
+apps/api lint:    9:10  error  Insert `␍`  prettier/prettier
+apps/api lint:   10:13  error  Insert `␍`  prettier/prettier
+apps/api lint:   11:18  error  Insert `␍`  prettier/prettier
+apps/api lint:   12:20  error  Insert `␍`  prettier/prettier
+apps/api lint:   13:25  error  Insert `␍`  prettier/prettier
+apps/api lint:   14:67  error  Insert `␍`  prettier/prettier
+apps/api lint:   15:21  error  Insert `␍`  prettier/prettier
+apps/api lint:   16:72  error  Insert `␍`  prettier/prettier
+apps/api lint:   17:9   error  Insert `␍`  prettier/prettier
+apps/api lint:   18:8   error  Insert `␍`  prettier/prettier
+apps/api lint:   19:5   error  Insert `␍`  prettier/prettier
+apps/api lint:   20:33  error  Insert `␍`  prettier/prettier
+apps/api lint:   21:41  error  Insert `␍`  prettier/prettier
+apps/api lint:   22:26  error  Insert `␍`  prettier/prettier
+apps/api lint:   23:3   error  Insert `␍`  prettier/prettier
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\auth\auth.service.ts
+apps/api lint:    1:68  error  Insert `␍`  prettier/prettier
+apps/api lint:    2:42  error  Insert `␍`  prettier/prettier
+apps/api lint:    3:34  error  Insert `␍`  prettier/prettier
+apps/api lint:    4:58  error  Insert `␍`  prettier/prettier
+apps/api lint:    5:40  error  Insert `␍`  prettier/prettier
+apps/api lint:    6:1   error  Insert `␍`  prettier/prettier
+apps/api lint:    7:14  error  Insert `␍`  prettier/prettier
+apps/api lint:    8:27  error  Insert `␍`  prettier/prettier
+apps/api lint:    9:15  error  Insert `␍`  prettier/prettier
+apps/api lint:   10:44  error  Insert `␍`  prettier/prettier
+apps/api lint:   11:45  error  Insert `␍`  prettier/prettier
+apps/api lint:   12:7   error  Insert `␍`  prettier/prettier
+apps/api lint:   13:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   14:60  error  Insert `␍`  prettier/prettier
+apps/api lint:   15:57  error  Insert `␍`  prettier/prettier
+apps/api lint:   16:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   17:53  error  Insert `␍`  prettier/prettier
+apps/api lint:   18:35  error  Insert `␍`  prettier/prettier
+apps/api lint:   19:17  error  Insert `␍`  prettier/prettier
+apps/api lint:   20:16  error  Insert `␍`  prettier/prettier
+apps/api lint:   21:21  error  Insert `␍`  prettier/prettier
+apps/api lint:   22:31  error  Insert `␍`  prettier/prettier
+apps/api lint:   23:25  error  Insert `␍`  prettier/prettier
+apps/api lint:   24:34  error  Insert `␍`  prettier/prettier
+apps/api lint:   25:17  error  Insert `␍`  prettier/prettier
+apps/api lint:   26:15  error  Insert `␍`  prettier/prettier
+apps/api lint:   27:13  error  Insert `␍`  prettier/prettier
+apps/api lint:   28:11  error  Insert `␍`  prettier/prettier
+apps/api lint:   29:9   error  Insert `␍`  prettier/prettier
+apps/api lint:   30:8   error  Insert `␍`  prettier/prettier
+apps/api lint:   31:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   32:35  error  Insert `␍`  prettier/prettier
+apps/api lint:   33:63  error  Insert `␍`  prettier/prettier
+apps/api lint:   34:6   error  Insert `␍`  prettier/prettier
+apps/api lint:   35:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   36:38  error  Insert `␍`  prettier/prettier
+apps/api lint:   37:59  error  Insert `␍`  prettier/prettier
+apps/api lint:   38:6   error  Insert `␍`  prettier/prettier
+apps/api lint:   39:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   40:75  error  Insert `␍`  prettier/prettier
+apps/api lint:   41:20  error  Insert `␍`  prettier/prettier
+apps/api lint:   42:63  error  Insert `␍`  prettier/prettier
+apps/api lint:   43:6   error  Insert `␍`  prettier/prettier
+apps/api lint:   44:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   45:55  error  Insert `␍`  prettier/prettier
+apps/api lint:   46:37  error  Insert `␍`  prettier/prettier
+apps/api lint:   47:7   error  Insert `␍`  prettier/prettier
+apps/api lint:   48:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   49:22  error  Insert `␍`  prettier/prettier
+apps/api lint:   50:20  error  Insert `␍`  prettier/prettier
+apps/api lint:   51:31  error  Insert `␍`  prettier/prettier
+apps/api lint:   52:25  error  Insert `␍`  prettier/prettier
+apps/api lint:   53:28  error  Insert `␍`  prettier/prettier
+apps/api lint:   54:19  error  Insert `␍`  prettier/prettier
+apps/api lint:   55:7   error  Insert `␍`  prettier/prettier
+apps/api lint:   56:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   57:13  error  Insert `␍`  prettier/prettier
+apps/api lint:   58:62  error  Insert `␍`  prettier/prettier
+apps/api lint:   59:14  error  Insert `␍`  prettier/prettier
+apps/api lint:   60:21  error  Insert `␍`  prettier/prettier
+apps/api lint:   61:27  error  Insert `␍`  prettier/prettier
+apps/api lint:   62:33  error  Insert `␍`  prettier/prettier
+apps/api lint:   63:33  error  Insert `␍`  prettier/prettier
+apps/api lint:   64:30  error  Insert `␍`  prettier/prettier
+apps/api lint:   65:21  error  Insert `␍`  prettier/prettier
+apps/api lint:   66:9   error  Insert `␍`  prettier/prettier
+apps/api lint:   67:7   error  Insert `␍`  prettier/prettier
+apps/api lint:   68:4   error  Insert `␍`  prettier/prettier
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\auth\jwt.strategy.ts
+apps/api lint:    1:45  error  Insert `␍`  prettier/prettier
+apps/api lint:    2:53  error  Insert `␍`  prettier/prettier
+apps/api lint:    3:53  error  Insert `␍`  prettier/prettier
+apps/api lint:    4:1   error  Insert `␍`  prettier/prettier
+apps/api lint:    5:20  error  Insert `␍`  prettier/prettier
+apps/api lint:    6:15  error  Insert `␍`  prettier/prettier
+apps/api lint:    7:20  error  Insert `␍`  prettier/prettier
+apps/api lint:    8:17  error  Insert `␍`  prettier/prettier
+apps/api lint:    9:16  error  Insert `␍`  prettier/prettier
+apps/api lint:   10:25  error  Insert `␍`  prettier/prettier
+apps/api lint:   11:3   error  Insert `␍`  prettier/prettier
+apps/api lint:   12:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   13:14  error  Insert `␍`  prettier/prettier
+apps/api lint:   14:62  error  Insert `␍`  prettier/prettier
+apps/api lint:   15:18  error  Insert `␍`  prettier/prettier
+apps/api lint:   16:12  error  Insert `␍`  prettier/prettier
+apps/api lint:   17:64  error  Insert `␍`  prettier/prettier
+apps/api lint:   18:31  error  Insert `␍`  prettier/prettier
+apps/api lint:   19:72  error  Insert `␍`  prettier/prettier
+apps/api lint:   20:8   error  Insert `␍`  prettier/prettier
+apps/api lint:   21:4   error  Insert `␍`  prettier/prettier
+apps/api lint:   22:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   23:46  error  Insert `␍`  prettier/prettier
+apps/api lint:   24:20  error  Insert `␍`  prettier/prettier
+apps/api lint:   25:4   error  Insert `␍`  prettier/prettier
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\auth\login.dto.ts
+apps/api lint:    1:72  error  Insert `␍`  prettier/prettier
+apps/api lint:    2:1   error  Insert `␍`  prettier/prettier
+apps/api lint:    3:24  error  Insert `␍`  prettier/prettier
+apps/api lint:    4:13  error  Insert `␍`  prettier/prettier
+apps/api lint:    5:18  error  Insert `␍`  prettier/prettier
+apps/api lint:    6:1   error  Insert `␍`  prettier/prettier
+apps/api lint:    7:14  error  Insert `␍`  prettier/prettier
+apps/api lint:    8:16  error  Insert `␍`  prettier/prettier
+apps/api lint:    9:21  error  Insert `␍`  prettier/prettier
+apps/api lint:   10:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   11:12  error  Insert `␍`  prettier/prettier
+apps/api lint:   12:21  error  Insert `␍`  prettier/prettier
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\common\decorators\permissions.decorator.ts
+apps/api lint:   1:46  error  Insert `␍`  prettier/prettier
+apps/api lint:   2:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   3:46  error  Insert `␍`  prettier/prettier
+apps/api lint:   4:57  error  Insert `␍`  prettier/prettier
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\common\decorators\public.decorator.ts
+apps/api lint:   1:46  error  Insert `␍`  prettier/prettier
+apps/api lint:   2:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   3:41  error  Insert `␍`  prettier/prettier
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\common\guards\jwt-auth.guard.ts
+apps/api lint:    1:9   error  Insert `␍`  prettier/prettier
+apps/api lint:    2:15  error  Insert `␍`  prettier/prettier
+apps/api lint:    3:20  error  Insert `␍`  prettier/prettier
+apps/api lint:    4:14  error  Insert `␍`  prettier/prettier
+apps/api lint:    5:25  error  Insert `␍`  prettier/prettier
+apps/api lint:    6:25  error  Insert `␍`  prettier/prettier
+apps/api lint:    7:42  error  Insert `␍`  prettier/prettier
+apps/api lint:    8:46  error  Insert `␍`  prettier/prettier
+apps/api lint:    9:64  error  Insert `␍`  prettier/prettier
+apps/api lint:   10:73  error  Insert `␍`  prettier/prettier
+apps/api lint:   11:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   12:14  error  Insert `␍`  prettier/prettier
+apps/api lint:   13:76  error  Insert `␍`  prettier/prettier
+apps/api lint:   14:55  error  Insert `␍`  prettier/prettier
+apps/api lint:   15:13  error  Insert `␍`  prettier/prettier
+apps/api lint:   16:4   error  Insert `␍`  prettier/prettier
+apps/api lint:   17:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   18:67  error  Insert `␍`  prettier/prettier
+apps/api lint:   19:80  error  Insert `␍`  prettier/prettier
+apps/api lint:   20:28  error  Insert `␍`  prettier/prettier
+apps/api lint:   21:26  error  Insert `␍`  prettier/prettier
+apps/api lint:   22:8   error  Insert `␍`  prettier/prettier
+apps/api lint:   23:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   24:20  error  Insert `␍`  prettier/prettier
+apps/api lint:   25:19  error  Insert `␍`  prettier/prettier
+apps/api lint:   26:6   error  Insert `␍`  prettier/prettier
+apps/api lint:   27:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   28:69  error  Insert `␍`  prettier/prettier
+apps/api lint:   29:22  error  Insert `␍`  prettier/prettier
+apps/api lint:   30:20  error  Insert `␍`  prettier/prettier
+apps/api lint:   31:6   error  Insert `␍`  prettier/prettier
+apps/api lint:   32:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   33:77  error  Insert `␍`  prettier/prettier
+apps/api lint:   34:25  error  Insert `␍`  prettier/prettier
+apps/api lint:   35:74  error  Insert `␍`  prettier/prettier
+apps/api lint:   36:6   error  Insert `␍`  prettier/prettier
+apps/api lint:   37:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   38:17  error  Insert `␍`  prettier/prettier
+apps/api lint:   39:4   error  Insert `␍`  prettier/prettier
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\common\guards\permissions.guard.ts
+apps/api lint:    1:9   error  Insert `␍`  prettier/prettier
+apps/api lint:    2:15  error  Insert `␍`  prettier/prettier
+apps/api lint:    3:20  error  Insert `␍`  prettier/prettier
+apps/api lint:    4:22  error  Insert `␍`  prettier/prettier
+apps/api lint:    5:14  error  Insert `␍`  prettier/prettier
+apps/api lint:    6:25  error  Insert `␍`  prettier/prettier
+apps/api lint:    7:42  error  Insert `␍`  prettier/prettier
+apps/api lint:    8:71  error  Insert `␍`  prettier/prettier
+apps/api lint:    9:73  error  Insert `␍`  prettier/prettier
+apps/api lint:   10:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   11:14  error  Insert `␍`  prettier/prettier
+apps/api lint:   12:55  error  Insert `␍`  prettier/prettier
+apps/api lint:   13:56  error  Insert `␍`  prettier/prettier
+apps/api lint:   14:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   15:52  error  Insert `␍`  prettier/prettier
+apps/api lint:   16:76  error  Insert `␍`  prettier/prettier
+apps/api lint:   17:23  error  Insert `␍`  prettier/prettier
+apps/api lint:   18:50  error  Insert `␍`  prettier/prettier
+apps/api lint:   19:7   error  Insert `␍`  prettier/prettier
+apps/api lint:   20:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   21:68  error  Insert `␍`  prettier/prettier
+apps/api lint:   22:19  error  Insert `␍`  prettier/prettier
+apps/api lint:   23:6   error  Insert `␍`  prettier/prettier
+apps/api lint:   24:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   25:77  error  Insert `␍`  prettier/prettier
+apps/api lint:   26:53  error  Insert `␍`  prettier/prettier
+apps/api lint:   27:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   28:61  error  Insert `␍`  prettier/prettier
+apps/api lint:   29:36  error  Insert `␍`  prettier/prettier
+apps/api lint:   30:7   error  Insert `␍`  prettier/prettier
+apps/api lint:   31:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   32:19  error  Insert `␍`  prettier/prettier
+apps/api lint:   33:65  error  Insert `␍`  prettier/prettier
+apps/api lint:   34:6   error  Insert `␍`  prettier/prettier
+apps/api lint:   35:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   36:17  error  Insert `␍`  prettier/prettier
+apps/api lint:   37:4   error  Insert `␍`  prettier/prettier
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\common\middleware\role-check.middleware.ts
+apps/api lint:    1:61  error  Insert `␍`  prettier/prettier
+apps/api lint:    2:50  error  Insert `␍`  prettier/prettier
+apps/api lint:    3:73  error  Insert `␍`  prettier/prettier
+apps/api lint:    4:1   error  Insert `␍`  prettier/prettier
+apps/api lint:    5:14  error  Insert `␍`  prettier/prettier
+apps/api lint:    6:61  error  Insert `␍`  prettier/prettier
+apps/api lint:    7:75  error  Insert `␍`  prettier/prettier
+apps/api lint:    8:38  error  Insert `␍`  prettier/prettier
+apps/api lint:    9:67  error  Insert `␍`  prettier/prettier
+apps/api lint:   10:6   error  Insert `␍`  prettier/prettier
+apps/api lint:   11:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   12:12  error  Insert `␍`  prettier/prettier
+apps/api lint:   13:4   error  Insert `␍`  prettier/prettier
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\common\middleware\tenant-isolation.middleware.ts
+apps/api lint:    1:61  error  Insert `␍`  prettier/prettier
+apps/api lint:    2:50  error  Insert `␍`  prettier/prettier
+apps/api lint:    3:73  error  Insert `␍`  prettier/prettier
+apps/api lint:    4:1   error  Insert `␍`  prettier/prettier
+apps/api lint:    5:14  error  Insert `␍`  prettier/prettier
+apps/api lint:    6:67  error  Insert `␍`  prettier/prettier
+apps/api lint:    7:75  error  Insert `␍`  prettier/prettier
+apps/api lint:    8:72  error  Insert `␍`  prettier/prettier
+apps/api lint:    9:12  error  Insert `␍`  prettier/prettier
+apps/api lint:   10:4   error  Insert `␍`  prettier/prettier
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\common\types\request-with-context.type.ts
+apps/api lint:    1:35  error  Insert `␍`  prettier/prettier
+apps/api lint:    2:1   error  Insert `␍`  prettier/prettier
+apps/api lint:    3:31  error  Insert `␍`  prettier/prettier
+apps/api lint:    4:15  error  Insert `␍`  prettier/prettier
+apps/api lint:    5:20  error  Insert `␍`  prettier/prettier
+apps/api lint:    6:17  error  Insert `␍`  prettier/prettier
+apps/api lint:    7:16  error  Insert `␍`  prettier/prettier
+apps/api lint:    8:25  error  Insert `␍`  prettier/prettier
+apps/api lint:    9:3   error  Insert `␍`  prettier/prettier
+apps/api lint:   10:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   11:54  error  Insert `␍`  prettier/prettier
+apps/api lint:   12:21  error  Insert `␍`  prettier/prettier
+apps/api lint:   13:25  error  Insert `␍`  prettier/prettier
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\health\health.controller.spec.ts
+apps/api lint:    1:55  error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint:    2:63  error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint:    3:1   error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint:    4:37  error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint:    5:36  error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint:    6:1   error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint:    7:27  error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint:    8:67  error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint:    9:39  error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint:   10:18  error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint:   11:1   error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint:   12:5   error    Unsafe assignment of an error typed value                                                                                  @typescript-eslint/no-unsafe-assignment
+apps/api lint:   12:47  warning  Unsafe argument of type error typed assigned to a parameter of type `string | symbol | Function | Type<HealthController>`  @typescript-eslint/no-unsafe-argument
+apps/api lint:   12:65  error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint:   13:6   error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint:   14:1   error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint:   15:34  error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint:   16:12  error    Unsafe call of a type that could not be resolved                                                                           @typescript-eslint/no-unsafe-call
+apps/api lint:   16:23  error    Unsafe member access .getHealth on a type that cannot be resolved                                                          @typescript-eslint/no-unsafe-member-access
+apps/api lint:   16:62  error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint:   17:6   error    Insert `␍`                                                                                                                 prettier/prettier
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\health\health.controller.ts
+apps/api lint:    1:50  error  Insert `␍`  prettier/prettier
+apps/api lint:    2:64  error  Insert `␍`  prettier/prettier
+apps/api lint:    3:1   error  Insert `␍`  prettier/prettier
+apps/api lint:    4:22  error  Insert `␍`  prettier/prettier
+apps/api lint:    5:32  error  Insert `␍`  prettier/prettier
+apps/api lint:    6:12  error  Insert `␍`  prettier/prettier
+apps/api lint:    7:9   error  Insert `␍`  prettier/prettier
+apps/api lint:    8:16  error  Insert `␍`  prettier/prettier
+apps/api lint:    9:29  error  Insert `␍`  prettier/prettier
+apps/api lint:   10:4   error  Insert `␍`  prettier/prettier
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\main.ts
+apps/api lint:    1:44  error    Insert `␍`                                                                                                                                                          prettier/prettier
+apps/api lint:    2:49  error    Insert `␍`                                                                                                                                                          prettier/prettier
+apps/api lint:    3:42  error    Insert `␍`                                                                                                                                                          prettier/prettier
+apps/api lint:    4:1   error    Insert `␍`                                                                                                                                                          prettier/prettier
+apps/api lint:    5:29  error    Insert `␍`                                                                                                                                                          prettier/prettier
+apps/api lint:    6:51  error    Insert `␍`                                                                                                                                                          prettier/prettier
+apps/api lint:    7:80  error    Insert `␍`                                                                                                                                                          prettier/prettier
+apps/api lint:    8:30  error    Insert `␍`                                                                                                                                                          prettier/prettier
+apps/api lint:    9:46  error    Insert `␍`                                                                                                                                                          prettier/prettier
+apps/api lint:   10:2   error    Insert `␍`                                                                                                                                                          prettier/prettier
+apps/api lint:   11:1   error    Insert `␍`                                                                                                                                                          prettier/prettier
+apps/api lint:   12:1   warning  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\prisma\prisma.module.ts
+apps/api lint:   1:41  error  Insert `␍`  prettier/prettier
+apps/api lint:   2:50  error  Insert `␍`  prettier/prettier
+apps/api lint:   3:1   error  Insert `␍`  prettier/prettier
+apps/api lint:   4:10  error  Insert `␍`  prettier/prettier
+apps/api lint:   5:30  error  Insert `␍`  prettier/prettier
+apps/api lint:   6:28  error  Insert `␍`  prettier/prettier
+apps/api lint:   7:3   error  Insert `␍`  prettier/prettier
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\test\app.e2e-spec.ts
+apps/api lint:   19:5   error  Unsafe return of a value of type error                          @typescript-eslint/no-unsafe-return
+apps/api lint:   19:12  error  Unsafe call of a type that could not be resolved                @typescript-eslint/no-unsafe-call
+apps/api lint:   19:12  error  Unsafe call of a type that could not be resolved                @typescript-eslint/no-unsafe-call
+apps/api lint:   19:12  error  Unsafe call of a type that could not be resolved                @typescript-eslint/no-unsafe-call
+apps/api lint:   20:8   error  Unsafe member access .get on a type that cannot be resolved     @typescript-eslint/no-unsafe-member-access
+apps/api lint:   21:8   error  Unsafe member access .expect on a type that cannot be resolved  @typescript-eslint/no-unsafe-member-access
+apps/api lint:   22:8   error  Unsafe member access .expect on a type that cannot be resolved  @typescript-eslint/no-unsafe-member-access
+apps/api lint: ✖ 347 problems (345 errors, 2 warnings)
+apps/api lint:   335 errors and 0 warnings potentially fixable with the `--fix` option.
+apps/api lint: Failed
+D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @orion/api@0.1.0 lint: `eslint "{src,test}/**/*.ts"`
+Exit status 1
+ ELIFECYCLE  Command failed with exit code 1.
+
+== Typecheck ==
+
+> orion-pharma-platform@0.1.0 typecheck D:\ORION_PHARMA_PLATFORM\orion-pharma-platform
+> corepack pnpm -r --if-present run typecheck
+
+Scope: 7 of 8 workspace projects
+packages/accounting typecheck$ tsc --noEmit
+packages/auth typecheck$ tsc --noEmit
+apps/web typecheck$ tsc --noEmit
+apps/api typecheck$ tsc --noEmit
+packages/accounting typecheck: 'tsc' is not recognized as an internal or external command,
+packages/accounting typecheck: operable program or batch file.
+packages/auth typecheck: 'tsc' is not recognized as an internal or external command,
+packages/auth typecheck: operable program or batch file.
+packages/auth typecheck: Failed
+D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\packages\auth:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @orion/auth@0.1.0 typecheck: `tsc --noEmit`
+Exit status 1
+packages/accounting typecheck: Failed
+ WARN   Local package.json exists, but node_modules missing, did you mean to install?
+packages/core typecheck$ tsc --noEmit
+ WARN   Local package.json exists, but node_modules missing, did you mean to install?
+packages/intelligence typecheck$ tsc --noEmit
+packages/core typecheck: 'tsc' is not recognized as an internal or external command,
+packages/core typecheck: operable program or batch file.
+packages/core typecheck: Failed
+ WARN   Local package.json exists, but node_modules missing, did you mean to install?
+packages/inventory typecheck$ tsc --noEmit
+packages/intelligence typecheck: 'tsc' is not recognized as an internal or external command,
+packages/intelligence typecheck: operable program or batch file.
+packages/intelligence typecheck: Failed
+ WARN   Local package.json exists, but node_modules missing, did you mean to install?
+packages/inventory typecheck: 'tsc' is not recognized as an internal or external command,
+packages/inventory typecheck: operable program or batch file.
+packages/inventory typecheck: Failed
+ WARN   Local package.json exists, but node_modules missing, did you mean to install?
+ ELIFECYCLE  Command failed with exit code 1.
+
+== Tests ==
+
+> orion-pharma-platform@0.1.0 test D:\ORION_PHARMA_PLATFORM\orion-pharma-platform
+> corepack pnpm -r --if-present run test
+
+Scope: 7 of 8 workspace projects
+packages/accounting test$ echo test:accounting
+packages/auth test$ echo test:auth
+apps/api test$ jest
+apps/web test$ node --test tests/smoke.test.mjs
+packages/auth test: test:auth
+packages/accounting test: test:accounting
+packages/accounting test: Done
+packages/auth test: Done
+packages/core test$ echo test:core
+packages/intelligence test$ echo test:intelligence
+packages/core test: test:core
+packages/core test: Done
+packages/inventory test$ echo test:inventory
+packages/intelligence test: test:intelligence
+packages/intelligence test: Done
+packages/inventory test: test:inventory
+packages/inventory test: Done
+apps/web test: ▶ web smoke tests
+apps/web test:   ✔ has app router page and manifest (1.9192ms)
+apps/web test: ✔ web smoke tests (2.8699ms)
+apps/web test: ℹ tests 1
+apps/web test: ℹ suites 1
+apps/web test: ℹ pass 1
+apps/web test: ℹ fail 0
+apps/web test: ℹ cancelled 0
+apps/web test: ℹ skipped 0
+apps/web test: ℹ todo 0
+apps/web test: ℹ duration_ms 152.6001
+apps/web test: Done
+apps/api test: FAIL src/health/health.controller.spec.ts
+apps/api test:   ● Test suite failed to run
+apps/api test:     Cannot find module './health/health.controller' from 'health/health.controller.spec.ts'
+apps/api test:       1 | import { Test, TestingModule } from '@nestjs/testing';
+apps/api test:     > 2 | import { HealthController } from './health/health.controller';
+apps/api test:         | ^
+apps/api test:       3 |
+apps/api test:       4 | describe('HealthController', () => {
+apps/api test:       5 |   let controller: HealthController;
+apps/api test:       at Resolver._throwModNotFoundError (../../../node_modules/.pnpm/jest-resolve@30.2.0/node_modules/jest-resolve/build/index.js:863:11)
+apps/api test:       at Object.<anonymous> (health/health.controller.spec.ts:2:1)
+apps/api test: Test Suites: 1 failed, 1 total
+apps/api test: Tests:       0 total
+apps/api test: Snapshots:   0 total
+apps/api test: Time:        3.84 s
+apps/api test: Ran all test suites.
+apps/api test: Failed
+D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @orion/api@0.1.0 test: `jest`
+Exit status 1
+ ELIFECYCLE  Test failed. See above for more details.
+
+== Re-run Lint ==
+
+> orion-pharma-platform@0.1.0 lint D:\ORION_PHARMA_PLATFORM\orion-pharma-platform
+> corepack pnpm -r --if-present run lint
+
+Scope: 7 of 8 workspace projects
+packages/accounting lint$ echo lint:accounting
+apps/api lint$ eslint "{src,test}/**/*.ts" --fix
+apps/web lint$ next lint
+packages/auth lint$ echo lint:auth
+packages/accounting lint: lint:accounting
+packages/auth lint: lint:auth
+packages/accounting lint: Done
+packages/core lint$ echo lint:core
+packages/auth lint: Done
+packages/intelligence lint$ echo lint:intelligence
+packages/core lint: lint:core
+packages/core lint: Done
+packages/inventory lint$ echo lint:inventory
+packages/intelligence lint: lint:intelligence
+packages/intelligence lint: Done
+packages/inventory lint: lint:inventory
+packages/inventory lint: Done
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\main.ts
+apps/api lint:   12:1  warning  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+apps/api lint: ✖ 1 problem (0 errors, 1 warning)
+apps/api lint: Done
+apps/web lint: ✔ No ESLint warnings or errors
+apps/web lint: Done
+
+== Re-run Typecheck ==
+
+> orion-pharma-platform@0.1.0 typecheck D:\ORION_PHARMA_PLATFORM\orion-pharma-platform
+> corepack pnpm -r --if-present run typecheck
+
+Scope: 7 of 8 workspace projects
+packages/accounting typecheck$ tsc --noEmit
+apps/web typecheck$ tsc --noEmit
+packages/auth typecheck$ tsc --noEmit
+apps/api typecheck$ tsc --noEmit
+packages/accounting typecheck: Done
+packages/auth typecheck: Done
+packages/core typecheck$ tsc --noEmit
+packages/intelligence typecheck$ tsc --noEmit
+packages/intelligence typecheck: Done
+packages/core typecheck: Done
+packages/inventory typecheck$ tsc --noEmit
+packages/inventory typecheck: Done
+apps/web typecheck: Done
+apps/api typecheck: test/app.e2e-spec.ts(19,12): error TS2349: This expression is not callable.
+apps/api typecheck:   Type '{ default: SuperTestStatic; Test: typeof Test; agent: typeof TestAgent & ((app?: App | undefined, options?: AgentOptions | undefined) => TestAgent<...>); }' has no call signatures.
+apps/api typecheck: Failed
+D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @orion/api@0.1.0 typecheck: `tsc --noEmit`
+Exit status 2
+ ELIFECYCLE  Command failed with exit code 2.
+
+== Re-run Tests ==
+
+> orion-pharma-platform@0.1.0 test D:\ORION_PHARMA_PLATFORM\orion-pharma-platform
+> corepack pnpm -r --if-present run test
+
+Scope: 7 of 8 workspace projects
+packages/accounting test$ echo test:accounting
+packages/auth test$ echo test:auth
+apps/web test$ node --test tests/smoke.test.mjs
+apps/api test$ jest
+packages/auth test: test:auth
+packages/accounting test: test:accounting
+packages/accounting test: Done
+packages/auth test: Done
+packages/core test$ echo test:core
+packages/intelligence test$ echo test:intelligence
+packages/intelligence test: test:intelligence
+packages/intelligence test: Done
+packages/inventory test$ echo test:inventory
+packages/core test: test:core
+packages/core test: Done
+packages/inventory test: test:inventory
+packages/inventory test: Done
+apps/web test: ▶ web smoke tests
+apps/web test:   ✔ has app router page and manifest (1.1702ms)
+apps/web test: ✔ web smoke tests (2.2226ms)
+apps/web test: ℹ tests 1
+apps/web test: ℹ suites 1
+apps/web test: ℹ pass 1
+apps/web test: ℹ fail 0
+apps/web test: ℹ cancelled 0
+apps/web test: ℹ skipped 0
+apps/web test: ℹ todo 0
+apps/web test: ℹ duration_ms 199.7926
+apps/web test: Done
+apps/api test: PASS src/health/health.controller.spec.ts
+apps/api test:   HealthController
+apps/api test:     √ returns status ok (19 ms)
+apps/api test: Test Suites: 1 passed, 1 total
+apps/api test: Tests:       1 passed, 1 total
+apps/api test: Snapshots:   0 total
+apps/api test: Time:        5.594 s
+apps/api test: Ran all test suites.
+apps/api test: Done
+
+== Final Typecheck ==
+
+> orion-pharma-platform@0.1.0 typecheck D:\ORION_PHARMA_PLATFORM\orion-pharma-platform
+> corepack pnpm -r --if-present run typecheck
+
+Scope: 7 of 8 workspace projects
+packages/accounting typecheck$ tsc --noEmit
+apps/web typecheck$ tsc --noEmit
+apps/api typecheck$ tsc --noEmit
+packages/auth typecheck$ tsc --noEmit
+packages/accounting typecheck: Done
+packages/core typecheck$ tsc --noEmit
+packages/auth typecheck: Done
+packages/intelligence typecheck$ tsc --noEmit
+packages/core typecheck: Done
+packages/inventory typecheck$ tsc --noEmit
+packages/intelligence typecheck: Done
+packages/inventory typecheck: Done
+apps/web typecheck: Done
+apps/api typecheck: Done

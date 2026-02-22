@@ -1,0 +1,58 @@
+== Docker Postgres startup ==
+time="2026-02-22T06:04:51+03:00" level=warning msg="D:\\ORION_PHARMA_PLATFORM\\orion-pharma-platform\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+unable to get image 'postgres:16': error during connect: Get "http://%2F%2F.%2Fpipe%2FdockerDesktopLinuxEngine/v1.51/images/postgres:16/json": open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.
+
+== Prisma generate ==
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+Prisma schema loaded from prisma\schema.prisma
+
+✔ Generated Prisma Client (v6.19.2) to .\..\..\node_modules\.pnpm\@prisma+client@6.19.2_prism_6b2b1af085fe6797f5a5ea830937a8e3\node_modules\@prisma\client in 1.04s
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+
+
+== Prisma migrate dev ==
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "orion_pharma", schema "public" at "localhost:5432"
+
+Error: P1001: Can't reach database server at `localhost:5432`
+
+Please make sure your database server is running at `localhost:5432`.
+undefined
+D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command "prisma" not found
+
+== Prisma seed ==
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+Running seed command `ts-node prisma/seed.ts` ...
+PrismaClientInitializationError: 
+Invalid `prisma.tenant.upsert()` invocation:
+
+
+Can't reach database server at `localhost:5432`
+
+Please make sure your database server is running at `localhost:5432`.
+    at ei.handleRequestError (D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\node_modules\.pnpm\@prisma+client@6.19.2_prism_6b2b1af085fe6797f5a5ea830937a8e3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:242:13)
+    at ei.handleAndLogRequestError (D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\node_modules\.pnpm\@prisma+client@6.19.2_prism_6b2b1af085fe6797f5a5ea830937a8e3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:174:12)
+    at ei.request (D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\node_modules\.pnpm\@prisma+client@6.19.2_prism_6b2b1af085fe6797f5a5ea830937a8e3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:143:12)
+    at async a (D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\node_modules\.pnpm\@prisma+client@6.19.2_prism_6b2b1af085fe6797f5a5ea830937a8e3\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:833:24)
+    at async main (D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\prisma\seed.ts:7:18) {
+  clientVersion: '6.19.2',
+  errorCode: undefined,
+  retryable: undefined
+}
+
+An error occurred while running the seed command:
+Error: Command failed with exit code 1: ts-node prisma/seed.ts
+undefined
+D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command "prisma" not found
