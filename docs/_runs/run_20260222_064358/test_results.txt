@@ -1,0 +1,157 @@
+
+== npm test ==
+
+> orion-pharma-platform@0.1.0 test
+> corepack pnpm -r --if-present run test
+
+Scope: 7 of 8 workspace projects
+packages/accounting test$ echo test:accounting
+packages/auth test$ echo test:auth
+apps/web test$ node --test tests/smoke.test.mjs
+apps/api test$ jest
+packages/accounting test: test:accounting
+packages/accounting test: Done
+packages/core test$ echo test:core
+packages/auth test: test:auth
+packages/auth test: Done
+packages/intelligence test$ echo test:intelligence
+packages/core test: test:core
+packages/core test: Done
+packages/inventory test$ echo test:inventory
+packages/intelligence test: test:intelligence
+packages/intelligence test: Done
+packages/inventory test: test:inventory
+packages/inventory test: Done
+apps/web test: ▶ web smoke tests
+apps/web test:   ✔ has app router page and manifest (0.8483ms)
+apps/web test: ✔ web smoke tests (1.4457ms)
+apps/web test: ℹ tests 1
+apps/web test: ℹ suites 1
+apps/web test: ℹ pass 1
+apps/web test: ℹ fail 0
+apps/web test: ℹ cancelled 0
+apps/web test: ℹ skipped 0
+apps/web test: ℹ todo 0
+apps/web test: ℹ duration_ms 82.5332
+apps/web test: Done
+apps/api test: PASS src/health/health.controller.spec.ts
+apps/api test:   HealthController
+apps/api test:     √ returns status ok (13 ms)
+apps/api test: Test Suites: 1 passed, 1 total
+apps/api test: Tests:       1 passed, 1 total
+apps/api test: Snapshots:   0 total
+apps/api test: Time:        1.334 s, estimated 2 s
+apps/api test: Ran all test suites.
+apps/api test: Done
+
+== health endpoint check ==
+Invoke-WebRequest: 
+Line |
+  23 |  try { (Invoke-WebRequest -Uri "http://localhost:3001/api/health" -Use …
+     |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | No connection could be made because the target machine actively refused it.
+
+
+== npm lint ==
+
+> orion-pharma-platform@0.1.0 lint
+> corepack pnpm -r --if-present run lint
+
+Scope: 7 of 8 workspace projects
+packages/accounting lint$ echo lint:accounting
+packages/auth lint$ echo lint:auth
+apps/api lint$ eslint "{src,test}/**/*.ts" --fix
+apps/web lint$ next lint
+packages/auth lint: lint:auth
+packages/auth lint: Done
+packages/accounting lint: lint:accounting
+packages/accounting lint: Done
+packages/core lint$ echo lint:core
+packages/intelligence lint$ echo lint:intelligence
+packages/core lint: lint:core
+packages/core lint: Done
+packages/inventory lint$ echo lint:inventory
+packages/intelligence lint: lint:intelligence
+packages/intelligence lint: Done
+packages/inventory lint: lint:inventory
+packages/inventory lint: Done
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\src\main.ts
+apps/api lint:   12:1  warning  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+apps/api lint: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api\test\app.e2e-spec.ts
+apps/api lint:   19:20  warning  Unsafe argument of type `any` assigned to a parameter of type `App`  @typescript-eslint/no-unsafe-argument
+apps/api lint: ✖ 2 problems (0 errors, 2 warnings)
+apps/api lint: Done
+apps/web lint: ✔ No ESLint warnings or errors
+apps/web lint: Done
+
+== npm lint (post-fix) ==
+
+> orion-pharma-platform@0.1.0 lint
+> corepack pnpm -r --if-present run lint
+
+Scope: 7 of 8 workspace projects
+packages/auth lint$ echo lint:auth
+packages/accounting lint$ echo lint:accounting
+apps/web lint$ next lint
+apps/api lint$ eslint "{src,test}/**/*.ts" --fix
+packages/auth lint: lint:auth
+packages/accounting lint: lint:accounting
+packages/accounting lint: Done
+packages/auth lint: Done
+packages/core lint$ echo lint:core
+packages/intelligence lint$ echo lint:intelligence
+packages/core lint: lint:core
+packages/core lint: Done
+packages/inventory lint$ echo lint:inventory
+packages/intelligence lint: lint:intelligence
+packages/intelligence lint: Done
+packages/inventory lint: lint:inventory
+packages/inventory lint: Done
+apps/api lint: Done
+apps/web lint: ✔ No ESLint warnings or errors
+apps/web lint: Done
+
+== npm test (final) ==
+
+> orion-pharma-platform@0.1.0 test
+> corepack pnpm -r --if-present run test
+
+Scope: 7 of 8 workspace projects
+packages/accounting test$ echo test:accounting
+packages/auth test$ echo test:auth
+apps/web test$ node --test tests/smoke.test.mjs
+apps/api test$ jest
+packages/auth test: test:auth
+packages/auth test: Done
+packages/accounting test: test:accounting
+packages/accounting test: Done
+packages/core test$ echo test:core
+packages/intelligence test$ echo test:intelligence
+packages/core test: test:core
+packages/core test: Done
+packages/inventory test$ echo test:inventory
+packages/intelligence test: test:intelligence
+packages/intelligence test: Done
+packages/inventory test: test:inventory
+packages/inventory test: Done
+apps/web test: ▶ web smoke tests
+apps/web test:   ✔ has app router page and manifest (1.0768ms)
+apps/web test: ✔ web smoke tests (1.6674ms)
+apps/web test: ℹ tests 1
+apps/web test: ℹ suites 1
+apps/web test: ℹ pass 1
+apps/web test: ℹ fail 0
+apps/web test: ℹ cancelled 0
+apps/web test: ℹ skipped 0
+apps/web test: ℹ todo 0
+apps/web test: ℹ duration_ms 90.0396
+apps/web test: Done
+apps/api test: PASS src/health/health.controller.spec.ts
+apps/api test:   HealthController
+apps/api test:     √ returns status ok (8 ms)
+apps/api test: Test Suites: 1 passed, 1 total
+apps/api test: Tests:       1 passed, 1 total
+apps/api test: Snapshots:   0 total
+apps/api test: Time:        2.545 s
+apps/api test: Ran all test suites.
+apps/api test: Done

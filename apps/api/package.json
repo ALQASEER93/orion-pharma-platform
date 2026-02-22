@@ -14,9 +14,12 @@
     "test": "jest",
     "test:cov": "jest --coverage",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy"
+    "prisma:generate": "node scripts/prisma-env.mjs generate",
+    "prisma:migrate": "node scripts/prisma-env.mjs migrate dev",
+    "prisma:migrate:devops": "node scripts/prisma-env.mjs migrate dev --name devops_hardening",
+    "prisma:deploy": "node scripts/prisma-env.mjs migrate deploy",
+    "prisma:reset": "node scripts/prisma-env.mjs migrate reset --force",
+    "prisma:verify": "node scripts/verify-migrations.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
