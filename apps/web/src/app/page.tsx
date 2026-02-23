@@ -1,5 +1,5 @@
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001/api';
+  process.env.ORION_WEB_API_BASE_URL ?? 'http://localhost:3001/api';
 
 async function fetchHealth(): Promise<string> {
   try {
