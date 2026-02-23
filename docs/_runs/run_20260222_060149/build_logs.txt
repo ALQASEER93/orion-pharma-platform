@@ -1,0 +1,89 @@
+== Build API ==
+
+> @orion/api@0.1.0 build D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api
+> nest build
+
+
+== Build Web ==
+
+> @orion/web@0.1.0 build D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\web
+> next build
+
+  ▲ Next.js 14.2.28
+
+   Creating an optimized production build ...
+> [PWA] Compile server
+> [PWA] Compile server
+> [PWA] Compile client (static)
+> [PWA] Auto register service worker with: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\node_modules\.pnpm\next-pwa@5.6.0_@babel+core@_33cec42da459763d496d9805a2229212\node_modules\next-pwa\register.js
+> [PWA] Service worker: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\web\public\sw.js
+> [PWA]   url: /sw.js
+> [PWA]   scope: /
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/5) ...
+   Generating static pages (1/5) 
+   Generating static pages (2/5) 
+   Generating static pages (3/5) 
+ ✓ Generating static pages (5/5)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ƒ /                                    136 B          87.2 kB
+└ ○ /_not-found                          870 B          87.9 kB
++ First Load JS shared by all            87.1 kB
+  ├ chunks/497-6d52613df443115c.js       31.6 kB
+  ├ chunks/89294da9-6fa3863801d1aa57.js  53.6 kB
+  └ other shared chunks (total)          1.85 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+== Re-run Build API ==
+
+> @orion/api@0.1.0 build D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api
+> nest build
+
+
+== Re-run Build Web ==
+
+> @orion/web@0.1.0 build D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\web
+> next build
+
+  ▲ Next.js 14.2.28
+
+   Creating an optimized production build ...
+> [PWA] Compile server
+> [PWA] Compile server
+> [PWA] Compile client (static)
+> [PWA] Auto register service worker with: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\node_modules\.pnpm\next-pwa@5.6.0_@babel+core@_33cec42da459763d496d9805a2229212\node_modules\next-pwa\register.js
+> [PWA] Service worker: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\web\public\sw.js
+> [PWA]   url: /sw.js
+> [PWA]   scope: /
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/5) ...
+   Generating static pages (1/5) 
+   Generating static pages (2/5) 
+   Generating static pages (3/5) 
+ ✓ Generating static pages (5/5)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ƒ /                                    136 B          87.2 kB
+└ ○ /_not-found                          870 B          87.9 kB
++ First Load JS shared by all            87.1 kB
+  ├ chunks/497-6d52613df443115c.js       31.6 kB
+  ├ chunks/89294da9-6fa3863801d1aa57.js  53.6 kB
+  └ other shared chunks (total)          1.85 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
