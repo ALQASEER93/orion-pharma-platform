@@ -8,9 +8,19 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { TenantIsolationMiddleware } from './common/middleware/tenant-isolation.middleware';
 import { RoleCheckMiddleware } from './common/middleware/role-check.middleware';
+import { ProductsModule } from './products/products.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { TaxonomyModule } from './taxonomy/taxonomy.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule, AuthModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    PrismaModule,
+    AuthModule,
+    TaxonomyModule,
+    ProductsModule,
+    InventoryModule,
+  ],
   controllers: [HealthController],
   providers: [
     {

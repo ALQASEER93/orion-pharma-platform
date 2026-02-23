@@ -1,0 +1,26 @@
+>>> corepack pnpm lint
+
+> orion-pharma-platform@0.1.0 lint D:\ORION_PHARMA_PLATFORM\orion-pharma-platform
+> corepack pnpm -r --if-present run lint
+
+Scope: 7 of 8 workspace projects
+apps/api lint$ eslint "{src,test}/**/*.ts" --fix
+apps/web lint$ next lint
+packages/accounting lint$ echo lint:accounting
+packages/auth lint$ echo lint:auth
+packages/accounting lint: lint:accounting
+packages/accounting lint: Done
+packages/auth lint: lint:auth
+packages/core lint$ echo lint:core
+packages/auth lint: Done
+packages/intelligence lint$ echo lint:intelligence
+packages/core lint: lint:core
+packages/core lint: Done
+packages/inventory lint$ echo lint:inventory
+packages/intelligence lint: lint:intelligence
+packages/intelligence lint: Done
+packages/inventory lint: lint:inventory
+packages/inventory lint: Done
+apps/api lint: Done
+apps/web lint: ✔ No ESLint warnings or errors
+apps/web lint: Done

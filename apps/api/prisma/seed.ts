@@ -14,7 +14,15 @@ async function main() {
     },
   });
 
-  const permissionKeys = ['users.read', 'users.manage', 'inventory.read'];
+  const permissionKeys = [
+    'users.read',
+    'users.manage',
+    'products.read',
+    'products.manage',
+    'inventory.read',
+    'inventory.adjust',
+    'inventory.override_negative',
+  ];
   for (const key of permissionKeys) {
     await prisma.permission.upsert({
       where: { key },
@@ -62,20 +70,119 @@ async function main() {
     10,
   );
 
+  const branch = await prisma.branch.upsert({
+    where: { id: '22222222-2222-2222-2222-222222222222' },
+    update: {
+      name: 'Main Branch',
+      location: 'Riyadh',
+    },
+    create: {
+      id: '22222222-2222-2222-2222-222222222222',
+      tenantId: tenant.id,
+      name: 'Main Branch',
+      location: 'Riyadh',
+    },
+  });
+
   await prisma.user.upsert({
     where: { email: 'admin@orion.local' },
     update: {
       passwordHash,
       tenantId: tenant.id,
+      branchId: branch.id,
       roleId: role.id,
       isActive: true,
     },
     create: {
       tenantId: tenant.id,
+      branchId: branch.id,
       roleId: role.id,
       email: 'admin@orion.local',
       passwordHash,
       isActive: true,
+    },
+  });
+
+  const therapeuticClass = await prisma.therapeuticClass.upsert({
+    where: {
+      tenantId_nameEn: {
+        tenantId: tenant.id,
+        nameEn: 'Antibiotics',
+      },
+    },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      nameAr: 'مضادات حيوية',
+      nameEn: 'Antibiotics',
+    },
+  });
+
+  const dosageForm = await prisma.dosageForm.upsert({
+    where: {
+      tenantId_nameEn: {
+        tenantId: tenant.id,
+        nameEn: 'Tablet',
+      },
+    },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      nameAr: 'أقراص',
+      nameEn: 'Tablet',
+    },
+  });
+
+  const storageCondition = await prisma.storageCondition.upsert({
+    where: {
+      tenantId_nameEn: {
+        tenantId: tenant.id,
+        nameEn: 'Room Temperature',
+      },
+    },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      nameAr: 'درجة حرارة الغرفة',
+      nameEn: 'Room Temperature',
+    },
+  });
+
+  const regulatoryType = await prisma.regulatoryType.upsert({
+    where: {
+      tenantId_nameEn: {
+        tenantId: tenant.id,
+        nameEn: 'Prescription',
+      },
+    },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      nameAr: 'بوصفة طبية',
+      nameEn: 'Prescription',
+    },
+  });
+
+  await prisma.product.upsert({
+    where: {
+      tenantId_barcode: {
+        tenantId: tenant.id,
+        barcode: 'ORION-AMOX-500',
+      },
+    },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      nameAr: 'أموكسيسيلين 500',
+      nameEn: 'Amoxicillin 500',
+      barcode: 'ORION-AMOX-500',
+      strength: '500mg',
+      packSize: '20 tabs',
+      trackingMode: 'LOT_EXPIRY',
+      therapeuticClassId: therapeuticClass.id,
+      dosageFormId: dosageForm.id,
+      storageConditionId: storageCondition.id,
+      regulatoryTypeId: regulatoryType.id,
     },
   });
 }

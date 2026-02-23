@@ -15,6 +15,7 @@ corepack pnpm dev:web
 - Docker is not required for local development.
 - Default DB provider: SQLite
 - Default DB file: `.orion/dev.db`
+- Auth token signing/verification uses `ORION_JWT_SECRET` (legacy `JWT_SECRET` fallback only when ORION var is absent).
 
 ## Optional Docker / PostgreSQL
 

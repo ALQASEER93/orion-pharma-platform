@@ -16,6 +16,13 @@ model Tenant {
   users            User[]
   roles            Role[]
   auditLogs        AuditLog[]
+  therapeuticClasses TherapeuticClass[]
+  dosageForms        DosageForm[]
+  storageConditions  StorageCondition[]
+  regulatoryTypes    RegulatoryType[]
+  products           Product[]
+  inventoryMovements InventoryMovement[]
+  inventoryBalances  InventoryBalance[]
 
   @@map("tenants")
 }
@@ -28,6 +35,8 @@ model Branch {
   createdAt DateTime @default(now()) @map("created_at")
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   users     User[]
+  inventoryMovements InventoryMovement[]
+  inventoryBalances  InventoryBalance[]
 
   @@map("branches")
 }
@@ -45,6 +54,7 @@ model User {
   branch       Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
   role         Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
   auditLogs    AuditLog[]
+  inventoryMovements InventoryMovement[]
 
   @@map("users")
 }
@@ -93,4 +103,136 @@ model AuditLog {
   user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@map("audit_logs")
+}
+
+enum TrackingMode {
+  NONE
+  EXPIRY_ONLY
+  LOT_EXPIRY
+}
+
+enum InventoryMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+model TherapeuticClass {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  nameAr    String   @map("name_ar")
+  nameEn    String   @map("name_en")
+  createdAt DateTime @default(now()) @map("created_at")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  products  Product[]
+
+  @@unique([tenantId, nameEn])
+  @@map("therapeutic_classes")
+}
+
+model DosageForm {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  nameAr    String   @map("name_ar")
+  nameEn    String   @map("name_en")
+  createdAt DateTime @default(now()) @map("created_at")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  products  Product[]
+
+  @@unique([tenantId, nameEn])
+  @@map("dosage_forms")
+}
+
+model StorageCondition {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  nameAr    String   @map("name_ar")
+  nameEn    String   @map("name_en")
+  createdAt DateTime @default(now()) @map("created_at")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  products  Product[]
+
+  @@unique([tenantId, nameEn])
+  @@map("storage_conditions")
+}
+
+model RegulatoryType {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  nameAr    String   @map("name_ar")
+  nameEn    String   @map("name_en")
+  createdAt DateTime @default(now()) @map("created_at")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  products  Product[]
+
+  @@unique([tenantId, nameEn])
+  @@map("regulatory_types")
+}
+
+model Product {
+  id                 String                @id @default(uuid())
+  tenantId           String                @map("tenant_id")
+  therapeuticClassId String?               @map("therapeutic_class_id")
+  dosageFormId       String?               @map("dosage_form_id")
+  storageConditionId String?               @map("storage_condition_id")
+  regulatoryTypeId   String?               @map("regulatory_type_id")
+  nameAr             String                @map("name_ar")
+  nameEn             String                @map("name_en")
+  barcode            String
+  strength           String
+  packSize           String                @map("pack_size")
+  trackingMode       TrackingMode          @default(NONE) @map("tracking_mode")
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+  tenant             Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  therapeuticClass   TherapeuticClass?     @relation(fields: [therapeuticClassId], references: [id], onDelete: SetNull)
+  dosageForm         DosageForm?           @relation(fields: [dosageFormId], references: [id], onDelete: SetNull)
+  storageCondition   StorageCondition?     @relation(fields: [storageConditionId], references: [id], onDelete: SetNull)
+  regulatoryType     RegulatoryType?       @relation(fields: [regulatoryTypeId], references: [id], onDelete: SetNull)
+  inventoryMovements InventoryMovement[]
+  inventoryBalances  InventoryBalance[]
+
+  @@unique([tenantId, barcode])
+  @@index([tenantId, nameEn])
+  @@index([tenantId, nameAr])
+  @@map("products")
+}
+
+model InventoryMovement {
+  id           String                @id @default(uuid())
+  tenantId     String                @map("tenant_id")
+  branchId     String                @map("branch_id")
+  productId    String                @map("product_id")
+  batchNo      String?               @map("batch_no")
+  expiryDate   DateTime?             @map("expiry_date")
+  movementType InventoryMovementType @map("movement_type")
+  quantity     Int
+  reason       String?
+  createdAt    DateTime              @default(now()) @map("created_at")
+  createdBy    String?               @map("created_by")
+  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch       Branch                @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  product      Product               @relation(fields: [productId], references: [id], onDelete: Restrict)
+  user         User?                 @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, branchId, productId, batchNo])
+  @@map("inventory_movements")
+}
+
+model InventoryBalance {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  branchId  String   @map("branch_id")
+  productId String   @map("product_id")
+  batchNo   String   @default("") @map("batch_no")
+  quantity  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, branchId, productId, batchNo])
+  @@index([tenantId, branchId, productId])
+  @@map("inventory_balances")
 }
