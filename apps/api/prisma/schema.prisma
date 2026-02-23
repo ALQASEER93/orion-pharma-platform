@@ -22,6 +22,7 @@ model Tenant {
   regulatoryTypes    RegulatoryType[]
   products           Product[]
   inventoryMovements InventoryMovement[]
+  inventoryBalances  InventoryBalance[]
 
   @@map("tenants")
 }
@@ -35,6 +36,7 @@ model Branch {
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   users     User[]
   inventoryMovements InventoryMovement[]
+  inventoryBalances  InventoryBalance[]
 
   @@map("branches")
 }
@@ -188,6 +190,7 @@ model Product {
   storageCondition   StorageCondition?     @relation(fields: [storageConditionId], references: [id], onDelete: SetNull)
   regulatoryType     RegulatoryType?       @relation(fields: [regulatoryTypeId], references: [id], onDelete: SetNull)
   inventoryMovements InventoryMovement[]
+  inventoryBalances  InventoryBalance[]
 
   @@unique([tenantId, barcode])
   @@index([tenantId, nameEn])
@@ -214,4 +217,22 @@ model InventoryMovement {
 
   @@index([tenantId, branchId, productId, batchNo])
   @@map("inventory_movements")
+}
+
+model InventoryBalance {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  branchId  String   @map("branch_id")
+  productId String   @map("product_id")
+  batchNo   String   @default("") @map("batch_no")
+  quantity  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, branchId, productId, batchNo])
+  @@index([tenantId, branchId, productId])
+  @@map("inventory_balances")
 }

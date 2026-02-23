@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
@@ -8,7 +9,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { JwtUserPayload } from '../common/types/request-with-context.type';
 import { CreateInventoryMovementDto } from './dto/create-inventory-movement.dto';
 import { QueryStockDto } from './dto/query-stock.dto';
-import { assertNonNegativeStock } from './stock-math';
 
 @Injectable()
 export class InventoryService {
@@ -87,37 +87,84 @@ export class InventoryService {
       );
     }
 
-    const currentStock = await this.prisma.inventoryMovement.aggregate({
-      where: {
-        tenantId,
-        branchId: dto.branchId,
-        productId: dto.productId,
-        batchNo: dto.batchNo ?? null,
-      },
-      _sum: {
-        quantity: true,
-      },
-    });
-
-    const existingQty = currentStock._sum.quantity ?? 0;
     const canOverrideNegative = user.permissions.includes(
       'inventory.override_negative',
     );
+    const batchNoKey = dto.batchNo ?? '';
 
-    assertNonNegativeStock(existingQty, dto.quantity, canOverrideNegative);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.inventoryBalance.upsert({
+        where: {
+          tenantId_branchId_productId_batchNo: {
+            tenantId,
+            branchId: dto.branchId,
+            productId: dto.productId,
+            batchNo: batchNoKey,
+          },
+        },
+        update: {},
+        create: {
+          tenantId,
+          branchId: dto.branchId,
+          productId: dto.productId,
+          batchNo: batchNoKey,
+          quantity: 0,
+        },
+      });
 
-    return this.prisma.inventoryMovement.create({
-      data: {
-        tenantId,
-        branchId: dto.branchId,
-        productId: dto.productId,
-        batchNo: dto.batchNo,
-        expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : null,
-        movementType: dto.movementType,
-        quantity: dto.quantity,
-        reason: dto.reason,
-        createdBy: user.sub,
-      },
+      if (dto.quantity < 0 && !canOverrideNegative) {
+        const guardResult = await tx.inventoryBalance.updateMany({
+          where: {
+            tenantId,
+            branchId: dto.branchId,
+            productId: dto.productId,
+            batchNo: batchNoKey,
+            quantity: {
+              gte: Math.abs(dto.quantity),
+            },
+          },
+          data: {
+            quantity: {
+              decrement: Math.abs(dto.quantity),
+            },
+          },
+        });
+
+        if (guardResult.count === 0) {
+          throw new ConflictException('Insufficient stock for this movement.');
+        }
+      } else {
+        await tx.inventoryBalance.update({
+          where: {
+            tenantId_branchId_productId_batchNo: {
+              tenantId,
+              branchId: dto.branchId,
+              productId: dto.productId,
+              batchNo: batchNoKey,
+            },
+          },
+          data: {
+            quantity:
+              dto.quantity >= 0
+                ? { increment: dto.quantity }
+                : { decrement: Math.abs(dto.quantity) },
+          },
+        });
+      }
+
+      return tx.inventoryMovement.create({
+        data: {
+          tenantId,
+          branchId: dto.branchId,
+          productId: dto.productId,
+          batchNo: dto.batchNo,
+          expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : null,
+          movementType: dto.movementType,
+          quantity: dto.quantity,
+          reason: dto.reason,
+          createdBy: user.sub,
+        },
+      });
     });
   }
 }

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { resolveJwtSecret } from './jwt-secret';
 
 type JwtPayload = {
   sub: string;
@@ -16,9 +17,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey:
-        process.env.ORION_JWT_SECRET ??
-        'ORION_local_dev_jwt_secret_change_in_production',
+      secretOrKey: resolveJwtSecret(),
     });
   }
 

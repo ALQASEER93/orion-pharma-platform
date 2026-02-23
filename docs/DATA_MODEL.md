@@ -11,6 +11,7 @@ Prisma schema is defined in `apps/api/prisma/schema.prisma`.
 - `permissions` (`id`, `key`)
 - `role_permissions` (`role_id`, `permission_id`)
 - `audit_logs` (`id`, `tenant_id`, `user_id`, `action`, `entity`, `entity_id`, `before`, `after`, `created_at`)
+- `inventory_balances` (`tenant_id`, `branch_id`, `product_id`, `batch_no`, `quantity`)
 
 ## Multi-tenant strategy
 
@@ -18,6 +19,7 @@ Prisma schema is defined in `apps/api/prisma/schema.prisma`.
 - Access control uses JWT tenant claim + request `x-tenant-id` header.
 - Role names are unique per tenant (`@@unique([tenantId, name])`).
 - Audit records preserve before/after payloads as Prisma `Json`.
+- Inventory updates use tenant-scoped atomic balance checks to prevent negative stock races.
 
 ## Database provider strategy
 
