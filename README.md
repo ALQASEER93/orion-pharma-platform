@@ -11,6 +11,7 @@ corepack pnpm dev:api
 corepack pnpm dev:web
 ```
 
+- Docker is not required for local development.
 - Default DB provider: SQLite
 - Default DB file: `.orion/dev.db`
 
@@ -21,6 +22,8 @@ corepack pnpm dev:up
 corepack pnpm db:migrate
 corepack pnpm --filter @orion/api prisma db seed
 ```
+
+You can also point `ORION_DATABASE_URL` to a hosted PostgreSQL instance without using Docker.
 
 ## Docs
 

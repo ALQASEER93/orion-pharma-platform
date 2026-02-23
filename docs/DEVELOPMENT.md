@@ -2,6 +2,8 @@
 
 ## No Docker Quickstart (Default)
 
+Docker is not required for local development.
+
 1. Copy `.env.example` to `.env`.
 2. Keep `ORION_DB_PROVIDER=sqlite`.
 3. Install dependencies:
@@ -19,7 +21,7 @@ SQLite local file is created at `.orion/dev.db`.
 1. Set `.env` values:
    - `ORION_DB_PROVIDER=postgresql`
    - `ORION_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/orion_pharma?schema=public`
-2. Optional local Postgres with Docker Compose:
+2. Use either a hosted PostgreSQL URL or optional local Postgres with Docker Compose:
    - `corepack pnpm dev:up`
 3. Apply schema and seed:
    - `corepack pnpm db:migrate`
