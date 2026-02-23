@@ -6,3 +6,6 @@ coverage
 .env
 .env.*
 !*.env.example
+docs/_runs/run_*/
+docs/_runs/*.zip
+docs/_runs/LATEST.txt

@@ -30,6 +30,7 @@ jobs:
       ORION_DB_PASSWORD: orion
       ORION_JWT_SECRET: ORION_CI_jwt_secret_2026_rotate_me_9f3ab17
       DATABASE_URL: postgresql://orion:orion@localhost:5432/orion_test?schema=public
+      PRISMA_HIDE_UPDATE_MESSAGE: 1
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,3 +72,11 @@ jobs:
 
       - name: Build Web
         run: pnpm --filter @orion/web build
+
+      - name: Upload RunPack zip (if present)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orion-runpack-${{ github.sha }}
+          path: docs/_runs/*.zip
+          if-no-files-found: ignore

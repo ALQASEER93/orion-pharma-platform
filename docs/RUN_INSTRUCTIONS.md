@@ -53,3 +53,8 @@ corepack pnpm db:migrate
 corepack pnpm db:reset
 corepack pnpm --filter @orion/api prisma:verify
 ```
+
+## Prisma roadmap note
+
+- Prisma v7 migration is deferred for a later planned upgrade window.
+- Current baseline remains Prisma v6 to keep release risk and infrastructure cost low.
