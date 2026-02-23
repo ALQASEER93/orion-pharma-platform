@@ -1,0 +1,50 @@
+>>> corepack pnpm test
+
+> orion-pharma-platform@0.1.0 test D:\ORION_PHARMA_PLATFORM\orion-pharma-platform
+> corepack pnpm -r --if-present run test
+
+Scope: 7 of 8 workspace projects
+packages/accounting test$ echo test:accounting
+packages/auth test$ echo test:auth
+apps/api test$ jest && jest --config ./test/jest-e2e.json --runInBand
+apps/web test$ node --test tests/smoke.test.mjs
+packages/accounting test: test:accounting
+packages/auth test: test:auth
+packages/auth test: Done
+packages/accounting test: Done
+packages/core test$ echo test:core
+packages/intelligence test$ echo test:intelligence
+packages/core test: test:core
+packages/core test: Done
+packages/inventory test$ echo test:inventory
+packages/intelligence test: test:intelligence
+packages/intelligence test: Done
+packages/inventory test: test:inventory
+packages/inventory test: Done
+apps/web test: ▶ web smoke tests
+apps/web test:   ✔ has app router page and manifest (1.2234ms)
+apps/web test: ✔ web smoke tests (1.8643ms)
+apps/web test: ℹ tests 1
+apps/web test: ℹ suites 1
+apps/web test: ℹ pass 1
+apps/web test: ℹ fail 0
+apps/web test: ℹ cancelled 0
+apps/web test: ℹ skipped 0
+apps/web test: ℹ todo 0
+apps/web test: ℹ duration_ms 79.8667
+apps/web test: Done
+apps/api test: PASS src/inventory/stock-math.spec.ts
+apps/api test: PASS src/health/health.controller.spec.ts (15.836 s)
+apps/api test: Test Suites: 2 passed, 2 total
+apps/api test: Tests:       4 passed, 4 total
+apps/api test: Snapshots:   0 total
+apps/api test: Time:        16.865 s
+apps/api test: Ran all test suites.
+apps/api test: PASS test/products.e2e-spec.ts
+apps/api test: PASS test/app.e2e-spec.ts
+apps/api test: Test Suites: 2 passed, 2 total
+apps/api test: Tests:       2 passed, 2 total
+apps/api test: Snapshots:   0 total
+apps/api test: Time:        5.252 s
+apps/api test: Ran all test suites.
+apps/api test: Done

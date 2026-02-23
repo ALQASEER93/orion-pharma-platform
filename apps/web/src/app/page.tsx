@@ -36,6 +36,14 @@ export default async function Home() {
         <div className="rounded-xl border border-slate-700 bg-slate-950 p-4 text-sm">
           API health: <span className="font-semibold text-emerald-300">{health}</span>
         </div>
+        <div className="flex flex-wrap gap-3 text-sm">
+          <a className="rounded border border-cyan-700 px-3 py-2 text-cyan-200" href="/products">
+            Products Management
+          </a>
+          <a className="rounded border border-emerald-700 px-3 py-2 text-emerald-200" href="/stock">
+            Stock On Hand
+          </a>
+        </div>
       </section>
     </main>
   );

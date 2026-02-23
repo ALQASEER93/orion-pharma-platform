@@ -1,0 +1,266 @@
+>>> docker compose build
+ Image orion-pharma-platform-web Building 
+ Image orion-pharma-platform-api Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.06kB done
+#1 DONE 0.0s
+
+#2 [api internal] load build definition from Dockerfile
+#2 transferring dockerfile:
+#2 ...
+
+#3 [web internal] load build definition from Dockerfile
+#3 transferring dockerfile: 665B 1.4s done
+#3 DONE 1.6s
+
+#2 [api internal] load build definition from Dockerfile
+#2 transferring dockerfile: 760B 1.4s done
+#2 DONE 1.7s
+
+#4 [api internal] load metadata for docker.io/library/node:24-alpine
+#4 ...
+
+#5 [auth] library/node:pull token for registry-1.docker.io
+#5 DONE 0.0s
+
+#4 [api internal] load metadata for docker.io/library/node:24-alpine
+#4 DONE 3.6s
+
+#6 [web internal] load .dockerignore
+#6 transferring context: 2B 0.0s done
+#6 DONE 0.1s
+
+#7 [api internal] load build context
+#7 DONE 0.0s
+
+#8 [web internal] load build context
+#8 DONE 0.0s
+
+#9 [web builder 1/8] FROM docker.io/library/node:24-alpine@sha256:4f696fbf39f383c1e486030ba6b289a5d9af541642fc78ab197e584a113b9c03
+#9 resolve docker.io/library/node:24-alpine@sha256:4f696fbf39f383c1e486030ba6b289a5d9af541642fc78ab197e584a113b9c03 0.1s done
+#9 resolve docker.io/library/node:24-alpine@sha256:4f696fbf39f383c1e486030ba6b289a5d9af541642fc78ab197e584a113b9c03 0.1s done
+#9 DONE 0.1s
+
+#7 [api internal] load build context
+#7 transferring context: 19.50MB 4.8s
+#7 transferring context: 40.93MB 7.7s done
+#7 DONE 7.8s
+
+#10 [api builder 2/8] WORKDIR /workspace
+#10 CACHED
+
+#11 [api builder 3/8] RUN corepack enable
+#11 CACHED
+
+#12 [api builder 4/8] COPY package.json pnpm-workspace.yaml ./
+#12 CACHED
+
+#13 [api builder 5/8] COPY apps/api ./apps/api
+#13 ...
+
+#8 [web internal] load build context
+#8 transferring context: 46.58MB 9.8s done
+#8 DONE 9.9s
+
+#10 [web builder 2/8] WORKDIR /workspace
+#10 CACHED
+
+#11 [web builder 3/8] RUN corepack enable
+#11 CACHED
+
+#12 [web builder 4/8] COPY package.json pnpm-workspace.yaml ./
+#12 CACHED
+
+#14 [web runner 6/7] COPY --from=builder /workspace/node_modules ./node_modules
+#14 CACHED
+
+#15 [web runner 4/7] COPY --from=builder /workspace/package.json ./package.json
+#15 CACHED
+
+#16 [web builder 4/7] COPY package.json pnpm-workspace.yaml ./
+#16 CACHED
+
+#17 [web builder 5/7] COPY apps/web ./apps/web
+#17 CACHED
+
+#18 [web builder 6/7] RUN pnpm install --filter @orion/web... --frozen-lockfile=false
+#18 CACHED
+
+#19 [web builder 7/7] RUN pnpm --filter @orion/web build
+#19 CACHED
+
+#20 [web runner 5/7] COPY --from=builder /workspace/pnpm-workspace.yaml ./pnpm-workspace.yaml
+#20 CACHED
+
+#21 [web runner 7/7] COPY --from=builder /workspace/apps/web ./apps/web
+#21 CACHED
+
+#22 [web] exporting to image
+#22 exporting layers 0.0s done
+#22 exporting manifest sha256:a9c157236f5afa9312bf148484f5e6981c1f40d1dff6dc206b4793ccae88b3db done
+#22 exporting config sha256:7256fcde4c353820d05b8470c6a606ce8788aa8450f24aff642b6b7cd810c7c1 done
+#22 exporting attestation manifest sha256:c7560905bf5da9548eb81592ae8be105b58cd6e04415711b6b5f7bec0ff7f772
+#22 exporting attestation manifest sha256:c7560905bf5da9548eb81592ae8be105b58cd6e04415711b6b5f7bec0ff7f772 0.1s done
+#22 exporting manifest list sha256:302bb049a4b1577b1a00775e3e35d6631e8f6d2dc59d2f7eefcbdb60901774ea 0.1s done
+#22 naming to docker.io/library/orion-pharma-platform-web:latest done
+#22 unpacking to docker.io/library/orion-pharma-platform-web:latest 0.0s done
+#22 DONE 0.5s
+
+#13 [api builder 5/8] COPY apps/api ./apps/api
+#13 ...
+
+#23 [web] resolving provenance for metadata file
+#23 DONE 0.1s
+
+#13 [api builder 5/8] COPY apps/api ./apps/api
+#13 DONE 6.1s
+
+#24 [api builder 6/8] RUN pnpm install --filter @orion/api... --frozen-lockfile=false
+#24 3.939 ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-10.6.1.tgz
+#24 9.444 (node:1) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+#24 9.444 (Use `node --trace-deprecation ...` to show where the warning was created)
+#24 10.32 Progress: resolved 1, reused 0, downloaded 0, added 0
+#24 11.35 Progress: resolved 5, reused 0, downloaded 0, added 0
+#24 13.44 Progress: resolved 10, reused 0, downloaded 4, added 0
+#24 14.51 
+#24 14.51    ╭───────────────────────────────────────────────────────────────────╮
+#24 14.51    │                                                                   │
+#24 14.51    │                Update available! 10.6.1 → 10.30.1.                │
+#24 14.51    │   Changelog: https://github.com/pnpm/pnpm/releases/tag/v10.30.1   │
+#24 14.51    │            Run "corepack use pnpm@10.30.1" to update.             │
+#24 14.51    │                                                                   │
+#24 14.51    ╰───────────────────────────────────────────────────────────────────╯
+#24 14.51 
+#24 14.55 Progress: resolved 14, reused 0, downloaded 7, added 0
+#24 15.58 Progress: resolved 24, reused 0, downloaded 18, added 0
+#24 16.61 Progress: resolved 31, reused 0, downloaded 23, added 0
+#24 17.61 Progress: resolved 37, reused 0, downloaded 31, added 0
+#24 18.65 Progress: resolved 37, reused 0, downloaded 33, added 0
+#24 20.73 Progress: resolved 38, reused 0, downloaded 36, added 0
+#24 23.15 Progress: resolved 38, reused 0, downloaded 37, added 0
+#24 27.75 Progress: resolved 39, reused 0, downloaded 37, added 0
+#24 47.06 Progress: resolved 41, reused 0, downloaded 38, added 0
+#24 48.06 Progress: resolved 52, reused 0, downloaded 41, added 0
+#24 49.06 Progress: resolved 61, reused 0, downloaded 51, added 0
+#24 50.11 Progress: resolved 66, reused 0, downloaded 54, added 0
+#24 51.18 Progress: resolved 66, reused 0, downloaded 56, added 0
+#24 53.15 Progress: resolved 66, reused 0, downloaded 59, added 0
+#24 54.55 Progress: resolved 67, reused 0, downloaded 61, added 0
+#24 57.59 Progress: resolved 67, reused 0, downloaded 62, added 0
+#24 58.75 Progress: resolved 80, reused 0, downloaded 70, added 0
+#24 61.64 Progress: resolved 80, reused 0, downloaded 74, added 0
+#24 62.86 Progress: resolved 86, reused 0, downloaded 75, added 0
+#24 64.60 Progress: resolved 94, reused 0, downloaded 83, added 0
+#24 65.67 Progress: resolved 97, reused 0, downloaded 89, added 0
+#24 67.96 Progress: resolved 108, reused 0, downloaded 98, added 0
+#24 68.96 Progress: resolved 112, reused 0, downloaded 103, added 0
+#24 69.96 Progress: resolved 135, reused 0, downloaded 122, added 0
+#24 72.78 Progress: resolved 138, reused 0, downloaded 128, added 0
+#24 74.21 Progress: resolved 147, reused 0, downloaded 133, added 0
+#24 75.25 Progress: resolved 166, reused 0, downloaded 149, added 0
+#24 77.67 Progress: resolved 169, reused 0, downloaded 157, added 0
+#24 78.81 Progress: resolved 182, reused 0, downloaded 159, added 0
+#24 80.54 Progress: resolved 190, reused 0, downloaded 176, added 0
+#24 81.84 Progress: resolved 191, reused 0, downloaded 176, added 0
+#24 82.84 Progress: resolved 212, reused 0, downloaded 196, added 0
+#24 83.84 Progress: resolved 235, reused 0, downloaded 212, added 0
+#24 84.84 Progress: resolved 251, reused 0, downloaded 229, added 0
+#24 85.87 Progress: resolved 264, reused 0, downloaded 243, added 0
+#24 86.88 Progress: resolved 290, reused 0, downloaded 271, added 0
+#24 87.88 Progress: resolved 310, reused 0, downloaded 287, added 0
+#24 88.88 Progress: resolved 329, reused 0, downloaded 306, added 0
+#24 89.93 Progress: resolved 332, reused 0, downloaded 309, added 0
+#24 91.12 Progress: resolved 332, reused 0, downloaded 310, added 0
+#24 92.12 Progress: resolved 357, reused 0, downloaded 335, added 0
+#24 94.53 Progress: resolved 372, reused 0, downloaded 342, added 0
+#24 95.96 Progress: resolved 379, reused 0, downloaded 357, added 0
+#24 97.25 Progress: resolved 380, reused 0, downloaded 357, added 0
+#24 99.03 Progress: resolved 389, reused 0, downloaded 361, added 0
+#24 100.2 Progress: resolved 399, reused 0, downloaded 375, added 0
+#24 101.2 Progress: resolved 415, reused 0, downloaded 390, added 0
+#24 102.9 Progress: resolved 434, reused 0, downloaded 407, added 0
+#24 105.0 Progress: resolved 447, reused 0, downloaded 417, added 0
+#24 106.0 Progress: resolved 465, reused 0, downloaded 436, added 0
+#24 107.1 Progress: resolved 491, reused 0, downloaded 459, added 0
+#24 108.1 Progress: resolved 510, reused 0, downloaded 475, added 0
+#24 109.1 Progress: resolved 535, reused 0, downloaded 501, added 0
+#24 110.1 Progress: resolved 565, reused 0, downloaded 527, added 0
+#24 111.1 Progress: resolved 592, reused 0, downloaded 553, added 0
+#24 112.1 Progress: resolved 611, reused 0, downloaded 561, added 0
+#24 113.1 Progress: resolved 634, reused 0, downloaded 574, added 0
+#24 114.1 Progress: resolved 654, reused 0, downloaded 594, added 0
+#24 115.1 Progress: resolved 673, reused 0, downloaded 611, added 0
+#24 116.1 Progress: resolved 702, reused 0, downloaded 641, added 0
+#24 117.1 Progress: resolved 727, reused 0, downloaded 654, added 0
+#24 118.3 Progress: resolved 737, reused 0, downloaded 676, added 0
+#24 119.3 Progress: resolved 738, reused 0, downloaded 720, added 0
+#24 120.0  WARN  3 deprecated subdependencies found: glob@10.5.0, glob@7.2.3, inflight@1.0.6
+#24 120.0 .                                        | +716 ++++++++++++++++++++++++++++++++
+#24 120.3 Progress: resolved 739, reused 0, downloaded 720, added 0
+#24 121.3 Progress: resolved 739, reused 0, downloaded 721, added 607
+#24 122.5 Progress: resolved 739, reused 0, downloaded 721, added 706
+#24 123.5 Progress: resolved 739, reused 0, downloaded 721, added 710
+#24 125.1 Progress: resolved 739, reused 0, downloaded 721, added 711
+#24 126.1 Progress: resolved 739, reused 0, downloaded 721, added 712
+#24 132.5 Progress: resolved 739, reused 0, downloaded 721, added 713
+#24 133.5 Progress: resolved 739, reused 0, downloaded 721, added 714
+#24 142.6 Progress: resolved 739, reused 0, downloaded 721, added 715
+#24 144.0 Progress: resolved 739, reused 0, downloaded 721, added 716
+#24 144.0 Progress: resolved 739, reused 0, downloaded 721, added 716, done
+#24 151.8 Done in 2m 23.2s using pnpm v10.6.1
+#24 DONE 163.0s
+
+#25 [api builder 7/8] RUN pnpm --filter @orion/api prisma:generate
+#25 5.786 
+#25 5.786 > @orion/api@0.1.0 prisma:generate /workspace/apps/api
+#25 5.786 > node scripts/prisma-env.mjs generate
+#25 5.786 
+#25 7.953 warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+#25 7.953 For more information, see: https://pris.ly/prisma-config
+#25 7.953 
+#25 16.29 Prisma schema loaded from prisma/schema.prisma
+#25 19.50 
+#25 19.50 ✔ Generated Prisma Client (v6.19.2) to ./../../node_modules/.pnpm/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client in 1.39s
+#25 19.50 
+#25 19.50 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+#25 19.50 
+#25 19.50 Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
+#25 19.50 
+#25 DONE 20.1s
+
+#26 [api builder 8/8] RUN pnpm --filter @orion/api build
+#26 1.991 
+#26 1.991 > @orion/api@0.1.0 build /workspace/apps/api
+#26 1.991 > nest build
+#26 1.991 
+#26 DONE 10.1s
+
+#27 [api runner 4/7] COPY --from=builder /workspace/package.json ./package.json
+#27 CACHED
+
+#28 [api runner 5/7] COPY --from=builder /workspace/pnpm-workspace.yaml ./pnpm-workspace.yaml
+#28 CACHED
+
+#29 [api runner 6/7] COPY --from=builder /workspace/node_modules ./node_modules
+#29 DONE 36.6s
+
+#30 [api runner 7/7] COPY --from=builder /workspace/apps/api ./apps/api
+#30 DONE 3.8s
+
+#31 [api] exporting to image
+#31 exporting layers
+#31 exporting layers 30.2s done
+#31 exporting manifest sha256:28dc18d3be21c41e1555c645b8c35bde82dc5023b2144ab3eb2f6bfdcf560247 0.1s done
+#31 exporting config sha256:8c87d2f694e38b211a1c8d6e4ffa835724f722c9e9e675cea551e30b5e4ddef4 0.0s done
+#31 exporting attestation manifest sha256:732ded9e2b376c1ddba5ec0af9502fe5832d723b5809c433fa3cd213940ede91
+#31 exporting attestation manifest sha256:732ded9e2b376c1ddba5ec0af9502fe5832d723b5809c433fa3cd213940ede91 0.1s done
+#31 exporting manifest list sha256:647b0c047c5813a32df5049aea7860597062c863e311d4d376454b35aa65c14f 0.1s done
+#31 naming to docker.io/library/orion-pharma-platform-api:latest 0.0s done
+#31 unpacking to docker.io/library/orion-pharma-platform-api:latest
+#31 unpacking to docker.io/library/orion-pharma-platform-api:latest 36.3s done
+#31 DONE 67.1s
+
+#32 [api] resolving provenance for metadata file
+#32 DONE 0.4s
+ Image orion-pharma-platform-api Built 
+ Image orion-pharma-platform-web Built 

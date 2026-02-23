@@ -1,0 +1,108 @@
+{
+  "run_name": "run_20260223_051425",
+  "run_dir": "docs/_runs/run_20260223_051425",
+  "zip_path": "docs/_runs/run_20260223_051425.zip",
+  "created_at": "2026-02-23T05:22:52.6076289+03:00",
+  "overall": "passed",
+  "checks": {
+    "postgres_health": {
+      "expected": "healthy",
+      "actual": "healthy",
+      "ok": true,
+      "log": "logs/postgres_health.log"
+    },
+    "api_health": {
+      "expected": "status=ok",
+      "actual": "ok",
+      "ok": true,
+      "log": "logs/api_health.log"
+    }
+  },
+  "steps": {
+    "docker_context": {
+      "exit_code": 0,
+      "duration_seconds": 0.36,
+      "log": "logs/docker_context.log",
+      "command": "docker context use desktop-linux"
+    },
+    "compose_down": {
+      "exit_code": 0,
+      "duration_seconds": 19.2,
+      "log": "logs/compose_down.log",
+      "command": "docker compose down -v"
+    },
+    "compose_build": {
+      "exit_code": 0,
+      "duration_seconds": 361.34,
+      "log": "logs/compose_build.log",
+      "command": "docker compose build"
+    },
+    "compose_up": {
+      "exit_code": 0,
+      "duration_seconds": 15.03,
+      "log": "logs/compose_up.log",
+      "command": "docker compose up -d"
+    },
+    "compose_ps": {
+      "exit_code": 0,
+      "duration_seconds": 0.43,
+      "log": "logs/compose_ps.log",
+      "command": "docker compose ps"
+    },
+    "compose_ps_json": {
+      "exit_code": 0,
+      "duration_seconds": 0.38,
+      "log": "logs/compose_ps_json.log",
+      "command": "docker compose ps --format json"
+    },
+    "postgres_health": {
+      "exit_code": 0,
+      "duration_seconds": 0,
+      "log": "logs/postgres_health.log",
+      "command": "docker inspect -f \"{{.State.Health.Status}}\" orion-postgres (retry loop)"
+    },
+    "api_health": {
+      "exit_code": 0,
+      "duration_seconds": 0,
+      "log": "logs/api_health.log",
+      "command": "GET http://localhost:3001/api/health (retry loop)"
+    },
+    "prisma_migrate": {
+      "exit_code": 0,
+      "duration_seconds": 10.01,
+      "log": "logs/prisma_migrate.log",
+      "command": "corepack pnpm --filter @orion/api prisma:deploy"
+    },
+    "prisma_seed": {
+      "exit_code": 0,
+      "duration_seconds": 5.35,
+      "log": "logs/prisma_seed.log",
+      "command": "corepack pnpm --filter @orion/api prisma:seed"
+    },
+    "lint": {
+      "exit_code": 0,
+      "duration_seconds": 12.24,
+      "log": "logs/lint.log",
+      "command": "corepack pnpm lint"
+    },
+    "typecheck": {
+      "exit_code": 0,
+      "duration_seconds": 4.77,
+      "log": "logs/typecheck.log",
+      "command": "corepack pnpm typecheck"
+    },
+    "test": {
+      "exit_code": 0,
+      "duration_seconds": 25.38,
+      "log": "logs/test.log",
+      "command": "corepack pnpm test"
+    },
+    "build": {
+      "exit_code": 0,
+      "duration_seconds": 31.42,
+      "log": "logs/build.log",
+      "command": "corepack pnpm build"
+    }
+  },
+  "fatal_error": null
+}

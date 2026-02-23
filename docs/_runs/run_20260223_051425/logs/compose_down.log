@@ -1,0 +1,17 @@
+>>> docker compose down -v
+ Container orion-web Stopping 
+ Container orion-web Stopped 
+ Container orion-web Removing 
+ Container orion-web Removed 
+ Container orion-api Stopping 
+ Container orion-api Stopped 
+ Container orion-api Removing 
+ Container orion-api Removed 
+ Container orion-postgres Stopping 
+ Container orion-postgres Stopped 
+ Container orion-postgres Removing 
+ Container orion-postgres Removed 
+ Volume orion-pharma-platform_postgres_data Removing 
+ Network orion-pharma-platform_default Removing 
+ Network orion-pharma-platform_default Removed 
+ Volume orion-pharma-platform_postgres_data Removed 

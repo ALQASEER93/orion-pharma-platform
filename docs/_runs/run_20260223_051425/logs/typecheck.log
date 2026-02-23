@@ -1,0 +1,20 @@
+>>> corepack pnpm typecheck
+
+> orion-pharma-platform@0.1.0 typecheck D:\ORION_PHARMA_PLATFORM\orion-pharma-platform
+> corepack pnpm -r --if-present run typecheck
+
+Scope: 7 of 8 workspace projects
+packages/accounting typecheck$ tsc --noEmit
+packages/auth typecheck$ tsc --noEmit
+apps/web typecheck$ tsc --noEmit
+apps/api typecheck$ tsc --noEmit
+packages/auth typecheck: Done
+packages/core typecheck$ tsc --noEmit
+packages/accounting typecheck: Done
+packages/intelligence typecheck$ tsc --noEmit
+packages/core typecheck: Done
+packages/inventory typecheck$ tsc --noEmit
+packages/intelligence typecheck: Done
+packages/inventory typecheck: Done
+apps/web typecheck: Done
+apps/api typecheck: Done

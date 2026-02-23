@@ -1,0 +1,5 @@
+>>> docker compose ps
+NAME             IMAGE                       COMMAND                  SERVICE    CREATED          STATUS                   PORTS
+orion-api        orion-pharma-platform-api   "docker-entrypoint.s…"   api        11 seconds ago   Up 1 second              0.0.0.0:3001->3001/tcp, [::]:3001->3001/tcp
+orion-postgres   postgres:16                 "docker-entrypoint.s…"   postgres   12 seconds ago   Up 8 seconds (healthy)   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+orion-web        orion-pharma-platform-web   "docker-entrypoint.s…"   web        10 seconds ago   Up Less than a second    0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp

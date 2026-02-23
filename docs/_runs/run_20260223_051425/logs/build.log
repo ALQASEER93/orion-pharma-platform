@@ -1,0 +1,50 @@
+>>> corepack pnpm build
+
+> orion-pharma-platform@0.1.0 build D:\ORION_PHARMA_PLATFORM\orion-pharma-platform
+> corepack pnpm -r --if-present run build
+
+Scope: 7 of 8 workspace projects
+apps/api build$ nest build
+apps/web build$ next build
+packages/accounting build$ tsc -p tsconfig.json
+packages/auth build$ tsc -p tsconfig.json
+packages/auth build: Done
+packages/core build$ tsc -p tsconfig.json
+packages/accounting build: Done
+packages/intelligence build$ tsc -p tsconfig.json
+packages/core build: Done
+packages/inventory build$ tsc -p tsconfig.json
+packages/intelligence build: Done
+packages/inventory build: Done
+apps/web build:   ▲ Next.js 14.2.28
+apps/web build:    Creating an optimized production build ...
+apps/web build: > [PWA] Compile server
+apps/web build: > [PWA] Compile server
+apps/web build: > [PWA] Compile client (static)
+apps/web build: > [PWA] Auto register service worker with: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\node_modules\.pnpm\next-pwa@5.6.0_@babel+core@_33cec42da459763d496d9805a2229212\node_modules\next-pwa\register.js
+apps/web build: > [PWA] Service worker: D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\web\public\sw.js
+apps/web build: > [PWA]   url: /sw.js
+apps/web build: > [PWA]   scope: /
+apps/api build: Done
+apps/web build:  ✓ Compiled successfully
+apps/web build:    Linting and checking validity of types ...
+apps/web build:    Collecting page data ...
+apps/web build:    Generating static pages (0/7) ...
+apps/web build:    Generating static pages (1/7) 
+apps/web build:    Generating static pages (3/7) 
+apps/web build:    Generating static pages (5/7) 
+apps/web build:  ✓ Generating static pages (7/7)
+apps/web build:    Finalizing page optimization ...
+apps/web build:    Collecting build traces ...
+apps/web build: Route (app)                              Size     First Load JS
+apps/web build: ┌ ƒ /                                    136 B          87.3 kB
+apps/web build: ├ ○ /_not-found                          870 B            88 kB
+apps/web build: ├ ○ /products                            2.45 kB        89.6 kB
+apps/web build: └ ○ /stock                               2.05 kB        89.2 kB
+apps/web build: + First Load JS shared by all            87.1 kB
+apps/web build:   ├ chunks/497-d585d519c83cc630.js       31.6 kB
+apps/web build:   ├ chunks/89294da9-5c0ae5ca48069552.js  53.6 kB
+apps/web build:   └ other shared chunks (total)          1.91 kB
+apps/web build: ○  (Static)   prerendered as static content
+apps/web build: ƒ  (Dynamic)  server-rendered on demand
+apps/web build: Done

@@ -1,0 +1,16 @@
+{
+  "docker_context": 0,
+  "compose_down": 0,
+  "compose_build": 0,
+  "compose_up": 0,
+  "compose_ps": 0,
+  "compose_ps_json": 0,
+  "postgres_health": 0,
+  "api_health": 0,
+  "prisma_migrate": 0,
+  "prisma_seed": 0,
+  "lint": 0,
+  "typecheck": 0,
+  "test": 0,
+  "build": 0
+}

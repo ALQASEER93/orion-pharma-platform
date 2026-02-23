@@ -3,11 +3,9 @@ WORKDIR /workspace
 RUN corepack enable
 
 COPY package.json pnpm-workspace.yaml ./
-COPY apps/api/package.json apps/api/package.json
-RUN pnpm install --filter @orion/api... --frozen-lockfile=false
-
 COPY apps/api ./apps/api
-RUN pnpm --filter @orion/api prisma generate
+RUN pnpm install --filter @orion/api... --frozen-lockfile=false
+RUN pnpm --filter @orion/api prisma:generate
 RUN pnpm --filter @orion/api build
 
 FROM node:24-alpine AS runner

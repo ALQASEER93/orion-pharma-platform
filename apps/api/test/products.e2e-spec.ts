@@ -1,8 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { Server } from 'http';
-import { AppModule } from './../src/app.module';
+import { AppModule } from '../src/app.module';
+
+const tenantId = '11111111-1111-1111-1111-111111111111';
 
 function ensureDatabaseUrl() {
   if (process.env.DATABASE_URL) {
@@ -17,7 +19,7 @@ function ensureDatabaseUrl() {
   process.env.DATABASE_URL = `postgresql://${user}:${password}@${host}:${port}/${db}?schema=public`;
 }
 
-describe('Health (e2e)', () => {
+describe('Products (e2e smoke)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -35,11 +37,24 @@ describe('Health (e2e)', () => {
     await app.close();
   });
 
-  it('/api/health (GET)', () => {
+  it('login + list products', async () => {
     const server = app.getHttpServer() as Server;
-    return request(server)
-      .get('/api/health')
-      .expect(200)
-      .expect({ status: 'ok' });
+
+    const loginResponse = await request(server).post('/api/auth/login').send({
+      email: 'admin@orion.local',
+      password: 'Admin@123',
+      tenantId,
+    });
+
+    expect(loginResponse.status).toBe(201);
+    expect(loginResponse.body.access_token).toBeTruthy();
+
+    const productsResponse = await request(server)
+      .get('/api/products')
+      .set('Authorization', `Bearer ${loginResponse.body.access_token}`)
+      .set('x-tenant-id', tenantId);
+
+    expect(productsResponse.status).toBe(200);
+    expect(Array.isArray(productsResponse.body)).toBe(true);
   });
 });

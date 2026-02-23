@@ -11,9 +11,16 @@ import { JwtStrategy } from './jwt.strategy';
     PrismaModule,
     PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET ?? 'change_me_in_production',
+      secret:
+        process.env.ORION_JWT_SECRET ??
+        process.env.JWT_SECRET ??
+        'change_me_in_production',
       signOptions: {
-        expiresIn: Number(process.env.JWT_EXPIRES_IN_SECONDS ?? 86400),
+        expiresIn: Number(
+          process.env.ORION_JWT_EXPIRES_IN_SECONDS ??
+            process.env.JWT_EXPIRES_IN_SECONDS ??
+            86400,
+        ),
       },
     }),
   ],
