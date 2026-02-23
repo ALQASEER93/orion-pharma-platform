@@ -3,9 +3,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { Server } from 'http';
 import { AppModule } from '../src/app.module';
+import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 const tenantId = '11111111-1111-1111-1111-111111111111';
 const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'Admin@123';
+const branchId = '22222222-2222-2222-2222-222222222222';
+const prisma = new PrismaClient();
 
 function ensureDatabaseUrl() {
   if (process.env.DATABASE_URL) {
@@ -25,6 +29,7 @@ describe('Products (e2e smoke)', () => {
 
   beforeAll(async () => {
     ensureDatabaseUrl();
+    await ensureAdminFixture();
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -36,6 +41,7 @@ describe('Products (e2e smoke)', () => {
 
   afterAll(async () => {
     await app.close();
+    await prisma.$disconnect();
   });
 
   it('login + list products', async () => {
@@ -62,3 +68,64 @@ describe('Products (e2e smoke)', () => {
     expect(Array.isArray(productsResponse.body)).toBe(true);
   });
 });
+
+async function ensureAdminFixture() {
+  await prisma.tenant.upsert({
+    where: { id: tenantId },
+    update: {},
+    create: {
+      id: tenantId,
+      name: 'ORION Pharma Demo Tenant',
+      subscriptionPlan: 'enterprise',
+    },
+  });
+
+  const role = await prisma.role.upsert({
+    where: {
+      tenantId_name: {
+        tenantId,
+        name: 'admin',
+      },
+    },
+    update: {},
+    create: {
+      tenantId,
+      name: 'admin',
+    },
+  });
+
+  await prisma.branch.upsert({
+    where: { id: branchId },
+    update: {
+      name: 'Main Branch',
+      location: 'Riyadh',
+      tenantId,
+    },
+    create: {
+      id: branchId,
+      tenantId,
+      name: 'Main Branch',
+      location: 'Riyadh',
+    },
+  });
+
+  const passwordHash = await bcrypt.hash(adminPassword, 10);
+  await prisma.user.upsert({
+    where: { email: 'admin@orion.local' },
+    update: {
+      tenantId,
+      branchId,
+      roleId: role.id,
+      passwordHash,
+      isActive: true,
+    },
+    create: {
+      tenantId,
+      branchId,
+      roleId: role.id,
+      email: 'admin@orion.local',
+      passwordHash,
+      isActive: true,
+    },
+  });
+}
