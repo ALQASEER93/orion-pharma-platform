@@ -5,23 +5,30 @@ import { Server } from 'http';
 import { AppModule } from '../src/app.module';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { resolveOrionDatabaseUrl } from '../src/prisma/orion-database-url';
 
 const tenantId = '11111111-1111-1111-1111-111111111111';
 const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'Admin@123';
 const branchId = '22222222-2222-2222-2222-222222222222';
-const prisma = new PrismaClient();
+let prisma: PrismaClient;
 
 function ensureDatabaseUrl() {
-  if (process.env.DATABASE_URL) {
+  if (process.env.ORION_DATABASE_URL) {
     return;
   }
 
-  const host = process.env.ORION_DB_HOST ?? 'localhost';
-  const port = process.env.ORION_DB_PORT ?? '5432';
-  const db = process.env.ORION_DB_NAME ?? 'orion_pharma';
-  const user = process.env.ORION_DB_USER ?? 'postgres';
-  const password = process.env.ORION_DB_PASSWORD ?? 'postgres';
-  process.env.DATABASE_URL = `postgresql://${user}:${password}@${host}:${port}/${db}?schema=public`;
+  const provider = (process.env.ORION_DB_PROVIDER ?? 'sqlite').toLowerCase();
+  if (provider === 'postgresql') {
+    const host = process.env.ORION_DB_HOST ?? 'localhost';
+    const port = process.env.ORION_DB_PORT ?? '5432';
+    const db = process.env.ORION_DB_NAME ?? 'orion_pharma';
+    const user = process.env.ORION_DB_USER ?? 'postgres';
+    const password = process.env.ORION_DB_PASSWORD ?? 'postgres';
+    process.env.ORION_DATABASE_URL = `postgresql://${user}:${password}@${host}:${port}/${db}?schema=public`;
+    return;
+  }
+
+  process.env.ORION_DATABASE_URL = resolveOrionDatabaseUrl();
 }
 
 describe('Products (e2e smoke)', () => {
@@ -29,6 +36,7 @@ describe('Products (e2e smoke)', () => {
 
   beforeAll(async () => {
     ensureDatabaseUrl();
+    prisma = new PrismaClient();
     await ensureAdminFixture();
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -40,8 +48,12 @@ describe('Products (e2e smoke)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
-    await prisma.$disconnect();
+    if (app) {
+      await app.close();
+    }
+    if (prisma) {
+      await prisma.$disconnect();
+    }
   });
 
   it('login + list products', async () => {
