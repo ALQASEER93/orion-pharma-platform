@@ -130,7 +130,17 @@ try {
 
   Invoke-LoggedCommand -Name 'prisma_generate' -Command 'corepack' -Arguments @('pnpm', '--filter', '@orion/api', 'prisma:generate') -Critical | Out-Null
   Invoke-LoggedCommand -Name 'prisma_deploy' -Command 'corepack' -Arguments @('pnpm', '--filter', '@orion/api', 'prisma:deploy') -Critical | Out-Null
-  Invoke-LoggedCommand -Name 'prisma_seed' -Command 'corepack' -Arguments @('pnpm', '--filter', '@orion/api', 'prisma', 'db', 'seed') -Critical | Out-Null
+  Invoke-LoggedCommand -Name 'prisma_seed' -Command 'corepack' -Arguments @('pnpm', '--filter', '@orion/api', 'prisma:seed') -Critical | Out-Null
+  $prismaSeedLogPath = Join-Path $logsDir 'prisma_seed.log'
+  if (Test-Path $prismaSeedLogPath) {
+    $prismaSeedLog = Get-Content -Path $prismaSeedLogPath -Raw
+    if ($prismaSeedLog -match 'None of the selected packages has a "prisma" script') {
+      $exitCodes['prisma_seed'] = 1
+      $steps['prisma_seed']['exit_code'] = 1
+      $blockers.Add('prisma_seed: missing prisma script in selected package(s)') | Out-Null
+      throw 'Critical step failed: prisma_seed (missing prisma script)'
+    }
+  }
 
   Invoke-LoggedCommand -Name 'lint' -Command 'corepack' -Arguments @('pnpm', 'lint') -Critical | Out-Null
   Invoke-LoggedCommand -Name 'typecheck' -Command 'corepack' -Arguments @('pnpm', 'typecheck') -Critical | Out-Null
@@ -190,7 +200,7 @@ $reportLines = @(
   '## How To Run Without Docker',
   '1. Configure `.env` from `.env.example` (keep `ORION_DB_PROVIDER=sqlite`).',
   '2. Run `corepack pnpm install`.',
-  '3. Run `corepack pnpm --filter @orion/api prisma:deploy` then `corepack pnpm --filter @orion/api prisma db seed`.',
+  '3. Run `corepack pnpm --filter @orion/api prisma:deploy` then `corepack pnpm --filter @orion/api prisma:seed`.',
   '4. Start API: `corepack pnpm --filter @orion/api start:dev`.',
   '5. Start Web: `corepack pnpm --filter @orion/web dev`.',
   '',

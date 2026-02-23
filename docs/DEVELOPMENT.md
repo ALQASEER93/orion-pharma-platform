@@ -9,7 +9,8 @@ Docker is not required for local development.
 3. Install dependencies:
    - `corepack pnpm install`
 4. Prepare database:
-   - `corepack pnpm dev:prepare`
+   - `corepack pnpm --filter @orion/api prisma:deploy`
+   - `corepack pnpm --filter @orion/api prisma:seed`
 5. Start services:
    - API: `corepack pnpm dev:api`
    - Web: `corepack pnpm dev:web`
@@ -25,7 +26,7 @@ SQLite local file is created at `.orion/dev.db`.
    - `corepack pnpm dev:up`
 3. Apply schema and seed:
    - `corepack pnpm db:migrate`
-   - `corepack pnpm --filter @orion/api prisma db seed`
+   - `corepack pnpm --filter @orion/api prisma:seed`
 
 ## Troubleshooting (Windows Low Disk)
 

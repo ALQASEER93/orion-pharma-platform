@@ -6,7 +6,8 @@ ORION PHARMA monorepo (NestJS API + Next.js web).
 
 ```bash
 corepack pnpm install
-corepack pnpm dev:prepare
+corepack pnpm --filter @orion/api prisma:deploy
+corepack pnpm --filter @orion/api prisma:seed
 corepack pnpm dev:api
 corepack pnpm dev:web
 ```
@@ -20,7 +21,7 @@ corepack pnpm dev:web
 ```bash
 corepack pnpm dev:up
 corepack pnpm db:migrate
-corepack pnpm --filter @orion/api prisma db seed
+corepack pnpm --filter @orion/api prisma:seed
 ```
 
 You can also point `ORION_DATABASE_URL` to a hosted PostgreSQL instance without using Docker.
