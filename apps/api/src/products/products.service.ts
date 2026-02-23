@@ -20,9 +20,9 @@ export class ProductsService {
       ...(query.q
         ? {
             OR: [
-              { nameAr: { contains: query.q, mode: 'insensitive' } },
-              { nameEn: { contains: query.q, mode: 'insensitive' } },
-              { barcode: { contains: query.q, mode: 'insensitive' } },
+              { nameAr: { contains: query.q } },
+              { nameEn: { contains: query.q } },
+              { barcode: { contains: query.q } },
             ],
           }
         : {}),
