@@ -4,19 +4,34 @@
 
 - Node.js 24+
 - Corepack enabled (`corepack pnpm -v`)
-- Docker Desktop
-- `.env` configured with `ORION_DB_*` values
+- `.env` configured from `.env.example`
 
-## Local setup
+## Docker-less Quickstart (Default)
 
 ```bash
 corepack pnpm install
-docker compose up -d postgres
+corepack pnpm dev:prepare
+corepack pnpm dev:api
+corepack pnpm dev:web
+```
+
+Default local database is SQLite at `.orion/dev.db`.
+
+## Optional PostgreSQL (Docker)
+
+Set these in `.env`:
+
+```bash
+ORION_DB_PROVIDER=postgresql
+ORION_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/orion_pharma?schema=public
+```
+
+Then run:
+
+```bash
+corepack pnpm dev:up
 corepack pnpm db:migrate
-corepack pnpm --filter @orion/api prisma:verify
 corepack pnpm --filter @orion/api prisma db seed
-corepack pnpm --filter @orion/api start:dev
-corepack pnpm --filter @orion/web dev
 ```
 
 ## Health check
@@ -29,27 +44,18 @@ corepack pnpm --filter @orion/web dev
 corepack pnpm lint
 corepack pnpm typecheck
 corepack pnpm test
-corepack pnpm --filter @orion/api build
-corepack pnpm --filter @orion/web build
+corepack pnpm build
 ```
 
-## Docker run
+## RunPack evidence
 
 ```bash
-corepack pnpm dev:up
+pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/runpack.ps1
 ```
 
-Services:
-- Web: `http://localhost:3000`
-- API: `http://localhost:3001/api/health`
-- PostgreSQL: `localhost:5432`
-
-## Common devops commands
+Optional Docker validation in RunPack:
 
 ```bash
-corepack pnpm dev:up
-corepack pnpm dev:down
-corepack pnpm db:migrate
-corepack pnpm db:reset
-corepack pnpm --filter @orion/api prisma:verify
+$env:ORION_RUNPACK_USE_DOCKER = "1"
+pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/runpack.ps1
 ```

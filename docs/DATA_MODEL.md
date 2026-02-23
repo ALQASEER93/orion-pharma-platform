@@ -17,4 +17,10 @@ Prisma schema is defined in `apps/api/prisma/schema.prisma`.
 - `tenant_id` appears on tenant-owned tables.
 - Access control uses JWT tenant claim + request `x-tenant-id` header.
 - Role names are unique per tenant (`@@unique([tenantId, name])`).
-- Audit records preserve before/after payloads in `jsonb`.
+- Audit records preserve before/after payloads as Prisma `Json`.
+
+## Database provider strategy
+
+- Local default: SQLite (`apps/api/prisma/schema.prisma`)
+- Optional PostgreSQL: `apps/api/prisma/schema.postgres.prisma`
+- Provider is selected by `ORION_DB_PROVIDER` via `apps/api/scripts/prisma-env.mjs`

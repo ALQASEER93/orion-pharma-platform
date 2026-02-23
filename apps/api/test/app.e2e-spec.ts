@@ -7,13 +7,18 @@ import { AppModule } from './../src/app.module';
 describe('Health (e2e)', () => {
   let app: INestApplication;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     await app.init();
+  });
+
+  afterAll(async () => {
+    await app.close();
   });
 
   it('/api/health (GET)', () => {

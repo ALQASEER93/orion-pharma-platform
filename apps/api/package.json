@@ -15,8 +15,7 @@
     "test:cov": "jest --coverage",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:generate": "node scripts/prisma-env.mjs generate",
-    "prisma:migrate": "node scripts/prisma-env.mjs migrate dev",
-    "prisma:migrate:devops": "node scripts/prisma-env.mjs migrate dev --name devops_hardening",
+    "prisma:migrate": "node scripts/prisma-env.mjs migrate dev --name orion_dev",
     "prisma:deploy": "node scripts/prisma-env.mjs migrate deploy",
     "prisma:reset": "node scripts/prisma-env.mjs migrate reset --force",
     "prisma:verify": "node scripts/verify-migrations.mjs"
