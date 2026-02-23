@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.6.1",
   "scripts": {
-    "dev:prepare": "corepack pnpm --filter @orion/api prisma:deploy && corepack pnpm --filter @orion/api prisma db seed",
+    "quickgate": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/quickgate.ps1",
+    "dev:prepare": "corepack pnpm --filter @orion/api prisma:deploy && corepack pnpm --filter @orion/api prisma:seed",
     "dev:api": "corepack pnpm --filter @orion/api start:dev",
     "dev:web": "corepack pnpm --filter @orion/web dev",
     "dev:up": "docker compose up -d --build",

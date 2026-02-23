@@ -27,6 +27,16 @@ corepack pnpm --filter @orion/api prisma:seed
 
 You can also point `ORION_DATABASE_URL` to a hosted PostgreSQL instance without using Docker.
 
+## CI Policy
+
+- QuickGate runs on every PR push (`scripts/quickgate.ps1`): install + lint + typecheck + unit tests.
+- RunPack remains the merge gate before merge and for post-merge verification.
+
+## Repo Skills
+
+- `.agents/skills/orion-runpack-gate/SKILL.md`
+- `.agents/skills/orion-merge-safe/SKILL.md`
+
 ## Docs
 
 - `docs/DEVELOPMENT.md`
