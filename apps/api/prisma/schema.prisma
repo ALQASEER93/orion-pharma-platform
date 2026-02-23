@@ -116,8 +116,8 @@ enum InventoryMovementType {
 }
 
 model TherapeuticClass {
-  id        String   @id @default(uuid()) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
   nameAr    String   @map("name_ar")
   nameEn    String   @map("name_en")
   createdAt DateTime @default(now()) @map("created_at")
@@ -129,8 +129,8 @@ model TherapeuticClass {
 }
 
 model DosageForm {
-  id        String   @id @default(uuid()) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
   nameAr    String   @map("name_ar")
   nameEn    String   @map("name_en")
   createdAt DateTime @default(now()) @map("created_at")
@@ -142,8 +142,8 @@ model DosageForm {
 }
 
 model StorageCondition {
-  id        String   @id @default(uuid()) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
   nameAr    String   @map("name_ar")
   nameEn    String   @map("name_en")
   createdAt DateTime @default(now()) @map("created_at")
@@ -155,8 +155,8 @@ model StorageCondition {
 }
 
 model RegulatoryType {
-  id        String   @id @default(uuid()) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
   nameAr    String   @map("name_ar")
   nameEn    String   @map("name_en")
   createdAt DateTime @default(now()) @map("created_at")
@@ -168,12 +168,12 @@ model RegulatoryType {
 }
 
 model Product {
-  id                 String                @id @default(uuid()) @db.Uuid
-  tenantId           String                @map("tenant_id") @db.Uuid
-  therapeuticClassId String?               @map("therapeutic_class_id") @db.Uuid
-  dosageFormId       String?               @map("dosage_form_id") @db.Uuid
-  storageConditionId String?               @map("storage_condition_id") @db.Uuid
-  regulatoryTypeId   String?               @map("regulatory_type_id") @db.Uuid
+  id                 String                @id @default(uuid())
+  tenantId           String                @map("tenant_id")
+  therapeuticClassId String?               @map("therapeutic_class_id")
+  dosageFormId       String?               @map("dosage_form_id")
+  storageConditionId String?               @map("storage_condition_id")
+  regulatoryTypeId   String?               @map("regulatory_type_id")
   nameAr             String                @map("name_ar")
   nameEn             String                @map("name_en")
   barcode            String
@@ -196,17 +196,17 @@ model Product {
 }
 
 model InventoryMovement {
-  id           String                @id @default(uuid()) @db.Uuid
-  tenantId     String                @map("tenant_id") @db.Uuid
-  branchId     String                @map("branch_id") @db.Uuid
-  productId    String                @map("product_id") @db.Uuid
+  id           String                @id @default(uuid())
+  tenantId     String                @map("tenant_id")
+  branchId     String                @map("branch_id")
+  productId    String                @map("product_id")
   batchNo      String?               @map("batch_no")
   expiryDate   DateTime?             @map("expiry_date")
   movementType InventoryMovementType @map("movement_type")
   quantity     Int
   reason       String?
   createdAt    DateTime              @default(now()) @map("created_at")
-  createdBy    String?               @map("created_by") @db.Uuid
+  createdBy    String?               @map("created_by")
   tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branch       Branch                @relation(fields: [branchId], references: [id], onDelete: Restrict)
   product      Product               @relation(fields: [productId], references: [id], onDelete: Restrict)
