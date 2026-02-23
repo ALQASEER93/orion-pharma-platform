@@ -15,3 +15,16 @@
 4. Tenant isolation middleware resolves `x-tenant-id` context.
 5. Permission guard enforces RBAC with `@Permissions(...)` metadata.
 6. Prisma persists all tenant-scoped entities in PostgreSQL.
+
+## Tech Debt
+
+- Nest warning tracked:
+  - `WARN [LegacyRouteConverter] Unsupported route path: "/api/*"...`
+  - Current impact: none on runtime behavior in ORION PHARMA flows.
+  - Planned resolution: investigate Nest version/plugin compatibility and route prefix handling in a dedicated tech-debt task.
+
+## Planned Migration
+
+- Prisma v7 upgrade is explicitly deferred in this phase.
+- Reason: keep delivery risk low while stabilizing RunPack governance and release flow.
+- Action later: schedule a controlled migration task with CI hardening and compatibility verification.

@@ -3,10 +3,8 @@ WORKDIR /workspace
 RUN corepack enable
 
 COPY package.json pnpm-workspace.yaml ./
-COPY apps/web/package.json apps/web/package.json
-RUN pnpm install --filter @orion/web... --frozen-lockfile=false
-
 COPY apps/web ./apps/web
+RUN pnpm install --filter @orion/web... --frozen-lockfile=false
 RUN pnpm --filter @orion/web build
 
 FROM node:24-alpine AS runner

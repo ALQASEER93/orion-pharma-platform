@@ -56,13 +56,14 @@ function main() {
     throw new Error('Missing Prisma args. Example: node scripts/prisma-env.mjs migrate dev');
   }
 
-  const databaseUrl = ensureDatabaseUrl();
+  const isGenerate = args[0] === 'generate';
+  const databaseUrl = isGenerate ? undefined : ensureDatabaseUrl();
   const result = spawnSync('prisma', args, {
     stdio: 'inherit',
     shell: process.platform === 'win32',
     env: {
       ...process.env,
-      DATABASE_URL: databaseUrl,
+      ...(databaseUrl ? { DATABASE_URL: databaseUrl } : {}),
     },
   });
 
