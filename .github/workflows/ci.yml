@@ -84,7 +84,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: corepack pnpm -w install --frozen-lockfile
+        run: corepack pnpm install --frozen-lockfile
 
       - name: Prepare SQLite directory
         run: mkdir -p .orion
@@ -122,7 +122,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: corepack pnpm -w install --frozen-lockfile
+        run: corepack pnpm install --frozen-lockfile
 
       - name: Build Web
         run: corepack pnpm --filter @orion/web build
@@ -148,7 +148,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: corepack pnpm -w install --frozen-lockfile
+        run: corepack pnpm install --frozen-lockfile
 
       - name: Shared tooling checks
         run: |
