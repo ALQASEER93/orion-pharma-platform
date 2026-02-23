@@ -5,6 +5,7 @@ import { Server } from 'http';
 import { AppModule } from '../src/app.module';
 
 const tenantId = '11111111-1111-1111-1111-111111111111';
+const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'Admin@123';
 
 function ensureDatabaseUrl() {
   if (process.env.DATABASE_URL) {
@@ -40,11 +41,14 @@ describe('Products (e2e smoke)', () => {
   it('login + list products', async () => {
     const server = app.getHttpServer() as Server;
 
-    const loginResponse = await request(server).post('/api/auth/login').send({
-      email: 'admin@orion.local',
-      password: 'Admin@123',
-      tenantId,
-    });
+    const loginResponse = await request(server)
+      .post('/api/auth/login')
+      .send({
+        email: 'admin@orion.local',
+        password: adminPassword,
+        tenantId,
+      })
+      .set('x-tenant-id', tenantId);
 
     expect(loginResponse.status).toBe(201);
     expect(loginResponse.body.access_token).toBeTruthy();
