@@ -1,42 +1,48 @@
-version: '3.9'
 services:
   postgres:
     image: postgres:16
     container_name: orion-postgres
-    restart: unless-stopped
+    restart: always
     env_file:
       - .env
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${ORION_DB_NAME}
+      POSTGRES_USER: ${ORION_DB_USER}
+      POSTGRES_PASSWORD: ${ORION_DB_PASSWORD}
     ports:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${ORION_DB_USER} -d ${ORION_DB_NAME}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     container_name: orion-api
-    restart: unless-stopped
+    restart: always
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      DATABASE_URL: postgresql://${ORION_DB_USER}:${ORION_DB_PASSWORD}@postgres:5432/${ORION_DB_NAME}?schema=public
       PORT: 3001
     ports:
       - '3001:3001'
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   web:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
     container_name: orion-web
-    restart: unless-stopped
+    restart: always
     env_file:
       - .env
     environment:

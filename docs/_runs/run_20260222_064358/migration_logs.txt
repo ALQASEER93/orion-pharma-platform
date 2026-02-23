@@ -1,0 +1,42 @@
+
+== postgres health status ==
+error during connect: Get "http://%2F%2F.%2Fpipe%2FdockerDesktopLinuxEngine/v1.51/containers/json?filters=%7B%22label%22%3A%7B%22com.docker.compose.config-hash%22%3Atrue%2C%22com.docker.compose.oneoff%3DFalse%22%3Atrue%2C%22com.docker.compose.project%3Dorion-pharma-platform%22%3Atrue%7D%7D": open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.
+
+== prisma migrate ==
+
+> orion-pharma-platform@0.1.0 db:migrate
+> corepack pnpm --filter @orion/api prisma:migrate:devops
+
+
+> @orion/api@0.1.0 prisma:migrate:devops D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api
+> node scripts/prisma-env.mjs migrate dev --name devops_hardening
+
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "orion_pharma", schema "public" at "localhost:5432"
+
+Error: P1001: Can't reach database server at `localhost:5432`
+
+Please make sure your database server is running at `localhost:5432`.
+D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @orion/api@0.1.0 prisma:migrate:devops: `node scripts/prisma-env.mjs migrate dev --name devops_hardening`
+Exit status 1
+
+== prisma verify ==
+
+> @orion/api@0.1.0 prisma:verify D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api
+> node scripts/verify-migrations.mjs
+
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "orion_pharma", schema "public" at "localhost:5432"
+Error: P1001: Can't reach database server at `localhost:5432`
+
+Please make sure your database server is running at `localhost:5432`.
+D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @orion/api@0.1.0 prisma:verify: `node scripts/verify-migrations.mjs`
+Exit status 1

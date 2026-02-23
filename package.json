@@ -4,6 +4,10 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.6.1",
   "scripts": {
+    "dev:up": "docker compose up -d --build",
+    "dev:down": "docker compose down",
+    "db:migrate": "corepack pnpm --filter @orion/api prisma:migrate:devops",
+    "db:reset": "corepack pnpm --filter @orion/api prisma:reset",
     "lint": "corepack pnpm -r --if-present run lint",
     "typecheck": "corepack pnpm -r --if-present run typecheck",
     "test": "corepack pnpm -r --if-present run test",
