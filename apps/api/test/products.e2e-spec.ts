@@ -94,6 +94,26 @@ async function ensureAdminFixture() {
     },
   });
 
+  const productsReadPermission = await prisma.permission.upsert({
+    where: { key: 'products.read' },
+    update: {},
+    create: { key: 'products.read' },
+  });
+
+  await prisma.rolePermission.upsert({
+    where: {
+      roleId_permissionId: {
+        roleId: role.id,
+        permissionId: productsReadPermission.id,
+      },
+    },
+    update: {},
+    create: {
+      roleId: role.id,
+      permissionId: productsReadPermission.id,
+    },
+  });
+
   await prisma.branch.upsert({
     where: { id: branchId },
     update: {
