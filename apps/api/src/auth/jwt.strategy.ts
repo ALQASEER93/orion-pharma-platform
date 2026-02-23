@@ -18,8 +18,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       ignoreExpiration: false,
       secretOrKey:
         process.env.ORION_JWT_SECRET ??
-        process.env.JWT_SECRET ??
-        'change_me_in_production',
+        'ORION_local_dev_jwt_secret_change_in_production',
     });
   }
 

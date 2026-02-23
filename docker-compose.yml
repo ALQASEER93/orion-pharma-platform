@@ -29,7 +29,8 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://${ORION_DB_USER}:${ORION_DB_PASSWORD}@postgres:5432/${ORION_DB_NAME}?schema=public
+      ORION_DB_PROVIDER: postgresql
+      ORION_DATABASE_URL: postgresql://${ORION_DB_USER}:${ORION_DB_PASSWORD}@postgres:5432/${ORION_DB_NAME}?schema=public
       ORION_PORT: 3001
     ports:
       - '3001:3001'
@@ -46,8 +47,7 @@ services:
     env_file:
       - .env
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://api:3001/api
-      NEXT_PUBLIC_API_BASE_URL_BROWSER: http://localhost:3001/api
+      ORION_WEB_API_BASE_URL: http://api:3001/api
     ports:
       - '3000:3000'
     depends_on:

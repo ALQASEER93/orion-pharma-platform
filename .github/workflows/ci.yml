@@ -8,28 +8,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: orion
-          POSTGRES_PASSWORD: orion
-          POSTGRES_DB: orion_test
-        options: >-
-          --health-cmd "pg_isready -U orion -d orion_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-        ports:
-          - 5432:5432
     env:
-      ORION_DB_HOST: localhost
-      ORION_DB_PORT: 5432
-      ORION_DB_NAME: orion_test
-      ORION_DB_USER: orion
-      ORION_DB_PASSWORD: orion
+      ORION_DB_PROVIDER: sqlite
+      ORION_DATABASE_URL: file:${{ github.workspace }}/.orion/ci.db
       ORION_JWT_SECRET: ORION_CI_jwt_secret_2026_rotate_me_9f3ab17
-      DATABASE_URL: postgresql://orion:orion@localhost:5432/orion_test?schema=public
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,6 +29,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile=false
+
+      - name: Prepare SQLite directory
+        run: mkdir -p .orion
 
       - name: Lint
         run: pnpm lint

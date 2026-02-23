@@ -4,24 +4,10 @@ import request from 'supertest';
 import { Server } from 'http';
 import { AppModule } from './../src/app.module';
 
-function ensureDatabaseUrl() {
-  if (process.env.DATABASE_URL) {
-    return;
-  }
-
-  const host = process.env.ORION_DB_HOST ?? 'localhost';
-  const port = process.env.ORION_DB_PORT ?? '5432';
-  const db = process.env.ORION_DB_NAME ?? 'orion_pharma';
-  const user = process.env.ORION_DB_USER ?? 'postgres';
-  const password = process.env.ORION_DB_PASSWORD ?? 'postgres';
-  process.env.DATABASE_URL = `postgresql://${user}:${password}@${host}:${port}/${db}?schema=public`;
-}
-
 describe('Health (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    ensureDatabaseUrl();
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();

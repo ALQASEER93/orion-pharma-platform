@@ -13,14 +13,9 @@ import { JwtStrategy } from './jwt.strategy';
     JwtModule.register({
       secret:
         process.env.ORION_JWT_SECRET ??
-        process.env.JWT_SECRET ??
-        'change_me_in_production',
+        'ORION_local_dev_jwt_secret_change_in_production',
       signOptions: {
-        expiresIn: Number(
-          process.env.ORION_JWT_EXPIRES_IN_SECONDS ??
-            process.env.JWT_EXPIRES_IN_SECONDS ??
-            86400,
-        ),
+        expiresIn: Number(process.env.ORION_JWT_EXPIRES_IN_SECONDS ?? 86400),
       },
     }),
   ],

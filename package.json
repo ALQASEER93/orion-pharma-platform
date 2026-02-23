@@ -4,9 +4,12 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.6.1",
   "scripts": {
+    "dev:prepare": "corepack pnpm --filter @orion/api prisma:deploy && corepack pnpm --filter @orion/api prisma db seed",
+    "dev:api": "corepack pnpm --filter @orion/api start:dev",
+    "dev:web": "corepack pnpm --filter @orion/web dev",
     "dev:up": "docker compose up -d --build",
     "dev:down": "docker compose down",
-    "db:migrate": "corepack pnpm --filter @orion/api prisma:migrate:devops",
+    "db:migrate": "corepack pnpm --filter @orion/api prisma:migrate",
     "db:reset": "corepack pnpm --filter @orion/api prisma:reset",
     "lint": "corepack pnpm -r --if-present run lint",
     "typecheck": "corepack pnpm -r --if-present run typecheck",

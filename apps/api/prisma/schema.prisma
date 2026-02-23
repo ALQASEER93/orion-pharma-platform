@@ -3,12 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = env("ORION_DATABASE_URL")
 }
 
 model Tenant {
-  id               String      @id @default(uuid()) @db.Uuid
+  id               String      @id @default(uuid())
   name             String
   subscriptionPlan String      @map("subscription_plan")
   createdAt        DateTime    @default(now()) @map("created_at")
@@ -27,8 +27,8 @@ model Tenant {
 }
 
 model Branch {
-  id        String   @id @default(uuid()) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
   name      String
   location  String
   createdAt DateTime @default(now()) @map("created_at")
@@ -40,10 +40,10 @@ model Branch {
 }
 
 model User {
-  id           String   @id @default(uuid()) @db.Uuid
-  tenantId     String   @map("tenant_id") @db.Uuid
-  branchId     String?  @map("branch_id") @db.Uuid
-  roleId       String   @map("role_id") @db.Uuid
+  id           String   @id @default(uuid())
+  tenantId     String   @map("tenant_id")
+  branchId     String?  @map("branch_id")
+  roleId       String   @map("role_id")
   email        String   @unique
   passwordHash String   @map("password_hash")
   isActive     Boolean  @default(true) @map("is_active")
@@ -58,8 +58,8 @@ model User {
 }
 
 model Role {
-  id              String           @id @default(uuid()) @db.Uuid
-  tenantId        String           @map("tenant_id") @db.Uuid
+  id              String           @id @default(uuid())
+  tenantId        String           @map("tenant_id")
   name            String
   tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   users           User[]
@@ -70,7 +70,7 @@ model Role {
 }
 
 model Permission {
-  id              String           @id @default(uuid()) @db.Uuid
+  id              String           @id @default(uuid())
   key             String           @unique
   rolePermissions RolePermission[]
 
@@ -78,8 +78,8 @@ model Permission {
 }
 
 model RolePermission {
-  roleId       String     @map("role_id") @db.Uuid
-  permissionId String     @map("permission_id") @db.Uuid
+  roleId       String     @map("role_id")
+  permissionId String     @map("permission_id")
   role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
@@ -88,14 +88,14 @@ model RolePermission {
 }
 
 model AuditLog {
-  id        String    @id @default(uuid()) @db.Uuid
-  tenantId  String    @map("tenant_id") @db.Uuid
-  userId    String?   @map("user_id") @db.Uuid
+  id        String    @id @default(uuid())
+  tenantId  String    @map("tenant_id")
+  userId    String?   @map("user_id")
   action    String
   entity    String
   entityId  String    @map("entity_id")
-  before    Json?     @db.JsonB
-  after     Json?     @db.JsonB
+  before    Json?
+  after     Json?
   createdAt DateTime  @default(now()) @map("created_at")
   tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
