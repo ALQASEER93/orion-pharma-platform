@@ -21,6 +21,8 @@ async function main() {
     'products.manage',
     'suppliers.read',
     'suppliers.manage',
+    'customers.read',
+    'customers.manage',
     'purchase_orders.read',
     'purchase_orders.manage',
     'goods_receipts.read',

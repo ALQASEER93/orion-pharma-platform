@@ -12,6 +12,7 @@ import { ProductsModule } from './products/products.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { TaxonomyModule } from './taxonomy/taxonomy.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
+import { CustomersModule } from './customers/customers.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { GoodsReceiptsModule } from './goods-receipts/goods-receipts.module';
 import { ProcurementTransactionsModule } from './procurement-transactions/procurement-transactions.module';
@@ -26,6 +27,7 @@ import { ProcurementReportsModule } from './procurement-reports/procurement-repo
     ProductsModule,
     InventoryModule,
     SuppliersModule,
+    CustomersModule,
     PurchaseOrdersModule,
     GoodsReceiptsModule,
     ProcurementTransactionsModule,
