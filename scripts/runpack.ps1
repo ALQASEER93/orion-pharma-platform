@@ -165,7 +165,7 @@ try {
 
     if ($hasCanonicalE2E) {
       $apiE2ERunMode = 'package-script:test:e2e'
-      Invoke-LoggedCommand -Name 'api_e2e' -Command 'corepack' -Arguments @('pnpm', '--filter', '@orion/api', 'run', 'test:e2e') -Critical | Out-Null
+      Invoke-LoggedCommand -Name 'api_e2e' -Command 'corepack' -Arguments @('pnpm', '--filter', '@orion/api', 'run', 'test:e2e', '--runInBand', '--testTimeout=30000') -Critical | Out-Null
     }
     elseif (Test-Path (Join-Path $apiDir 'test/jest-e2e.json')) {
       $apiE2ERunMode = 'jest-fallback'
