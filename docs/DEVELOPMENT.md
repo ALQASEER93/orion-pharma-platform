@@ -36,6 +36,10 @@ SQLite local file is created at `.orion/dev.db`.
 
 ## Validation
 
+QuickGate (fast PR checks):
+
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quickgate.ps1`
+
 Use RunPack for reproducible evidence:
 
 - `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/runpack.ps1`

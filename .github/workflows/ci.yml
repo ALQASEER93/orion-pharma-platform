@@ -5,9 +5,64 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  changes:
     runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      web: ${{ steps.filter.outputs.web }}
+      shared: ${{ steps.filter.outputs.shared }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+            web:
+              - 'apps/web/**'
+            shared:
+              - 'scripts/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/**'
+              - 'tsconfig*.json'
+              - 'packages/**'
+
+  quickgate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Run QuickGate
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/quickgate.ps1
+
+  api:
+    runs-on: ubuntu-latest
+    needs: [changes, quickgate]
+    if: needs.changes.outputs.api == 'true' || needs.changes.outputs.shared == 'true'
     env:
       ORION_DB_PROVIDER: sqlite
       ORION_DATABASE_URL: file:${{ github.workspace }}/.orion/ci.db
@@ -26,33 +81,83 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile=false
+        run: corepack pnpm install --frozen-lockfile
 
       - name: Prepare SQLite directory
         run: mkdir -p .orion
 
-      - name: Lint
-        run: pnpm lint
-
       - name: Prisma generate
-        run: pnpm --filter @orion/api prisma:generate
+        run: corepack pnpm --filter @orion/api prisma:generate
 
       - name: Prisma deploy
-        run: pnpm --filter @orion/api prisma:deploy
+        run: corepack pnpm --filter @orion/api prisma:deploy
 
       - name: Prisma seed
-        run: pnpm --filter @orion/api prisma db seed
-
-      - name: Type check
-        run: pnpm typecheck
-
-      - name: Run tests
-        run: pnpm test
+        run: corepack pnpm --filter @orion/api prisma:seed
 
       - name: Build API
-        run: pnpm --filter @orion/api build
+        run: corepack pnpm --filter @orion/api build
+
+  web:
+    runs-on: ubuntu-latest
+    needs: [changes, quickgate]
+    if: needs.changes.outputs.web == 'true' || needs.changes.outputs.shared == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile
 
       - name: Build Web
-        run: pnpm --filter @orion/web build
+        run: corepack pnpm --filter @orion/web build
+
+  shared-tooling:
+    runs-on: ubuntu-latest
+    needs: [changes, quickgate]
+    if: needs.changes.outputs.shared == 'true'
+    env:
+      ORION_DB_PROVIDER: sqlite
+      ORION_DATABASE_URL: file:${{ github.workspace }}/.orion/ci.db
+      ORION_JWT_SECRET: ORION_CI_jwt_secret_2026_rotate_me_9f3ab17
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Prisma generate
+        run: corepack pnpm --filter @orion/api prisma:generate
+
+      - name: Shared tooling checks
+        run: |
+          corepack pnpm -w lint
+          corepack pnpm -w typecheck
