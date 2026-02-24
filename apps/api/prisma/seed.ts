@@ -21,6 +21,8 @@ async function main() {
     'products.manage',
     'suppliers.read',
     'suppliers.manage',
+    'purchase_orders.read',
+    'purchase_orders.manage',
     'inventory.read',
     'inventory.adjust',
     'inventory.override_negative',

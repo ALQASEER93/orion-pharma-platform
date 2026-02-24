@@ -1,3 +1,8 @@
+---
+name: orion-merge-safe
+description: Guarded PR merge workflow requiring green checks, head SHA match, and post-merge RunPack verification.
+---
+
 # ORION Merge Safe
 
 Use this skill when a PR is ready and you need a guarded merge with post-merge verification.
