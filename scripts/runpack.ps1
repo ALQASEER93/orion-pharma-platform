@@ -68,6 +68,8 @@ function Write-StatusJson {
     run_name = $runName
     run_dir = "docs/_runs/$runName"
     zip_path = "docs/_runs/$runName.zip"
+    logs_zip_path = "docs/_runs/${runName}_logs.zip"
+    advisor_zip_path = "docs/_runs/${runName}_advisor.zip"
     created_at = (Get-Date).ToString('o')
     overall_pass = ($Overall -eq 'passed')
     overall = $Overall
@@ -145,7 +147,53 @@ try {
   Invoke-LoggedCommand -Name 'lint' -Command 'corepack' -Arguments @('pnpm', 'lint') -Critical | Out-Null
   Invoke-LoggedCommand -Name 'typecheck' -Command 'corepack' -Arguments @('pnpm', 'typecheck') -Critical | Out-Null
   Invoke-LoggedCommand -Name 'test' -Command 'corepack' -Arguments @('pnpm', 'test') -Critical | Out-Null
-  Invoke-LoggedCommand -Name 'api_health_e2e' -Command 'corepack' -Arguments @('pnpm', '--filter', '@orion/api', 'exec', 'jest', '--config', './test/jest-e2e.json', '--runInBand', 'app.e2e-spec.ts') -Critical | Out-Null
+  $apiDir = Join-Path $repoRoot 'apps/api'
+  $apiPackageJsonPath = Join-Path $apiDir 'package.json'
+  $apiE2ERunMode = 'skipped'
+
+  if (Test-Path $apiDir) {
+    $hasCanonicalE2E = $false
+    if (Test-Path $apiPackageJsonPath) {
+      try {
+        $apiPackage = Get-Content -Path $apiPackageJsonPath -Raw | ConvertFrom-Json
+        $hasCanonicalE2E = -not [string]::IsNullOrWhiteSpace($apiPackage.scripts.'test:e2e')
+      }
+      catch {
+        $_ | Out-String | Add-Content -Path (Join-Path $logsDir 'api_e2e.log') -Encoding UTF8
+      }
+    }
+
+    if ($hasCanonicalE2E) {
+      $apiE2ERunMode = 'package-script:test:e2e'
+      Invoke-LoggedCommand -Name 'api_e2e' -Command 'corepack' -Arguments @('pnpm', '--filter', '@orion/api', 'run', 'test:e2e') -Critical | Out-Null
+    }
+    elseif (Test-Path (Join-Path $apiDir 'test/jest-e2e.json')) {
+      $apiE2ERunMode = 'jest-fallback'
+      Invoke-LoggedCommand -Name 'api_e2e' -Command 'corepack' -Arguments @('pnpm', '--filter', '@orion/api', 'exec', 'jest', '--config', './test/jest-e2e.json', '--runInBand') -Critical | Out-Null
+    }
+    else {
+      $steps['api_e2e'] = [ordered]@{
+        exit_code = 0
+        duration_seconds = 0
+        log = 'logs/api_e2e.log'
+        command = 'api e2e skipped (missing test:e2e script and jest e2e config)'
+      }
+      $exitCodes['api_e2e'] = 0
+      'API e2e skipped: missing test:e2e script and test/jest-e2e.json.' | Set-Content -Path (Join-Path $logsDir 'api_e2e.log') -Encoding UTF8
+    }
+  }
+  else {
+    $steps['api_e2e'] = [ordered]@{
+      exit_code = 0
+      duration_seconds = 0
+      log = 'logs/api_e2e.log'
+      command = 'api e2e skipped (apps/api not present)'
+    }
+    $exitCodes['api_e2e'] = 0
+    'API e2e skipped: apps/api not present.' | Set-Content -Path (Join-Path $logsDir 'api_e2e.log') -Encoding UTF8
+  }
+
+  $steps['api_e2e']['mode'] = $apiE2ERunMode
   Invoke-LoggedCommand -Name 'build' -Command 'corepack' -Arguments @('pnpm', 'build') -Critical | Out-Null
 }
 catch {
@@ -160,7 +208,7 @@ $checks['prisma_seed'] = [ordered]@{ exit_code = $exitCodes['prisma_seed'] }
 $checks['lint'] = [ordered]@{ exit_code = $exitCodes['lint'] }
 $checks['typecheck'] = [ordered]@{ exit_code = $exitCodes['typecheck'] }
 $checks['test'] = [ordered]@{ exit_code = $exitCodes['test'] }
-$checks['api_health_e2e'] = [ordered]@{ exit_code = $exitCodes['api_health_e2e'] }
+$checks['api_e2e'] = [ordered]@{ exit_code = $exitCodes['api_e2e'] }
 $checks['build'] = [ordered]@{ exit_code = $exitCodes['build'] }
 
 Write-StatusJson -Overall $overall -FatalError $fatalError
@@ -191,7 +239,7 @@ $reportLines = @(
   "- lint exit: $($exitCodes['lint'])",
   "- typecheck exit: $($exitCodes['typecheck'])",
   "- test exit: $($exitCodes['test'])",
-  "- api health e2e exit: $($exitCodes['api_health_e2e'])",
+  "- api e2e exit: $($exitCodes['api_e2e'])",
   "- build exit: $($exitCodes['build'])",
   '',
   '## Docker',
@@ -222,9 +270,41 @@ else {
 
 $reportLines | Set-Content -Path $reportPath -Encoding UTF8
 
+$advisorReadmePath = Join-Path $artifactsDir 'ADVISOR_README.md'
+$advisorLines = @(
+  '# Advisor Artifact Bundle',
+  '',
+  'This bundle is produced by `scripts/runpack.ps1` for merge gating evidence.',
+  '',
+  '## Run',
+  "- Run name: $runName",
+  "- Branch: $branch",
+  "- Commit: $commit",
+  "- Generated at: $((Get-Date).ToString('o'))",
+  '',
+  '## Included Files',
+  '- report.md: Human-readable gate summary.',
+  '- ../json/status.json: Machine-readable run status (`overall_pass`, `blockers`, checks, steps).',
+  '- ../json/exit_codes.json: Step exit code map.',
+  '',
+  '## Gate Criteria',
+  '- overall_pass must be true',
+  '- blockers must be empty'
+)
+$advisorLines | Set-Content -Path $advisorReadmePath -Encoding UTF8
+
 $zipPath = Join-Path $repoRoot "docs/_runs/$runName.zip"
 if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
 Compress-Archive -Path $runDir -DestinationPath $zipPath -Force
+
+$logsZipPath = Join-Path $repoRoot "docs/_runs/${runName}_logs.zip"
+if (Test-Path $logsZipPath) { Remove-Item -Force $logsZipPath }
+Compress-Archive -Path $logsDir -DestinationPath $logsZipPath -Force
+
+$advisorZipPath = Join-Path $repoRoot "docs/_runs/${runName}_advisor.zip"
+if (Test-Path $advisorZipPath) { Remove-Item -Force $advisorZipPath }
+Compress-Archive -Path $artifactsDir -DestinationPath $advisorZipPath -Force
+
 Set-Content -Path (Join-Path $repoRoot 'docs/_runs/LATEST.txt') -Value $runName -Encoding UTF8
 
 if ($overall -eq 'passed') {

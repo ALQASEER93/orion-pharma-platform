@@ -9,5 +9,6 @@ coverage
 docs/_runs/run_*/
 docs/_runs/*.zip
 docs/_runs/LATEST.txt
+docs/_runs/CURRENT_RUN.txt
 .orion/*
 !.orion/.keep
