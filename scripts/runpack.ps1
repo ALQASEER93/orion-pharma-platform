@@ -66,10 +66,10 @@ function Write-StatusJson {
 
   $status = [ordered]@{
     run_name = $runName
-    run_dir = "docs/_runs/$runName"
-    zip_path = "docs/_runs/$runName.zip"
-    logs_zip_path = "docs/_runs/${runName}_logs.zip"
-    advisor_zip_path = "docs/_runs/${runName}_advisor.zip"
+    run_dir = "$outputRootRelative/$runName"
+    zip_path = "$outputRootRelative/$runName.zip"
+    logs_zip_path = "$outputRootRelative/${runName}_logs.zip"
+    advisor_zip_path = "$outputRootRelative/${runName}_advisor.zip"
     created_at = (Get-Date).ToString('o')
     overall_pass = ($Overall -eq 'passed')
     overall = $Overall
@@ -88,13 +88,55 @@ function Write-StatusJson {
 $repoRoot = Get-RepoRoot
 Set-Location $repoRoot
 
+$outputRootRelative = 'docs/_runs'
+$docsRunsRoot = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $outputRootRelative))
+$docsRunsRootNormalized = $docsRunsRoot.TrimEnd('\','/') + [System.IO.Path]::DirectorySeparatorChar
+
+function Assert-NoLegacyDocsRunsToken {
+  param([Parameter(Mandatory = $true)][string]$PathValue)
+
+  if ($PathValue -match '(^|[\\/])docs_runs([\\/]|$)') {
+    throw "Legacy evidence path detected ('$PathValue'). RunPack only supports docs/_runs."
+  }
+}
+
+function Assert-DocsRunsPath {
+  param([string]$Path)
+
+  Assert-NoLegacyDocsRunsToken -PathValue $Path
+
+  $full = [System.IO.Path]::GetFullPath($Path)
+  $fullNormalized = $full.TrimEnd('\','/') + [System.IO.Path]::DirectorySeparatorChar
+
+  if (-not $fullNormalized.StartsWith($docsRunsRootNormalized, [System.StringComparison]::InvariantCultureIgnoreCase)) {
+    throw "Runpack output path '$Path' ($full) resolves outside $docsRunsRoot."
+  }
+
+  if ($full -match '[\\/](docs_runs)(?:[\\/]|$)') {
+    throw "Runpack output path '$Path' ($full) resolves to docs_runs; aborting."
+  }
+}
+
 $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $runName = "run_$timestamp"
-$runDir = Join-Path $repoRoot "docs/_runs/$runName"
+$runDir = Join-Path $docsRunsRoot $runName
 $logsDir = Join-Path $runDir 'logs'
 $artifactsDir = Join-Path $runDir 'artifacts'
 $jsonDir = Join-Path $runDir 'json'
+$zipPath = Join-Path $docsRunsRoot "$runName.zip"
+$logsZipPath = Join-Path $docsRunsRoot "${runName}_logs.zip"
+$advisorZipPath = Join-Path $docsRunsRoot "${runName}_advisor.zip"
+$latestPath = Join-Path $docsRunsRoot 'LATEST.txt'
 
+foreach ($pathValue in @($outputRootRelative, $runName, $runDir, $logsDir, $artifactsDir, $jsonDir, $zipPath, $logsZipPath, $advisorZipPath, $latestPath)) {
+  Assert-NoLegacyDocsRunsToken -PathValue ([string]$pathValue)
+}
+
+foreach ($path in @($runDir, $logsDir, $artifactsDir, $jsonDir, $zipPath, $logsZipPath, $advisorZipPath, $latestPath)) {
+  Assert-DocsRunsPath $path
+}
+
+New-Item -ItemType Directory -Force $docsRunsRoot | Out-Null
 New-Item -ItemType Directory -Force $logsDir, $artifactsDir, $jsonDir | Out-Null
 
 $exitCodes = [ordered]@{}
@@ -293,19 +335,16 @@ $advisorLines = @(
 )
 $advisorLines | Set-Content -Path $advisorReadmePath -Encoding UTF8
 
-$zipPath = Join-Path $repoRoot "docs/_runs/$runName.zip"
 if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
 Compress-Archive -Path $runDir -DestinationPath $zipPath -Force
 
-$logsZipPath = Join-Path $repoRoot "docs/_runs/${runName}_logs.zip"
 if (Test-Path $logsZipPath) { Remove-Item -Force $logsZipPath }
 Compress-Archive -Path $logsDir -DestinationPath $logsZipPath -Force
 
-$advisorZipPath = Join-Path $repoRoot "docs/_runs/${runName}_advisor.zip"
 if (Test-Path $advisorZipPath) { Remove-Item -Force $advisorZipPath }
 Compress-Archive -Path $artifactsDir -DestinationPath $advisorZipPath -Force
 
-Set-Content -Path (Join-Path $repoRoot 'docs/_runs/LATEST.txt') -Value $runName -Encoding UTF8
+Set-Content -Path $latestPath -Value $runName -Encoding UTF8
 
 if ($overall -eq 'passed') {
   exit 0
