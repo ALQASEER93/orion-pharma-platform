@@ -49,6 +49,12 @@ export default async function Home() {
           <a className="rounded border border-emerald-700 px-3 py-2 text-emerald-200" href="/stock">
             Stock On Hand
           </a>
+          <a className="rounded border border-orange-700 px-3 py-2 text-orange-200" href="/sales/invoices">
+            Sales Invoices
+          </a>
+          <a className="rounded border border-fuchsia-700 px-3 py-2 text-fuchsia-200" href="/pos">
+            POS Minimal
+          </a>
         </div>
       </section>
     </main>
