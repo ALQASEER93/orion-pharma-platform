@@ -26,6 +26,8 @@ model Tenant {
   suppliers          Supplier[]
   purchaseOrders     PurchaseOrder[]
   purchaseOrderLines PurchaseOrderLine[]
+  goodsReceipts      GoodsReceipt[]
+  goodsReceiptLines  GoodsReceiptLine[]
   documentSequences  DocumentSequence[]
 
   @@map("tenants")
@@ -47,6 +49,7 @@ model Supplier {
   updatedAt            DateTime @updatedAt @map("updated_at")
   tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   purchaseOrders       PurchaseOrder[]
+  goodsReceipts        GoodsReceipt[]
 
   @@unique([tenantId, code])
   @@index([tenantId, nameEn])
@@ -65,6 +68,7 @@ model Branch {
   inventoryMovements InventoryMovement[]
   inventoryBalances  InventoryBalance[]
   purchaseOrders     PurchaseOrder[]
+  goodsReceipts      GoodsReceipt[]
 
   @@map("branches")
 }
@@ -83,6 +87,7 @@ model User {
   role         Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
   auditLogs    AuditLog[]
   inventoryMovements InventoryMovement[]
+  goodsReceiptsCreated GoodsReceipt[]
 
   @@map("users")
 }
@@ -228,6 +233,7 @@ model Product {
   inventoryMovements InventoryMovement[]
   inventoryBalances  InventoryBalance[]
   purchaseOrderLines PurchaseOrderLine[]
+  goodsReceiptLines  GoodsReceiptLine[]
 
   @@unique([tenantId, barcode])
   @@index([tenantId, nameEn])
@@ -251,6 +257,7 @@ model InventoryMovement {
   branch       Branch                @relation(fields: [branchId], references: [id], onDelete: Restrict)
   product      Product               @relation(fields: [productId], references: [id], onDelete: Restrict)
   user         User?                 @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  goodsReceiptLine GoodsReceiptLine?
 
   @@index([tenantId, branchId, productId, batchNo])
   @@map("inventory_movements")
@@ -302,6 +309,7 @@ model PurchaseOrder {
   branch     Branch              @relation(fields: [branchId], references: [id], onDelete: Restrict)
   supplier   Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   lines      PurchaseOrderLine[]
+  goodsReceipts GoodsReceipt[]
 
   @@unique([tenantId, poNumber])
   @@index([tenantId, status, orderedAt])
@@ -315,6 +323,7 @@ model PurchaseOrderLine {
   tenantId        String        @map("tenant_id")
   productId       String        @map("product_id")
   quantity        Int
+  receivedQuantity Int           @default(0) @map("received_quantity")
   unitPrice       Float         @map("unit_price")
   lineTotal       Float         @map("line_total")
   notes           String?
@@ -322,8 +331,61 @@ model PurchaseOrderLine {
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   product         Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+  goodsReceiptLines GoodsReceiptLine[]
 
   @@index([tenantId, purchaseOrderId])
   @@index([tenantId, productId])
   @@map("purchase_order_lines")
+}
+
+model GoodsReceipt {
+  id             String             @id @default(uuid())
+  tenantId       String             @map("tenant_id")
+  branchId       String             @map("branch_id")
+  supplierId     String             @map("supplier_id")
+  purchaseOrderId String            @map("purchase_order_id")
+  grnNumber      String             @map("grn_number")
+  idempotencyKey String             @map("idempotency_key")
+  payloadHash    String             @map("payload_hash")
+  notes          String?
+  receivedAt     DateTime           @default(now()) @map("received_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  createdBy      String?            @map("created_by")
+  tenant         Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch         Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  supplier       Supplier           @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  purchaseOrder  PurchaseOrder      @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  creator        User?              @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  lines          GoodsReceiptLine[]
+
+  @@unique([tenantId, grnNumber])
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, receivedAt])
+  @@index([tenantId, purchaseOrderId])
+  @@map("goods_receipts")
+}
+
+model GoodsReceiptLine {
+  id                String            @id @default(uuid())
+  goodsReceiptId    String            @map("goods_receipt_id")
+  purchaseOrderLineId String          @map("purchase_order_line_id")
+  tenantId          String            @map("tenant_id")
+  productId         String            @map("product_id")
+  inventoryMovementId String?         @unique @map("inventory_movement_id")
+  qtyReceivedNow    Int               @map("qty_received_now")
+  batchNo           String?           @map("batch_no")
+  expiryDate        DateTime?         @map("expiry_date")
+  notes             String?
+  createdAt         DateTime          @default(now()) @map("created_at")
+  goodsReceipt      GoodsReceipt      @relation(fields: [goodsReceiptId], references: [id], onDelete: Cascade)
+  purchaseOrderLine PurchaseOrderLine @relation(fields: [purchaseOrderLineId], references: [id], onDelete: Restrict)
+  tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product           Product           @relation(fields: [productId], references: [id], onDelete: Restrict)
+  inventoryMovement InventoryMovement? @relation(fields: [inventoryMovementId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, goodsReceiptId])
+  @@index([tenantId, purchaseOrderLineId])
+  @@index([tenantId, productId])
+  @@map("goods_receipt_lines")
 }

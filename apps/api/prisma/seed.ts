@@ -23,6 +23,8 @@ async function main() {
     'suppliers.manage',
     'purchase_orders.read',
     'purchase_orders.manage',
+    'goods_receipts.read',
+    'goods_receipts.manage',
     'inventory.read',
     'inventory.adjust',
     'inventory.override_negative',
