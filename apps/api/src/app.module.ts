@@ -17,6 +17,7 @@ import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { GoodsReceiptsModule } from './goods-receipts/goods-receipts.module';
 import { ProcurementTransactionsModule } from './procurement-transactions/procurement-transactions.module';
 import { ProcurementReportsModule } from './procurement-reports/procurement-reports.module';
+import { SalesModule } from './sales/sales.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ProcurementReportsModule } from './procurement-reports/procurement-repo
     GoodsReceiptsModule,
     ProcurementTransactionsModule,
     ProcurementReportsModule,
+    SalesModule,
   ],
   controllers: [HealthController],
   providers: [
