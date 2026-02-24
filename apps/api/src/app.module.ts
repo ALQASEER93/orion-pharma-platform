@@ -11,6 +11,7 @@ import { RoleCheckMiddleware } from './common/middleware/role-check.middleware';
 import { ProductsModule } from './products/products.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { TaxonomyModule } from './taxonomy/taxonomy.module';
+import { SuppliersModule } from './suppliers/suppliers.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { TaxonomyModule } from './taxonomy/taxonomy.module';
     TaxonomyModule,
     ProductsModule,
     InventoryModule,
+    SuppliersModule,
   ],
   controllers: [HealthController],
   providers: [

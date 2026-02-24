@@ -23,8 +23,31 @@ model Tenant {
   products           Product[]
   inventoryMovements InventoryMovement[]
   inventoryBalances  InventoryBalance[]
+  suppliers          Supplier[]
 
   @@map("tenants")
+}
+
+model Supplier {
+  id                   String   @id @default(uuid())
+  tenantId             String   @map("tenant_id")
+  code                 String
+  nameAr               String   @map("name_ar")
+  nameEn               String   @map("name_en")
+  contactName          String?  @map("contact_name")
+  email                String?
+  phone                String?
+  address              String?
+  preferredPaymentTerm String?  @map("preferred_payment_term")
+  isActive             Boolean  @default(true) @map("is_active")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@index([tenantId, nameEn])
+  @@index([tenantId, nameAr])
+  @@map("suppliers")
 }
 
 model Branch {
