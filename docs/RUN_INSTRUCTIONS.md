@@ -53,6 +53,15 @@ corepack pnpm build
 pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/runpack.ps1
 ```
 
+RunPack evidence is written only under `docs/_runs`:
+- `docs/_runs/run_<ts>/` (logs, artifacts, json)
+- `docs/_runs/run_<ts>.zip`
+- `docs/_runs/run_<ts>_logs.zip`
+- `docs/_runs/run_<ts>_advisor.zip`
+- `docs/_runs/LATEST.txt`
+
+`docs_runs` (without underscore) is a legacy path and is blocked by RunPack guardrails.
+
 Optional Docker validation in RunPack:
 
 ```bash
