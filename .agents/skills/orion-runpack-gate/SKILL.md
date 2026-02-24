@@ -1,3 +1,8 @@
+---
+name: orion-runpack-gate
+description: Execute and validate full RunPack artifacts, ensuring overall_pass true with no blockers before merge.
+---
+
 # ORION RunPack Gate
 
 Use this skill when you need to validate merge readiness using full repository evidence.

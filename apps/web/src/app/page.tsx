@@ -37,6 +37,9 @@ export default async function Home() {
           API health: <span className="font-semibold text-emerald-300">{health}</span>
         </div>
         <div className="flex flex-wrap gap-3 text-sm">
+          <a className="rounded border border-amber-700 px-3 py-2 text-amber-200" href="/purchase-orders">
+            Purchase Orders
+          </a>
           <a className="rounded border border-violet-700 px-3 py-2 text-violet-200" href="/suppliers">
             Suppliers Core
           </a>

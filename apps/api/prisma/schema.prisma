@@ -24,6 +24,9 @@ model Tenant {
   inventoryMovements InventoryMovement[]
   inventoryBalances  InventoryBalance[]
   suppliers          Supplier[]
+  purchaseOrders     PurchaseOrder[]
+  purchaseOrderLines PurchaseOrderLine[]
+  documentSequences  DocumentSequence[]
 
   @@map("tenants")
 }
@@ -43,6 +46,7 @@ model Supplier {
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
   tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  purchaseOrders       PurchaseOrder[]
 
   @@unique([tenantId, code])
   @@index([tenantId, nameEn])
@@ -60,6 +64,7 @@ model Branch {
   users     User[]
   inventoryMovements InventoryMovement[]
   inventoryBalances  InventoryBalance[]
+  purchaseOrders     PurchaseOrder[]
 
   @@map("branches")
 }
@@ -140,6 +145,14 @@ enum InventoryMovementType {
   ADJUSTMENT
 }
 
+enum PurchaseOrderStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  CLOSED
+  CANCELLED
+}
+
 model TherapeuticClass {
   id        String   @id @default(uuid())
   tenantId  String   @map("tenant_id")
@@ -214,6 +227,7 @@ model Product {
   regulatoryType     RegulatoryType?       @relation(fields: [regulatoryTypeId], references: [id], onDelete: SetNull)
   inventoryMovements InventoryMovement[]
   inventoryBalances  InventoryBalance[]
+  purchaseOrderLines PurchaseOrderLine[]
 
   @@unique([tenantId, barcode])
   @@index([tenantId, nameEn])
@@ -258,4 +272,58 @@ model InventoryBalance {
   @@unique([tenantId, branchId, productId, batchNo])
   @@index([tenantId, branchId, productId])
   @@map("inventory_balances")
+}
+
+model DocumentSequence {
+  id         String   @id @default(uuid())
+  tenantId   String   @map("tenant_id")
+  key        String
+  nextNumber Int      @default(1) @map("next_number")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@map("document_sequences")
+}
+
+model PurchaseOrder {
+  id         String              @id @default(uuid())
+  tenantId   String              @map("tenant_id")
+  branchId   String              @map("branch_id")
+  supplierId String              @map("supplier_id")
+  poNumber   String              @map("po_number")
+  status     PurchaseOrderStatus @default(DRAFT)
+  notes      String?
+  orderedAt  DateTime            @default(now()) @map("ordered_at")
+  createdAt  DateTime            @default(now()) @map("created_at")
+  updatedAt  DateTime            @updatedAt @map("updated_at")
+  tenant     Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch     Branch              @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  supplier   Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  lines      PurchaseOrderLine[]
+
+  @@unique([tenantId, poNumber])
+  @@index([tenantId, status, orderedAt])
+  @@index([tenantId, supplierId])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id              String        @id @default(uuid())
+  purchaseOrderId String        @map("purchase_order_id")
+  tenantId        String        @map("tenant_id")
+  productId       String        @map("product_id")
+  quantity        Int
+  unitPrice       Float         @map("unit_price")
+  lineTotal       Float         @map("line_total")
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product         Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, purchaseOrderId])
+  @@index([tenantId, productId])
+  @@map("purchase_order_lines")
 }
