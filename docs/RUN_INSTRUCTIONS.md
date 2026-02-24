@@ -31,7 +31,7 @@ Then run:
 ```bash
 corepack pnpm dev:up
 corepack pnpm db:migrate
-corepack pnpm --filter @orion/api prisma db seed
+corepack pnpm --filter @orion/api prisma:seed
 ```
 
 ## Health check

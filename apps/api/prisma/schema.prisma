@@ -24,6 +24,7 @@ model Tenant {
   inventoryMovements InventoryMovement[]
   inventoryBalances  InventoryBalance[]
   suppliers          Supplier[]
+  customers          Customer[]
   purchaseOrders     PurchaseOrder[]
   purchaseOrderLines PurchaseOrderLine[]
   goodsReceipts      GoodsReceipt[]
@@ -60,6 +61,23 @@ model Supplier {
   @@index([tenantId, nameEn])
   @@index([tenantId, nameAr])
   @@map("suppliers")
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, name])
+  @@index([tenantId, createdAt])
+  @@map("customers")
 }
 
 model Branch {
