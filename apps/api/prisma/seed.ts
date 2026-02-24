@@ -19,6 +19,8 @@ async function main() {
     'users.manage',
     'products.read',
     'products.manage',
+    'suppliers.read',
+    'suppliers.manage',
     'inventory.read',
     'inventory.adjust',
     'inventory.override_negative',
@@ -183,6 +185,36 @@ async function main() {
       dosageFormId: dosageForm.id,
       storageConditionId: storageCondition.id,
       regulatoryTypeId: regulatoryType.id,
+    },
+  });
+
+  await prisma.supplier.upsert({
+    where: {
+      tenantId_code: {
+        tenantId: tenant.id,
+        code: 'SUP-ORION-001',
+      },
+    },
+    update: {
+      nameAr: 'المورد الطبي الأول',
+      nameEn: 'First Medical Supplier',
+      contactName: 'ORION Supply Team',
+      email: 'supply1@orion.local',
+      phone: '+966500000001',
+      preferredPaymentTerm: 'NET 30',
+      isActive: true,
+    },
+    create: {
+      tenantId: tenant.id,
+      code: 'SUP-ORION-001',
+      nameAr: 'المورد الطبي الأول',
+      nameEn: 'First Medical Supplier',
+      contactName: 'ORION Supply Team',
+      email: 'supply1@orion.local',
+      phone: '+966500000001',
+      address: 'Riyadh Industrial Zone',
+      preferredPaymentTerm: 'NET 30',
+      isActive: true,
     },
   });
 }
