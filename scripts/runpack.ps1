@@ -346,6 +346,21 @@ Compress-Archive -Path $artifactsDir -DestinationPath $advisorZipPath -Force
 
 Set-Content -Path $latestPath -Value $runName -Encoding UTF8
 
+$runDirRelative = "$outputRootRelative/$runName/"
+$runZipRelative = "$outputRootRelative/$runName.zip"
+$logsZipRelative = "$outputRootRelative/${runName}_logs.zip"
+$advisorZipRelative = "$outputRootRelative/${runName}_advisor.zip"
+$latestRelative = "$outputRootRelative/LATEST.txt"
+$latestValue = (Get-Content -Path $latestPath -Raw -Encoding UTF8).Trim()
+
+Write-Host "RunPack evidence paths:"
+Write-Host "- $runDirRelative"
+Write-Host "- $runZipRelative"
+Write-Host "- $logsZipRelative"
+Write-Host "- $advisorZipRelative"
+Write-Host "- $latestRelative"
+Write-Host "LATEST value: $latestValue"
+
 if ($overall -eq 'passed') {
   exit 0
 }
