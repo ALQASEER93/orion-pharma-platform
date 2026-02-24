@@ -14,6 +14,7 @@ import { TaxonomyModule } from './taxonomy/taxonomy.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { GoodsReceiptsModule } from './goods-receipts/goods-receipts.module';
+import { ProcurementTransactionsModule } from './procurement-transactions/procurement-transactions.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { GoodsReceiptsModule } from './goods-receipts/goods-receipts.module';
     SuppliersModule,
     PurchaseOrdersModule,
     GoodsReceiptsModule,
+    ProcurementTransactionsModule,
   ],
   controllers: [HealthController],
   providers: [
