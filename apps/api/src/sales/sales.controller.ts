@@ -115,7 +115,11 @@ export class SalesController {
     @Req() request: RequestWithContext,
     @Param('id') invoiceId: string,
   ) {
-    return this.salesService.postInvoice(resolveTenantId(request), invoiceId);
+    return this.salesService.postInvoice(
+      resolveTenantId(request),
+      request.user,
+      invoiceId,
+    );
   }
 
   @Post('pos/checkout')

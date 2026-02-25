@@ -14,14 +14,8 @@ import {
 import { SalesPaymentMethod } from '@prisma/client';
 
 export class PosCheckoutLineDto {
-  @IsOptional()
   @IsUUID()
-  productId?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(200)
-  itemName?: string;
+  productId!: string;
 
   @Type(() => Number)
   @IsNumber()
@@ -57,6 +51,10 @@ export class PosCheckoutPaymentDto {
 }
 
 export class PosCheckoutDto {
+  @IsOptional()
+  @IsUUID()
+  branchId?: string;
+
   @IsOptional()
   @IsUUID()
   customerId?: string;

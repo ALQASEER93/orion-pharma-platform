@@ -18,7 +18,6 @@ type Customer = {
 
 type CartLine = {
   productId: string;
-  itemName: string;
   qty: number;
   unitPrice: number;
 };
@@ -30,10 +29,12 @@ type CheckoutResult = {
 };
 
 const defaultTenant = '11111111-1111-1111-1111-111111111111';
+const defaultBranch = '22222222-2222-2222-2222-222222222222';
 
 export default function PosPage() {
   const baseUrl = useMemo(() => getApiBase(), []);
   const [tenantId, setTenantId] = useState(defaultTenant);
+  const [branchId, setBranchId] = useState(defaultBranch);
   const [token, setToken] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -96,7 +97,6 @@ export default function PosPage() {
         ...current,
         {
           productId: product.id,
-          itemName: product.nameEn || product.nameAr,
           qty: 1,
           unitPrice: 0,
         },
@@ -122,10 +122,10 @@ export default function PosPage() {
         'x-tenant-id': tenantId,
       },
       body: JSON.stringify({
+        branchId,
         customerId: customerId || undefined,
         lines: cart.map((line) => ({
           productId: line.productId,
-          itemName: line.itemName,
           qty: line.qty,
           unitPrice: line.unitPrice,
         })),
@@ -137,7 +137,32 @@ export default function PosPage() {
     });
 
     if (!response.ok) {
-      setError(`Checkout failed (${response.status})`);
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            code?: string;
+            message?: string;
+            details?: Array<{
+              productId?: string;
+              requiredQty?: number;
+              availableQty?: number;
+            }>;
+          }
+        | null;
+
+      if (payload?.code === 'STOCK_INSUFFICIENT') {
+        const details = payload.details
+          ?.map(
+            (item) =>
+              `${item.productId ?? 'unknown'} required ${item.requiredQty ?? 0}, available ${item.availableQty ?? 0}`,
+          )
+          .join(' | ');
+        setError(
+          `Insufficient stock: ${details ?? payload.message ?? 'stock check failed'}`,
+        );
+        return;
+      }
+
+      setError(payload?.message ?? `Checkout failed (${response.status})`);
       return;
     }
 
@@ -150,14 +175,22 @@ export default function PosPage() {
     <main className="min-h-screen bg-slate-950 p-6 text-slate-100">
       <section className="mx-auto max-w-5xl space-y-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
         <h1 className="text-2xl font-semibold">POS / نقطة البيع</h1>
-        <p className="text-sm text-slate-300">Minimal checkout for Slice 2.</p>
+        <p className="text-sm text-slate-300">
+          Product-only checkout with inventory stock validation.
+        </p>
 
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-3">
           <input
             className="rounded border border-slate-700 bg-slate-950 p-2"
             placeholder="Tenant ID"
             value={tenantId}
             onChange={(e) => setTenantId(e.target.value)}
+          />
+          <input
+            className="rounded border border-slate-700 bg-slate-950 p-2"
+            placeholder="Branch ID"
+            value={branchId}
+            onChange={(e) => setBranchId(e.target.value)}
           />
           <input
             className="rounded border border-slate-700 bg-slate-950 p-2"
@@ -206,20 +239,12 @@ export default function PosPage() {
           <div className="space-y-2">
             {cart.map((line, index) => (
               <div key={`${line.productId}-${index}`} className="grid gap-2 md:grid-cols-4">
+                <div className="rounded border border-slate-700 bg-slate-950 p-2 text-sm">
+                  {products.find((item) => item.id === line.productId)?.nameEn ?? line.productId}
+                </div>
                 <input
                   className="rounded border border-slate-700 bg-slate-950 p-2"
-                  value={line.itemName}
-                  onChange={(e) =>
-                    setCart((current) =>
-                      current.map((item, i) =>
-                        i === index ? { ...item, itemName: e.target.value } : item,
-                      ),
-                    )
-                  }
-                />
-                <input
-                  className="rounded border border-slate-700 bg-slate-950 p-2"
-                  min={0.000001}
+                  min={1}
                   step={1}
                   type="number"
                   value={line.qty}

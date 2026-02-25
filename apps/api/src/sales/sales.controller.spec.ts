@@ -66,7 +66,7 @@ describe('SalesController', () => {
     checkoutMock.mockResolvedValueOnce(response);
 
     const payload = {
-      lines: [{ itemName: 'Manual Item', qty: 1, unitPrice: 5 }],
+      lines: [{ productId: 'prod-1', qty: 1, unitPrice: 5 }],
       payment: { method: 'CASH', amount: 5 },
     };
 

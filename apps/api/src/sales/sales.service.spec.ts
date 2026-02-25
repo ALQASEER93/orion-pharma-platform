@@ -69,7 +69,7 @@ describe('SalesService', () => {
     );
 
     await expect(
-      service.postInvoice('tenant-1', 'inv-1'),
+      service.postInvoice('tenant-1', undefined, 'inv-1'),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 });

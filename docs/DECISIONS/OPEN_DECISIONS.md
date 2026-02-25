@@ -68,3 +68,9 @@
 - Status: Open
 - Need: Block 6 Slice 1.
 - Question: who approves KPI formulas before release and how revisions are governed.
+
+## DEV NOTE - Inventory Cost Snapshot Strategy (Slice 6)
+- MVP valuation basis at sales posting is `MOVING_AVG` (weighted average) to keep posting deterministic and implementation-simple.
+- `unitCostSnapshot` + `costMethodSnapshot` are persisted per sales line at posting time for future GL/COGS postings.
+- Extension path: introduce FIFO cost layers later without breaking posted history; existing snapshots remain immutable per document line.
+- Reference principle: IAS 2 allows weighted average or FIFO; current implementation starts with weighted average and keeps model extensible for FIFO.
