@@ -35,6 +35,13 @@ export class AccountingPostingService {
         status: PostingRuleSetStatus.ACTIVE,
         effectiveFrom: { lte: effectiveAt },
         OR: [{ effectiveTo: null }, { effectiveTo: { gt: effectiveAt } }],
+        rules: {
+          some: {
+            tenantId,
+            eventType,
+            isActive: true,
+          },
+        },
       },
       orderBy: [
         { effectiveFrom: 'desc' },

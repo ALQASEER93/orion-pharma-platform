@@ -44,6 +44,9 @@ model Tenant {
   postingKeys        PostingKey[]
   postingRuleSets    PostingRuleSet[]
   postingRules       PostingRule[]
+  arInvoices         ArInvoice[]
+  arReceipts         ArReceipt[]
+  arAllocations      ArAllocation[]
 
   @@map("tenants")
 }
@@ -85,6 +88,8 @@ model Customer {
   updatedAt DateTime @updatedAt @map("updated_at")
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   salesInvoices SalesInvoice[]
+  arInvoices ArInvoice[]
+  arReceipts ArReceipt[]
 
   @@index([tenantId, name])
   @@index([tenantId, createdAt])
@@ -132,6 +137,8 @@ model User {
   salesInvoicesCreated SalesInvoice[]
   salesPaymentsCreated SalesPayment[]
   createdPostingRuleSets PostingRuleSet[] @relation("PostingRuleSetCreatedBy")
+  arInvoicesCreated ArInvoice[] @relation("ArInvoiceCreatedBy")
+  arReceiptsCreated ArReceipt[] @relation("ArReceiptCreatedBy")
 
   @@map("users")
 }
@@ -243,6 +250,24 @@ enum PostingRuleSetStatus {
   DRAFT
   ACTIVE
   INACTIVE
+}
+
+enum ArInvoiceStatus {
+  OPEN
+  PAID
+  VOID
+}
+
+enum ArReceiptMethod {
+  CASH
+  CARD
+  BANK
+}
+
+enum ArReceiptStatus {
+  DRAFT
+  POSTED
+  VOID
 }
 
 model TherapeuticClass {
@@ -412,6 +437,7 @@ model SalesInvoice {
   createdBy       User?              @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
   lines           SalesInvoiceLine[]
   payments        SalesPayment[]
+  arInvoice       ArInvoice?
 
   @@unique([tenantId, invoiceNo])
   @@index([tenantId, issuedAt])
@@ -518,6 +544,8 @@ model JournalEntry {
   branch      Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
   fiscalPeriod FiscalPeriod?    @relation(fields: [fiscalPeriodId], references: [id], onDelete: SetNull)
   lines       JournalLine[]
+  arInvoices  ArInvoice[]
+  arReceipts  ArReceipt[]
 
   @@unique([tenantId, entryNo])
   @@index([tenantId, date, status])
@@ -598,6 +626,77 @@ model PostingRule {
 
   @@index([tenantId, ruleSetId, eventType, isActive, priority])
   @@map("posting_rules")
+}
+
+model ArInvoice {
+  id                String          @id @default(uuid())
+  tenantId          String          @map("tenant_id")
+  customerId        String          @map("customer_id")
+  salesInvoiceId    String          @unique @map("sales_invoice_id")
+  journalEntryId    String?         @map("journal_entry_id")
+  status            ArInvoiceStatus @default(OPEN)
+  invoiceNo         String          @map("invoice_no")
+  issueDate         DateTime        @map("issue_date")
+  dueDate           DateTime?       @map("due_date")
+  originalAmount    Float           @map("original_amount")
+  paidAmount        Float           @default(0) @map("paid_amount")
+  outstandingAmount Float           @map("outstanding_amount")
+  createdByUserId   String?         @map("created_by_user_id")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer          Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  salesInvoice      SalesInvoice    @relation(fields: [salesInvoiceId], references: [id], onDelete: Restrict)
+  journalEntry      JournalEntry?   @relation(fields: [journalEntryId], references: [id], onDelete: SetNull)
+  createdBy         User?           @relation("ArInvoiceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  allocations       ArAllocation[]
+
+  @@index([tenantId, status, issueDate])
+  @@index([tenantId, customerId, status])
+  @@map("ar_invoices")
+}
+
+model ArReceipt {
+  id              String          @id @default(uuid())
+  tenantId        String          @map("tenant_id")
+  customerId      String          @map("customer_id")
+  journalEntryId  String?         @map("journal_entry_id")
+  receiptNo       String          @map("receipt_no")
+  date            DateTime
+  amount          Float
+  method          ArReceiptMethod
+  reference       String?
+  status          ArReceiptStatus @default(DRAFT)
+  createdByUserId String?         @map("created_by_user_id")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer        Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  journalEntry    JournalEntry?   @relation(fields: [journalEntryId], references: [id], onDelete: SetNull)
+  createdBy       User?           @relation("ArReceiptCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  allocations     ArAllocation[]
+
+  @@unique([tenantId, receiptNo])
+  @@index([tenantId, status, date])
+  @@index([tenantId, customerId, status])
+  @@map("ar_receipts")
+}
+
+model ArAllocation {
+  id        String    @id @default(uuid())
+  tenantId  String    @map("tenant_id")
+  receiptId String    @map("receipt_id")
+  invoiceId String    @map("invoice_id")
+  amount    Float
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  receipt   ArReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  invoice   ArInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, receiptId])
+  @@index([tenantId, invoiceId])
+  @@map("ar_allocations")
 }
 
 model PurchaseOrder {

@@ -32,6 +32,14 @@ import { rangesOverlap } from './utils/posting-rules';
 const JOURNAL_SEQUENCE_KEY = 'JOURNAL_ENTRY';
 const JOURNAL_POST_STAGE = 'JOURNAL_POST';
 
+export type JournalPreviewLineInput = {
+  accountCode: string;
+  debit: number;
+  credit: number;
+  memo?: string | null;
+  branchId?: string;
+};
+
 const DEFAULT_COA: Array<{
   code: string;
   nameAr: string;
@@ -605,6 +613,180 @@ export class AccountingService {
       payload: dto.payload,
       effectiveAt,
       branchId: dto.branchId,
+    });
+  }
+
+  async postJournalFromPreview(params: {
+    tenantId: string;
+    date: Date;
+    description: string;
+    sourceType: string;
+    sourceId: string;
+    lines: JournalPreviewLineInput[];
+    defaultBranchId?: string;
+    idempotencyStage?: string;
+  }) {
+    if (params.lines.length === 0) {
+      return null;
+    }
+
+    this.validateJournalLines(
+      params.lines.map((line) => ({ debit: line.debit, credit: line.credit })),
+    );
+    if (!isBalanced(params.lines)) {
+      throw new ConflictException('Journal preview is not balanced.');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      if (params.idempotencyStage) {
+        try {
+          await tx.postingKey.create({
+            data: {
+              tenantId: params.tenantId,
+              sourceType: params.sourceType,
+              sourceId: params.sourceId,
+              stage: params.idempotencyStage,
+            },
+          });
+        } catch (error) {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            error.code === 'P2002'
+          ) {
+            const existing = await tx.journalEntry.findFirst({
+              where: {
+                tenantId: params.tenantId,
+                sourceType: params.sourceType,
+                sourceId: params.sourceId,
+                status: JournalEntryStatus.POSTED,
+              },
+              include: {
+                lines: true,
+              },
+            });
+
+            if (existing) {
+              return existing;
+            }
+
+            throw new ConflictException('Posting key already consumed.');
+          }
+
+          throw error;
+        }
+      }
+
+      const postingDate = new Date(params.date);
+      if (Number.isNaN(postingDate.getTime())) {
+        throw new BadRequestException('Posting date is invalid.');
+      }
+
+      const period = await tx.fiscalPeriod.findUnique({
+        where: {
+          tenantId_year_month: {
+            tenantId: params.tenantId,
+            year: postingDate.getUTCFullYear(),
+            month: postingDate.getUTCMonth() + 1,
+          },
+        },
+      });
+
+      if (!period) {
+        throw new ConflictException(
+          'Fiscal period is not configured for posting date.',
+        );
+      }
+
+      if (period.status !== FiscalPeriodStatus.OPEN) {
+        throw new ConflictException('Fiscal period is closed or locked.');
+      }
+
+      const allBranchIds = [
+        ...new Set(
+          params.lines
+            .map((line) => line.branchId ?? params.defaultBranchId)
+            .filter((value): value is string => Boolean(value)),
+        ),
+      ];
+      for (const branchId of allBranchIds) {
+        await this.assertBranchInTenant(tx, params.tenantId, branchId);
+      }
+
+      const accountCodes = [
+        ...new Set(params.lines.map((line) => line.accountCode.trim())),
+      ];
+      const accounts = await tx.account.findMany({
+        where: {
+          tenantId: params.tenantId,
+          isActive: true,
+          code: {
+            in: accountCodes,
+          },
+        },
+        select: {
+          id: true,
+          code: true,
+        },
+      });
+      if (accounts.length !== accountCodes.length) {
+        throw new NotFoundException(
+          'One or more account codes were not found in tenant.',
+        );
+      }
+      const accountMap = new Map(
+        accounts.map((account) => [account.code, account.id]),
+      );
+
+      const sequence = await tx.documentSequence.upsert({
+        where: {
+          tenantId_key: {
+            tenantId: params.tenantId,
+            key: JOURNAL_SEQUENCE_KEY,
+          },
+        },
+        create: {
+          tenantId: params.tenantId,
+          key: JOURNAL_SEQUENCE_KEY,
+          nextNumber: 2,
+        },
+        update: {
+          nextNumber: {
+            increment: 1,
+          },
+        },
+      });
+
+      const sequenceNumber = sequence.nextNumber - 1;
+      const entryNo = `JE-${postingDate.getUTCFullYear()}-${sequenceNumber
+        .toString()
+        .padStart(6, '0')}`;
+
+      return tx.journalEntry.create({
+        data: {
+          tenantId: params.tenantId,
+          entryNo,
+          date: postingDate,
+          description: params.description,
+          status: JournalEntryStatus.POSTED,
+          sourceType: params.sourceType,
+          sourceId: params.sourceId,
+          branchId: params.defaultBranchId,
+          fiscalPeriodId: period.id,
+          lines: {
+            create: params.lines.map((line) => ({
+              tenantId: params.tenantId,
+              accountId: accountMap.get(line.accountCode.trim()) as string,
+              debit: line.debit,
+              credit: line.credit,
+              memo: line.memo ?? undefined,
+              branchId: line.branchId ?? params.defaultBranchId,
+            })),
+          },
+        },
+        include: {
+          lines: true,
+        },
+      });
     });
   }
 

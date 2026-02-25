@@ -40,6 +40,8 @@ async function main() {
     'inventory.override_negative',
     'accounting.read',
     'accounting.manage',
+    'ar.read',
+    'ar.manage',
   ];
   for (const key of permissionKeys) {
     await prisma.permission.upsert({

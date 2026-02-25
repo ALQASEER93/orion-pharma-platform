@@ -19,6 +19,7 @@ import { ProcurementTransactionsModule } from './procurement-transactions/procur
 import { ProcurementReportsModule } from './procurement-reports/procurement-reports.module';
 import { SalesModule } from './sales/sales.module';
 import { AccountingModule } from './accounting/accounting.module';
+import { ArModule } from './ar/ar.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { AccountingModule } from './accounting/accounting.module';
     ProcurementReportsModule,
     SalesModule,
     AccountingModule,
+    ArModule,
   ],
   controllers: [HealthController],
   providers: [
