@@ -47,6 +47,9 @@ model Tenant {
   arInvoices         ArInvoice[]
   arReceipts         ArReceipt[]
   arAllocations      ArAllocation[]
+  apBills            ApBill[]
+  apPayments         ApPayment[]
+  apAllocations      ApAllocation[]
 
   @@map("tenants")
 }
@@ -69,6 +72,8 @@ model Supplier {
   purchaseOrders       PurchaseOrder[]
   goodsReceipts        GoodsReceipt[]
   purchaseReturns      PurchaseReturn[]
+  apBills              ApBill[]
+  apPayments           ApPayment[]
 
   @@unique([tenantId, code])
   @@index([tenantId, nameEn])
@@ -139,6 +144,8 @@ model User {
   createdPostingRuleSets PostingRuleSet[] @relation("PostingRuleSetCreatedBy")
   arInvoicesCreated ArInvoice[] @relation("ArInvoiceCreatedBy")
   arReceiptsCreated ArReceipt[] @relation("ArReceiptCreatedBy")
+  apBillsCreated ApBill[] @relation("ApBillCreatedBy")
+  apPaymentsCreated ApPayment[] @relation("ApPaymentCreatedBy")
 
   @@map("users")
 }
@@ -265,6 +272,24 @@ enum ArReceiptMethod {
 }
 
 enum ArReceiptStatus {
+  DRAFT
+  POSTED
+  VOID
+}
+
+enum ApBillStatus {
+  OPEN
+  PAID
+  VOID
+}
+
+enum ApPaymentMethod {
+  CASH
+  CARD
+  BANK
+}
+
+enum ApPaymentStatus {
   DRAFT
   POSTED
   VOID
@@ -546,6 +571,8 @@ model JournalEntry {
   lines       JournalLine[]
   arInvoices  ArInvoice[]
   arReceipts  ArReceipt[]
+  apBills     ApBill[]
+  apPayments  ApPayment[]
 
   @@unique([tenantId, entryNo])
   @@index([tenantId, date, status])
@@ -697,6 +724,79 @@ model ArAllocation {
   @@index([tenantId, receiptId])
   @@index([tenantId, invoiceId])
   @@map("ar_allocations")
+}
+
+model ApBill {
+  id                String       @id @default(uuid())
+  tenantId          String       @map("tenant_id")
+  supplierId        String       @map("supplier_id")
+  sourceType        String?      @map("source_type")
+  sourceId          String?      @map("source_id")
+  billNo            String       @map("bill_no")
+  issueDate         DateTime     @map("issue_date")
+  dueDate           DateTime?    @map("due_date")
+  status            ApBillStatus @default(OPEN)
+  originalAmount    Float        @map("original_amount")
+  paidAmount        Float        @default(0) @map("paid_amount")
+  outstandingAmount Float        @map("outstanding_amount")
+  journalEntryId    String?      @map("journal_entry_id")
+  createdByUserId   String?      @map("created_by_user_id")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  tenant            Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier          Supplier     @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  journalEntry      JournalEntry? @relation(fields: [journalEntryId], references: [id], onDelete: SetNull)
+  createdBy         User?        @relation("ApBillCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  allocations       ApAllocation[]
+
+  @@unique([tenantId, billNo])
+  @@index([tenantId, status, issueDate])
+  @@index([tenantId, supplierId, status])
+  @@index([tenantId, sourceType, sourceId])
+  @@map("ap_bills")
+}
+
+model ApPayment {
+  id              String          @id @default(uuid())
+  tenantId        String          @map("tenant_id")
+  supplierId      String          @map("supplier_id")
+  paymentNo       String          @map("payment_no")
+  date            DateTime
+  amount          Float
+  method          ApPaymentMethod
+  reference       String?
+  status          ApPaymentStatus @default(DRAFT)
+  journalEntryId  String?         @map("journal_entry_id")
+  createdByUserId String?         @map("created_by_user_id")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier        Supplier        @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  journalEntry    JournalEntry?   @relation(fields: [journalEntryId], references: [id], onDelete: SetNull)
+  createdBy       User?           @relation("ApPaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  allocations     ApAllocation[]
+
+  @@unique([tenantId, paymentNo])
+  @@index([tenantId, status, date])
+  @@index([tenantId, supplierId, status])
+  @@map("ap_payments")
+}
+
+model ApAllocation {
+  id        String    @id @default(uuid())
+  tenantId  String    @map("tenant_id")
+  paymentId String    @map("payment_id")
+  billId    String    @map("bill_id")
+  amount    Float
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payment   ApPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  bill      ApBill    @relation(fields: [billId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, paymentId])
+  @@index([tenantId, billId])
+  @@map("ap_allocations")
 }
 
 model PurchaseOrder {
