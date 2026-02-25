@@ -2,6 +2,10 @@ import { ConflictException } from '@nestjs/common';
 import { GoodsReceiptsService } from './goods-receipts.service';
 
 describe('GoodsReceiptsService', () => {
+  const inventoryValuationService = {
+    applyMovement: jest.fn(),
+  };
+
   const prisma = {
     goodsReceipt: {
       findMany: jest.fn(),
@@ -33,7 +37,10 @@ describe('GoodsReceiptsService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new GoodsReceiptsService(prisma as never);
+    service = new GoodsReceiptsService(
+      prisma as never,
+      inventoryValuationService as never,
+    );
   });
 
   it('rejects over-receipt with conflict', async () => {

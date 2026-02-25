@@ -3,10 +3,25 @@ import { SalesInvoiceStatus } from '@prisma/client';
 import { SalesService } from './sales.service';
 
 describe('SalesService', () => {
+  const accountingService = {
+    postJournalFromPreview: jest.fn(),
+  };
+  const accountingPostingService = {
+    simulate: jest.fn(),
+  };
+  const inventoryValuationService = {
+    getCurrentAvgUnitCost: jest.fn(),
+    applyMovement: jest.fn(),
+  };
+
   const prisma = {
     salesInvoice: {
       findMany: jest.fn(),
       findFirst: jest.fn(),
+      findFirstOrThrow: jest.fn(),
+    },
+    cogsPostingLink: {
+      create: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -15,7 +30,12 @@ describe('SalesService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new SalesService(prisma as never);
+    service = new SalesService(
+      prisma as never,
+      accountingService as never,
+      accountingPostingService as never,
+      inventoryValuationService as never,
+    );
   });
 
   it('lists invoices by tenant', async () => {

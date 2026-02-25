@@ -9,10 +9,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { JwtUserPayload } from '../common/types/request-with-context.type';
 import { CreateInventoryMovementDto } from './dto/create-inventory-movement.dto';
 import { QueryStockDto } from './dto/query-stock.dto';
+import { InventoryValuationService } from './inventory-valuation.service';
 
 @Injectable()
 export class InventoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly inventoryValuationService: InventoryValuationService,
+  ) {}
 
   async getStockOnHand(tenantId: string, query: QueryStockDto) {
     const movements = await this.prisma.inventoryMovement.findMany({
@@ -152,7 +156,7 @@ export class InventoryService {
         });
       }
 
-      return tx.inventoryMovement.create({
+      const movement = await tx.inventoryMovement.create({
         data: {
           tenantId,
           branchId: dto.branchId,
@@ -161,10 +165,26 @@ export class InventoryService {
           expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : null,
           movementType: dto.movementType,
           quantity: dto.quantity,
+          unitCost: dto.unitCost,
+          costTotal:
+            dto.unitCost !== undefined
+              ? Math.abs(dto.quantity) * dto.unitCost
+              : null,
           reason: dto.reason,
           createdBy: user.sub,
         },
       });
+
+      await this.inventoryValuationService.applyMovement(tx, {
+        tenantId,
+        inventoryMovementId: movement.id,
+        branchId: dto.branchId,
+        productId: dto.productId,
+        quantityDelta: dto.quantity,
+        unitCost: dto.unitCost,
+      });
+
+      return movement;
     });
   }
 }
