@@ -6,12 +6,18 @@ describe('AccountingService', () => {
   const prisma = {
     $transaction: jest.fn(),
   };
+  const accountingPostingService = {
+    simulate: jest.fn(),
+  };
 
   let service: AccountingService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new AccountingService(prisma as never);
+    service = new AccountingService(
+      prisma as never,
+      accountingPostingService as never,
+    );
   });
 
   it('rejects posting for unbalanced entry', async () => {

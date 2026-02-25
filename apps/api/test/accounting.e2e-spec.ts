@@ -8,6 +8,7 @@ import {
   FiscalPeriodStatus,
   JournalEntryStatus,
   NormalBalance,
+  PostingRuleSetStatus,
   PrismaClient,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -43,6 +44,7 @@ describe('Accounting Foundation (e2e)', () => {
   let app: INestApplication;
   let accessToken = '';
   let otherTenantJournalId = '';
+  let otherTenantRuleSetId = '';
   const uniqueRunId = `${Date.now()}`;
 
   beforeAll(async () => {
@@ -50,7 +52,9 @@ describe('Accounting Foundation (e2e)', () => {
     delete process.env.JWT_SECRET;
     ensureDatabaseUrl();
     prisma = new PrismaClient();
-    otherTenantJournalId = await ensureFixture();
+    const fixture = await ensureFixture();
+    otherTenantJournalId = fixture.otherTenantJournalId;
+    otherTenantRuleSetId = fixture.otherTenantRuleSetId;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -277,6 +281,217 @@ describe('Accounting Foundation (e2e)', () => {
 
     expect(postForeignJournal.status).toBe(404);
   });
+
+  it('creates v1 ruleset, activates, then simulates deterministic preview', async () => {
+    const server = app.getHttpServer() as Server;
+
+    const createRuleSet = await request(server)
+      .post('/api/accounting/posting-rulesets')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        name: `SALES_POSTED_${uniqueRunId}`,
+        version: 1,
+        effectiveFrom: '2026-01-01T00:00:00.000Z',
+        effectiveTo: '2026-06-01T00:00:00.000Z',
+      });
+
+    expect(createRuleSet.status).toBe(201);
+
+    const addRule = await request(server)
+      .post('/api/accounting/posting-rules')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        ruleSetId: createRuleSet.body.id,
+        eventType: 'SALES_POSTED',
+        priority: 100,
+        debitAccountCode: '1010',
+        creditAccountCode: '4000',
+        amountExpr: 'grandTotal - discountTotal',
+        memoTemplate: 'Sales {{invoiceNo}}',
+        conditionsJson: { channel: 'POS' },
+      });
+
+    expect(addRule.status).toBe(201);
+    await deactivateActiveRuleSets(
+      server,
+      createRuleSet.body.id as string,
+      accessToken,
+    );
+
+    const activate = await request(server)
+      .patch(`/api/accounting/posting-rulesets/${createRuleSet.body.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        status: PostingRuleSetStatus.ACTIVE,
+      });
+
+    expect(activate.status).toBe(200);
+    expect(activate.body.status).toBe(PostingRuleSetStatus.ACTIVE);
+
+    const preview = await request(server)
+      .post('/api/accounting/posting-rules/simulate')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        eventType: 'SALES_POSTED',
+        effectiveAt: '2026-03-01T00:00:00.000Z',
+        branchId,
+        payload: {
+          grandTotal: 120,
+          discountTotal: 20,
+          channel: 'POS',
+          invoiceNo: 'INV-1001',
+        },
+      });
+
+    expect(preview.status).toBe(201);
+    expect(preview.body.selectedRuleSet.version).toBe(1);
+    expect(preview.body.matchedRules).toHaveLength(1);
+    expect(preview.body.totals).toEqual({ debit: 100, credit: 100 });
+    expect(preview.body.balanced).toBe(true);
+    expect(preview.body.journalPreview.lines[0]).toMatchObject({
+      accountCode: '1010',
+      debit: 100,
+      credit: 0,
+      memo: 'Sales INV-1001',
+      branchId,
+    });
+  });
+
+  it('selects ruleset version by effective date', async () => {
+    const server = app.getHttpServer() as Server;
+    const ruleSetName = `PURCHASE_GRN_${uniqueRunId}`;
+
+    const createV1 = await request(server)
+      .post('/api/accounting/posting-rulesets')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        name: ruleSetName,
+        version: 1,
+        effectiveFrom: '2026-01-01T00:00:00.000Z',
+        effectiveTo: '2026-07-01T00:00:00.000Z',
+      });
+    expect(createV1.status).toBe(201);
+
+    const ruleV1 = await request(server)
+      .post('/api/accounting/posting-rules')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        ruleSetId: createV1.body.id,
+        eventType: 'PURCHASE_GRN_POSTED',
+        priority: 50,
+        debitAccountCode: '1200',
+        creditAccountCode: '2000',
+        amountExpr: 'baseAmount',
+      });
+    expect(ruleV1.status).toBe(201);
+
+    await deactivateActiveRuleSets(
+      server,
+      createV1.body.id as string,
+      accessToken,
+    );
+
+    const activateV1 = await request(server)
+      .patch(`/api/accounting/posting-rulesets/${createV1.body.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        status: PostingRuleSetStatus.ACTIVE,
+      });
+    expect(activateV1.status).toBe(200);
+
+    const createV2 = await request(server)
+      .post('/api/accounting/posting-rulesets')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        name: ruleSetName,
+        version: 2,
+        effectiveFrom: '2026-07-01T00:00:00.000Z',
+      });
+    expect(createV2.status).toBe(201);
+
+    const ruleV2 = await request(server)
+      .post('/api/accounting/posting-rules')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        ruleSetId: createV2.body.id,
+        eventType: 'PURCHASE_GRN_POSTED',
+        priority: 50,
+        debitAccountCode: '1200',
+        creditAccountCode: '2000',
+        amountExpr: 'baseAmount + taxAmount',
+      });
+    expect(ruleV2.status).toBe(201);
+
+    const activateV2 = await request(server)
+      .patch(`/api/accounting/posting-rulesets/${createV2.body.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        status: PostingRuleSetStatus.ACTIVE,
+      });
+    expect(activateV2.status).toBe(200);
+
+    const previewV1Date = await request(server)
+      .post('/api/accounting/posting-rules/simulate')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        eventType: 'PURCHASE_GRN_POSTED',
+        effectiveAt: '2026-06-15T00:00:00.000Z',
+        payload: {
+          baseAmount: 200,
+          taxAmount: 30,
+        },
+      });
+
+    expect(previewV1Date.status).toBe(201);
+    expect(previewV1Date.body.selectedRuleSet.version).toBe(1);
+    expect(previewV1Date.body.totals.debit).toBe(200);
+
+    const previewV2Date = await request(server)
+      .post('/api/accounting/posting-rules/simulate')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        eventType: 'PURCHASE_GRN_POSTED',
+        effectiveAt: '2026-08-15T00:00:00.000Z',
+        payload: {
+          baseAmount: 200,
+          taxAmount: 30,
+        },
+      });
+
+    expect(previewV2Date.status).toBe(201);
+    expect(previewV2Date.body.selectedRuleSet.version).toBe(2);
+    expect(previewV2Date.body.totals.debit).toBe(230);
+  });
+
+  it('enforces tenant isolation for posting rules endpoints', async () => {
+    const server = app.getHttpServer() as Server;
+
+    const listOther = await request(server)
+      .get('/api/accounting/posting-rules')
+      .query({ ruleSetId: otherTenantRuleSetId })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId);
+    expect(listOther.status).toBe(404);
+
+    const patchOther = await request(server)
+      .patch(`/api/accounting/posting-rulesets/${otherTenantRuleSetId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({ status: PostingRuleSetStatus.ACTIVE });
+    expect(patchOther.status).toBe(404);
+  });
 });
 
 async function requiredAccounts(codes: string[]) {
@@ -301,6 +516,37 @@ async function requiredAccounts(codes: string[]) {
 
     return account;
   });
+}
+
+async function deactivateActiveRuleSets(
+  server: Server,
+  keepRuleSetId: string,
+  token: string,
+) {
+  const existingRuleSets = await request(server)
+    .get('/api/accounting/posting-rulesets')
+    .set('Authorization', `Bearer ${token}`)
+    .set('x-tenant-id', tenantId);
+  expect(existingRuleSets.status).toBe(200);
+
+  for (const ruleSet of existingRuleSets.body as Array<{
+    id: string;
+    status: string;
+  }>) {
+    if (
+      ruleSet.id === keepRuleSetId ||
+      ruleSet.status !== PostingRuleSetStatus.ACTIVE
+    ) {
+      continue;
+    }
+
+    const deactivate = await request(server)
+      .patch(`/api/accounting/posting-rulesets/${ruleSet.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('x-tenant-id', tenantId)
+      .send({ status: PostingRuleSetStatus.INACTIVE });
+    expect(deactivate.status).toBe(200);
+  }
 }
 
 async function ensureFixture() {
@@ -447,5 +693,31 @@ async function ensureFixture() {
     },
   });
 
-  return otherJournal.id;
+  const otherRuleSet = await prisma.postingRuleSet.upsert({
+    where: {
+      tenantId_name_version: {
+        tenantId: otherTenantId,
+        name: 'OTHER_RULESET',
+        version: 1,
+      },
+    },
+    update: {
+      status: PostingRuleSetStatus.ACTIVE,
+      effectiveFrom: new Date('2026-01-01T00:00:00.000Z'),
+      effectiveTo: null,
+    },
+    create: {
+      tenantId: otherTenantId,
+      name: 'OTHER_RULESET',
+      version: 1,
+      status: PostingRuleSetStatus.ACTIVE,
+      effectiveFrom: new Date('2026-01-01T00:00:00.000Z'),
+      effectiveTo: null,
+    },
+  });
+
+  return {
+    otherTenantJournalId: otherJournal.id,
+    otherTenantRuleSetId: otherRuleSet.id,
+  };
 }

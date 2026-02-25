@@ -42,6 +42,8 @@ model Tenant {
   journalEntries     JournalEntry[]
   journalLines       JournalLine[]
   postingKeys        PostingKey[]
+  postingRuleSets    PostingRuleSet[]
+  postingRules       PostingRule[]
 
   @@map("tenants")
 }
@@ -129,6 +131,7 @@ model User {
   procurementAdjustmentsCreated ProcurementAdjustment[]
   salesInvoicesCreated SalesInvoice[]
   salesPaymentsCreated SalesPayment[]
+  createdPostingRuleSets PostingRuleSet[] @relation("PostingRuleSetCreatedBy")
 
   @@map("users")
 }
@@ -234,6 +237,12 @@ enum JournalEntryStatus {
   DRAFT
   POSTED
   VOID
+}
+
+enum PostingRuleSetStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
 }
 
 model TherapeuticClass {
@@ -548,6 +557,47 @@ model PostingKey {
 
   @@unique([tenantId, sourceType, sourceId, stage])
   @@map("posting_keys")
+}
+
+model PostingRuleSet {
+  id              String               @id @default(uuid())
+  tenantId        String               @map("tenant_id")
+  name            String
+  version         Int
+  status          PostingRuleSetStatus @default(DRAFT)
+  effectiveFrom   DateTime             @map("effective_from")
+  effectiveTo     DateTime?            @map("effective_to")
+  createdByUserId String?              @map("created_by_user_id")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy       User?                @relation("PostingRuleSetCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  rules           PostingRule[]
+
+  @@unique([tenantId, name, version])
+  @@index([tenantId, status, effectiveFrom, effectiveTo])
+  @@map("posting_rule_sets")
+}
+
+model PostingRule {
+  id                String         @id @default(uuid())
+  tenantId          String         @map("tenant_id")
+  ruleSetId         String         @map("rule_set_id")
+  eventType         String         @map("event_type")
+  priority          Int            @default(0)
+  debitAccountCode  String         @map("debit_account_code")
+  creditAccountCode String         @map("credit_account_code")
+  amountExpr        String         @map("amount_expr")
+  memoTemplate      String?        @map("memo_template")
+  conditionsJson    Json?          @map("conditions_json")
+  isActive          Boolean        @default(true) @map("is_active")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  tenant            Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ruleSet           PostingRuleSet @relation(fields: [ruleSetId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, ruleSetId, eventType, isActive, priority])
+  @@map("posting_rules")
 }
 
 model PurchaseOrder {

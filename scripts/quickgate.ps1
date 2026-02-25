@@ -16,6 +16,10 @@ Invoke-Step -Name 'Install (frozen lockfile)' -Action {
   corepack pnpm -w install --frozen-lockfile
 }
 
+Invoke-Step -Name 'Prisma generate' -Action {
+  corepack pnpm --filter @orion/api prisma:generate
+}
+
 Invoke-Step -Name 'Lint' -Action {
   corepack pnpm -w lint
 }
