@@ -20,6 +20,7 @@ import { ProcurementReportsModule } from './procurement-reports/procurement-repo
 import { SalesModule } from './sales/sales.module';
 import { AccountingModule } from './accounting/accounting.module';
 import { ArModule } from './ar/ar.module';
+import { ApModule } from './ap/ap.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ArModule } from './ar/ar.module';
     SalesModule,
     AccountingModule,
     ArModule,
+    ApModule,
   ],
   controllers: [HealthController],
   providers: [
