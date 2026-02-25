@@ -98,6 +98,7 @@ model Branch {
   goodsReceipts      GoodsReceipt[]
   purchaseReturns    PurchaseReturn[]
   procurementAdjustments ProcurementAdjustment[]
+  salesInvoices      SalesInvoice[]
 
   @@map("branches")
 }
@@ -301,15 +302,19 @@ model InventoryMovement {
   reason       String?
   createdAt    DateTime              @default(now()) @map("created_at")
   createdBy    String?               @map("created_by")
+  salesInvoiceLineId String?         @map("sales_invoice_line_id")
   tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branch       Branch                @relation(fields: [branchId], references: [id], onDelete: Restrict)
   product      Product               @relation(fields: [productId], references: [id], onDelete: Restrict)
   user         User?                 @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  salesInvoiceLine SalesInvoiceLine? @relation(fields: [salesInvoiceLineId], references: [id], onDelete: SetNull)
   goodsReceiptLine GoodsReceiptLine?
   purchaseReturnLine PurchaseReturnLine?
   procurementAdjustmentLine ProcurementAdjustmentLine?
 
   @@index([tenantId, branchId, productId, batchNo])
+  @@index([tenantId, salesInvoiceLineId])
+  @@unique([salesInvoiceLineId, batchNo])
   @@map("inventory_movements")
 }
 
@@ -350,6 +355,7 @@ model SalesInvoice {
   invoiceNo       String             @map("invoice_no")
   status          SalesInvoiceStatus @default(DRAFT)
   issuedAt        DateTime           @default(now()) @map("issued_at")
+  branchId        String?            @map("branch_id")
   customerId      String?            @map("customer_id")
   currency        String             @default("JOD")
   subtotal        Float              @default(0)
@@ -360,6 +366,7 @@ model SalesInvoice {
   createdAt       DateTime           @default(now()) @map("created_at")
   updatedAt       DateTime           @updatedAt @map("updated_at")
   tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch          Branch?            @relation(fields: [branchId], references: [id], onDelete: SetNull)
   customer        Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
   createdBy       User?              @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
   lines           SalesInvoiceLine[]
@@ -369,6 +376,7 @@ model SalesInvoice {
   @@index([tenantId, issuedAt])
   @@index([tenantId, status, createdAt])
   @@index([tenantId, customerId])
+  @@index([tenantId, branchId])
   @@map("sales_invoices")
 }
 
@@ -383,10 +391,13 @@ model SalesInvoiceLine {
   discount       Float        @default(0)
   taxRate        Float?       @map("tax_rate")
   lineTotal      Float        @default(0) @map("line_total")
+  unitCostSnapshot Float?     @map("unit_cost_snapshot")
+  costMethodSnapshot String?  @map("cost_method_snapshot")
   createdAt      DateTime     @default(now()) @map("created_at")
   salesInvoice   SalesInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   product        Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+  inventoryMovements InventoryMovement[]
 
   @@index([tenantId, invoiceId])
   @@index([tenantId, productId])

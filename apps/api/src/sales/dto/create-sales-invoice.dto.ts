@@ -9,6 +9,10 @@ import {
 export class CreateSalesInvoiceDto {
   @IsOptional()
   @IsUUID()
+  branchId?: string;
+
+  @IsOptional()
+  @IsUUID()
   customerId?: string;
 
   @IsOptional()

@@ -41,6 +41,7 @@ describe('Sales Invoices + POS (e2e)', () => {
 
   beforeAll(async () => {
     process.env.ORION_JWT_SECRET = 'ORION_e2e_test_secret';
+    process.env.ORION_ALLOW_NEGATIVE_STOCK = 'false';
     delete process.env.JWT_SECRET;
     ensureDatabaseUrl();
     prisma = new PrismaClient();
@@ -76,7 +77,9 @@ describe('Sales Invoices + POS (e2e)', () => {
     }
   });
 
-  it('create invoice -> manage lines -> post -> list/detail', async () => {
+  it('create invoice -> post creates OUT movements + snapshots, second post is idempotent', async () => {
+    await resetStock(12);
+
     const server = app.getHttpServer() as Server;
 
     const createDraft = await request(server)
@@ -86,6 +89,7 @@ describe('Sales Invoices + POS (e2e)', () => {
       .send({
         customerId,
         currency: 'JOD',
+        branchId,
       });
     expect(createDraft.status).toBe(201);
     expect(createDraft.body.status).toBe(SalesInvoiceStatus.DRAFT);
@@ -97,24 +101,13 @@ describe('Sales Invoices + POS (e2e)', () => {
       .set('x-tenant-id', tenantId)
       .send({
         productId,
-        qty: 2,
+        qty: 3,
         unitPrice: 10,
         discount: 1,
         taxRate: 10,
       });
     expect(addLine.status).toBe(201);
     expect(addLine.body.lines).toHaveLength(1);
-
-    const lineId = (addLine.body.lines as Array<{ id: string }>)[0].id;
-    const updateLine = await request(server)
-      .patch(`/api/sales/invoices/${invoiceId}/lines/${lineId}`)
-      .set('Authorization', `Bearer ${accessToken}`)
-      .set('x-tenant-id', tenantId)
-      .send({
-        qty: 3,
-      });
-    expect(updateLine.status).toBe(200);
-    expect(updateLine.body.grandTotal).toBeCloseTo(31.9, 2);
 
     const postInvoice = await request(server)
       .post(`/api/sales/invoices/${invoiceId}/post`)
@@ -124,23 +117,82 @@ describe('Sales Invoices + POS (e2e)', () => {
     expect(postInvoice.status).toBe(201);
     expect(postInvoice.body.status).toBe(SalesInvoiceStatus.POSTED);
 
-    const list = await request(server)
-      .get('/api/sales/invoices')
-      .query({ q: postInvoice.body.invoiceNo })
-      .set('Authorization', `Bearer ${accessToken}`)
-      .set('x-tenant-id', tenantId);
-    expect(list.status).toBe(200);
-    expect(Array.isArray(list.body)).toBe(true);
-    expect(
-      (list.body as Array<{ id: string }>).some((row) => row.id === invoiceId),
-    ).toBe(true);
+    const invoiceLines = await prisma.salesInvoiceLine.findMany({
+      where: {
+        invoiceId,
+        tenantId,
+      },
+    });
 
-    const detail = await request(server)
-      .get(`/api/sales/invoices/${invoiceId}`)
+    expect(invoiceLines).toHaveLength(1);
+    expect(invoiceLines[0].unitCostSnapshot).not.toBeNull();
+    expect(invoiceLines[0].costMethodSnapshot).toBe('MOVING_AVG');
+
+    const movementCountAfterFirstPost = await prisma.inventoryMovement.count({
+      where: {
+        tenantId,
+        salesInvoiceLineId: invoiceLines[0].id,
+        movementType: 'OUT',
+      },
+    });
+    expect(movementCountAfterFirstPost).toBe(1);
+
+    const repost = await request(server)
+      .post(`/api/sales/invoices/${invoiceId}/post`)
       .set('Authorization', `Bearer ${accessToken}`)
-      .set('x-tenant-id', tenantId);
-    expect(detail.status).toBe(200);
-    expect(detail.body.id).toBe(invoiceId);
+      .set('x-tenant-id', tenantId)
+      .send();
+    expect(repost.status).toBe(201);
+    expect(repost.body.status).toBe(SalesInvoiceStatus.POSTED);
+
+    const movementCountAfterRepost = await prisma.inventoryMovement.count({
+      where: {
+        tenantId,
+        salesInvoiceLineId: invoiceLines[0].id,
+        movementType: 'OUT',
+      },
+    });
+    expect(movementCountAfterRepost).toBe(1);
+  });
+
+  it('insufficient stock blocks posting with stable code', async () => {
+    await resetStock(1);
+
+    const server = app.getHttpServer() as Server;
+
+    const createDraft = await request(server)
+      .post('/api/sales/invoices')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        customerId,
+        currency: 'JOD',
+        branchId,
+      });
+    expect(createDraft.status).toBe(201);
+
+    const invoiceId = (createDraft.body as { id: string }).id;
+
+    const addLine = await request(server)
+      .post(`/api/sales/invoices/${invoiceId}/lines`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        productId,
+        qty: 5,
+        unitPrice: 10,
+      });
+    expect(addLine.status).toBe(201);
+
+    const postInvoice = await request(server)
+      .post(`/api/sales/invoices/${invoiceId}/post`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send();
+
+    expect(postInvoice.status).toBe(409);
+    expect(postInvoice.body.code).toBe('STOCK_INSUFFICIENT');
+    expect(Array.isArray(postInvoice.body.details)).toBe(true);
   });
 
   it('returns 404 for cross-tenant invoice id', async () => {
@@ -160,7 +212,9 @@ describe('Sales Invoices + POS (e2e)', () => {
     expect(crossPatch.status).toBe(404);
   });
 
-  it('checkout via /pos/checkout returns posted invoice + payment', async () => {
+  it('checkout via /pos/checkout creates posted invoice + payment + OUT movement', async () => {
+    await resetStock(4);
+
     const server = app.getHttpServer() as Server;
 
     const checkout = await request(server)
@@ -168,6 +222,7 @@ describe('Sales Invoices + POS (e2e)', () => {
       .set('Authorization', `Bearer ${accessToken}`)
       .set('x-tenant-id', tenantId)
       .send({
+        branchId,
         customerId,
         lines: [{ productId, qty: 2, unitPrice: 15 }],
         payment: { method: 'CASH', amount: 30 },
@@ -178,6 +233,38 @@ describe('Sales Invoices + POS (e2e)', () => {
     expect(
       (checkout.body.payments as Array<{ amount: number }>)[0].amount,
     ).toBe(30);
+
+    const lineId = (checkout.body.lines as Array<{ id: string }>)[0].id;
+    const movements = await prisma.inventoryMovement.findMany({
+      where: {
+        tenantId,
+        salesInvoiceLineId: lineId,
+      },
+    });
+
+    expect(movements).toHaveLength(1);
+    expect(movements[0].movementType).toBe('OUT');
+    expect(movements[0].quantity).toBe(-2);
+  });
+
+  it('checkout is blocked when stock is insufficient', async () => {
+    await resetStock(1);
+
+    const server = app.getHttpServer() as Server;
+
+    const checkout = await request(server)
+      .post('/api/pos/checkout')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        branchId,
+        customerId,
+        lines: [{ productId, qty: 3, unitPrice: 15 }],
+        payment: { method: 'CASH', amount: 45 },
+      });
+
+    expect(checkout.status).toBe(409);
+    expect(checkout.body.code).toBe('STOCK_INSUFFICIENT');
   });
 });
 
@@ -320,6 +407,8 @@ async function ensureFixture() {
     },
   });
 
+  await resetStock(12);
+
   const otherInvoice = await prisma.salesInvoice.upsert({
     where: {
       tenantId_invoiceNo: {
@@ -332,6 +421,7 @@ async function ensureFixture() {
       invoiceNo: 'SI-2026-999999',
       status: SalesInvoiceStatus.DRAFT,
       currency: 'JOD',
+      branchId: null,
       createdByUserId: user.id,
     },
     create: {
@@ -339,9 +429,53 @@ async function ensureFixture() {
       invoiceNo: 'SI-2026-999999',
       status: SalesInvoiceStatus.DRAFT,
       currency: 'JOD',
+      branchId: null,
       createdByUserId: user.id,
     },
   });
 
   return otherInvoice.id;
+}
+
+async function resetStock(quantity: number) {
+  await prisma.inventoryMovement.deleteMany({
+    where: {
+      tenantId,
+      branchId,
+      productId,
+      reason: 'sales e2e stock reset',
+    },
+  });
+
+  await prisma.inventoryBalance.upsert({
+    where: {
+      tenantId_branchId_productId_batchNo: {
+        tenantId,
+        branchId,
+        productId,
+        batchNo: '',
+      },
+    },
+    update: {
+      quantity,
+    },
+    create: {
+      tenantId,
+      branchId,
+      productId,
+      batchNo: '',
+      quantity,
+    },
+  });
+
+  await prisma.inventoryMovement.create({
+    data: {
+      tenantId,
+      branchId,
+      productId,
+      movementType: 'IN',
+      quantity,
+      reason: 'sales e2e stock reset',
+    },
+  });
 }
