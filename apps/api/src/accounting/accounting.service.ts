@@ -9,15 +9,25 @@ import {
   FiscalPeriodStatus,
   JournalEntryStatus,
   NormalBalance,
+  PostingRuleSetStatus,
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AccountingPostingService } from './accounting-posting.service';
 import { CreateJournalDto } from './dto/create-journal.dto';
+import { CreatePostingRuleDto } from './dto/create-posting-rule.dto';
+import { CreatePostingRuleSetDto } from './dto/create-posting-ruleset.dto';
 import { QueryJournalsDto } from './dto/query-journals.dto';
+import { QueryPostingRulesDto } from './dto/query-posting-rules.dto';
+import { SimulatePostingRulesDto } from './dto/simulate-posting-rules.dto';
+import { UpdatePostingRuleDto } from './dto/update-posting-rule.dto';
+import { UpdatePostingRuleSetDto } from './dto/update-posting-ruleset.dto';
 import {
   assertJournalLineValues,
   isBalanced,
 } from './utils/journal-validation';
+import { validateExpressionSyntax } from './utils/posting-expression';
+import { rangesOverlap } from './utils/posting-rules';
 
 const JOURNAL_SEQUENCE_KEY = 'JOURNAL_ENTRY';
 const JOURNAL_POST_STAGE = 'JOURNAL_POST';
@@ -96,7 +106,10 @@ const DEFAULT_COA: Array<{
 
 @Injectable()
 export class AccountingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accountingPostingService: AccountingPostingService,
+  ) {}
 
   async listCoa(tenantId: string) {
     return this.prisma.account.findMany({
@@ -358,6 +371,243 @@ export class AccountingService {
     });
   }
 
+  async listPostingRuleSets(tenantId: string) {
+    return this.prisma.postingRuleSet.findMany({
+      where: { tenantId },
+      orderBy: [{ name: 'asc' }, { version: 'desc' }],
+    });
+  }
+
+  async createPostingRuleSet(
+    tenantId: string,
+    userId: string | undefined,
+    dto: CreatePostingRuleSetDto,
+  ) {
+    const effectiveFrom = new Date(dto.effectiveFrom);
+    const effectiveTo = dto.effectiveTo ? new Date(dto.effectiveTo) : null;
+    this.validateRuleSetWindow(effectiveFrom, effectiveTo);
+
+    try {
+      return await this.prisma.postingRuleSet.create({
+        data: {
+          tenantId,
+          name: dto.name.trim(),
+          version: dto.version,
+          status: PostingRuleSetStatus.DRAFT,
+          effectiveFrom,
+          effectiveTo,
+          createdByUserId: userId,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'Posting rule set version already exists for tenant.',
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  async updatePostingRuleSet(
+    tenantId: string,
+    ruleSetId: string,
+    dto: UpdatePostingRuleSetDto,
+  ) {
+    const current = await this.prisma.postingRuleSet.findFirst({
+      where: { id: ruleSetId, tenantId },
+    });
+    if (!current) {
+      throw new NotFoundException('Posting rule set not found.');
+    }
+
+    if (
+      current.status === PostingRuleSetStatus.ACTIVE &&
+      (dto.effectiveFrom !== undefined || dto.effectiveTo !== undefined)
+    ) {
+      throw new ConflictException(
+        'Active posting rule sets are immutable. Create a new version.',
+      );
+    }
+
+    const effectiveFrom =
+      dto.effectiveFrom !== undefined
+        ? new Date(dto.effectiveFrom)
+        : current.effectiveFrom;
+    const effectiveTo =
+      dto.effectiveTo !== undefined
+        ? new Date(dto.effectiveTo)
+        : current.effectiveTo;
+    this.validateRuleSetWindow(effectiveFrom, effectiveTo);
+
+    if (
+      dto.status === PostingRuleSetStatus.ACTIVE &&
+      current.status !== PostingRuleSetStatus.ACTIVE
+    ) {
+      await this.assertNoActiveRuleSetOverlap(
+        tenantId,
+        current.id,
+        effectiveFrom,
+        effectiveTo,
+      );
+    }
+
+    return this.prisma.postingRuleSet.update({
+      where: { id: current.id },
+      data: {
+        ...(dto.status ? { status: dto.status } : {}),
+        ...(dto.effectiveFrom !== undefined ? { effectiveFrom } : {}),
+        ...(dto.effectiveTo !== undefined ? { effectiveTo } : {}),
+      },
+    });
+  }
+
+  async listPostingRules(tenantId: string, query: QueryPostingRulesDto) {
+    if (!query.ruleSetId) {
+      throw new BadRequestException('ruleSetId query parameter is required.');
+    }
+
+    const ruleSet = await this.prisma.postingRuleSet.findFirst({
+      where: {
+        id: query.ruleSetId,
+        tenantId,
+      },
+      select: { id: true },
+    });
+    if (!ruleSet) {
+      throw new NotFoundException('Posting rule set not found.');
+    }
+
+    return this.prisma.postingRule.findMany({
+      where: {
+        tenantId,
+        ruleSetId: query.ruleSetId,
+      },
+      orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }, { id: 'asc' }],
+    });
+  }
+
+  async createPostingRule(tenantId: string, dto: CreatePostingRuleDto) {
+    const ruleSet = await this.prisma.postingRuleSet.findFirst({
+      where: {
+        id: dto.ruleSetId,
+        tenantId,
+      },
+    });
+    if (!ruleSet) {
+      throw new NotFoundException('Posting rule set not found.');
+    }
+
+    this.assertRuleSetMutable(ruleSet.status);
+    validateExpressionSyntax(dto.amountExpr);
+    await this.assertAccountCodesInTenant(tenantId, [
+      dto.debitAccountCode,
+      dto.creditAccountCode,
+    ]);
+
+    return this.prisma.postingRule.create({
+      data: {
+        tenantId,
+        ruleSetId: dto.ruleSetId,
+        eventType: dto.eventType.trim(),
+        priority: dto.priority ?? 0,
+        debitAccountCode: dto.debitAccountCode.trim(),
+        creditAccountCode: dto.creditAccountCode.trim(),
+        amountExpr: dto.amountExpr.trim(),
+        memoTemplate: dto.memoTemplate,
+        ...(dto.conditionsJson !== undefined
+          ? { conditionsJson: dto.conditionsJson as Prisma.JsonObject }
+          : {}),
+        isActive: dto.isActive ?? true,
+      },
+    });
+  }
+
+  async updatePostingRule(
+    tenantId: string,
+    ruleId: string,
+    dto: UpdatePostingRuleDto,
+  ) {
+    const rule = await this.prisma.postingRule.findFirst({
+      where: { id: ruleId, tenantId },
+      include: {
+        ruleSet: {
+          select: {
+            status: true,
+          },
+        },
+      },
+    });
+    if (!rule) {
+      throw new NotFoundException('Posting rule not found.');
+    }
+
+    this.assertRuleSetMutable(rule.ruleSet.status);
+
+    if (dto.amountExpr !== undefined) {
+      validateExpressionSyntax(dto.amountExpr);
+    }
+
+    const debitAccountCode = dto.debitAccountCode ?? rule.debitAccountCode;
+    const creditAccountCode = dto.creditAccountCode ?? rule.creditAccountCode;
+    if (
+      dto.debitAccountCode !== undefined ||
+      dto.creditAccountCode !== undefined
+    ) {
+      await this.assertAccountCodesInTenant(tenantId, [
+        debitAccountCode,
+        creditAccountCode,
+      ]);
+    }
+
+    return this.prisma.postingRule.update({
+      where: { id: rule.id },
+      data: {
+        ...(dto.eventType !== undefined
+          ? { eventType: dto.eventType.trim() }
+          : {}),
+        ...(dto.priority !== undefined ? { priority: dto.priority } : {}),
+        ...(dto.debitAccountCode !== undefined
+          ? { debitAccountCode: dto.debitAccountCode.trim() }
+          : {}),
+        ...(dto.creditAccountCode !== undefined
+          ? { creditAccountCode: dto.creditAccountCode.trim() }
+          : {}),
+        ...(dto.amountExpr !== undefined
+          ? { amountExpr: dto.amountExpr.trim() }
+          : {}),
+        ...(dto.memoTemplate !== undefined
+          ? { memoTemplate: dto.memoTemplate }
+          : {}),
+        ...(dto.conditionsJson !== undefined
+          ? { conditionsJson: dto.conditionsJson as Prisma.JsonObject }
+          : {}),
+        ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+      },
+    });
+  }
+
+  async simulatePostingRules(tenantId: string, dto: SimulatePostingRulesDto) {
+    const effectiveAt = dto.effectiveAt
+      ? new Date(dto.effectiveAt)
+      : new Date();
+    if (dto.branchId) {
+      await this.assertBranchInTenant(this.prisma, tenantId, dto.branchId);
+    }
+
+    return this.accountingPostingService.simulate({
+      tenantId,
+      eventType: dto.eventType,
+      payload: dto.payload,
+      effectiveAt,
+      branchId: dto.branchId,
+    });
+  }
+
   private validateJournalLines(
     lines: Array<{ debit: number; credit: number }>,
   ) {
@@ -397,7 +647,7 @@ export class AccountingService {
   }
 
   private async assertBranchInTenant(
-    tx: Prisma.TransactionClient,
+    tx: Pick<Prisma.TransactionClient, 'branch'>,
     tenantId: string,
     branchId: string,
   ) {
@@ -413,6 +663,89 @@ export class AccountingService {
 
     if (!row) {
       throw new NotFoundException('Branch not found in tenant.');
+    }
+  }
+
+  private validateRuleSetWindow(effectiveFrom: Date, effectiveTo: Date | null) {
+    if (Number.isNaN(effectiveFrom.getTime())) {
+      throw new BadRequestException('effectiveFrom is invalid.');
+    }
+
+    if (effectiveTo !== null && Number.isNaN(effectiveTo.getTime())) {
+      throw new BadRequestException('effectiveTo is invalid.');
+    }
+
+    if (effectiveTo !== null && effectiveFrom >= effectiveTo) {
+      throw new BadRequestException(
+        'effectiveTo must be greater than effectiveFrom.',
+      );
+    }
+  }
+
+  private assertRuleSetMutable(status: PostingRuleSetStatus) {
+    if (status === PostingRuleSetStatus.ACTIVE) {
+      throw new ConflictException(
+        'Active posting rule sets are immutable. Create a new version.',
+      );
+    }
+  }
+
+  private async assertNoActiveRuleSetOverlap(
+    tenantId: string,
+    currentRuleSetId: string,
+    effectiveFrom: Date,
+    effectiveTo: Date | null,
+  ) {
+    const activeRuleSets = await this.prisma.postingRuleSet.findMany({
+      where: {
+        tenantId,
+        status: PostingRuleSetStatus.ACTIVE,
+        id: {
+          not: currentRuleSetId,
+        },
+      },
+      select: {
+        id: true,
+        effectiveFrom: true,
+        effectiveTo: true,
+      },
+    });
+
+    const overlapping = activeRuleSets.some((ruleSet) =>
+      rangesOverlap(
+        effectiveFrom,
+        effectiveTo,
+        ruleSet.effectiveFrom,
+        ruleSet.effectiveTo,
+      ),
+    );
+
+    if (overlapping) {
+      throw new ConflictException(
+        'Rule set effective window overlaps with another active rule set.',
+      );
+    }
+  }
+
+  private async assertAccountCodesInTenant(
+    tenantId: string,
+    accountCodes: string[],
+  ) {
+    const codes = [...new Set(accountCodes.map((code) => code.trim()))];
+    const count = await this.prisma.account.count({
+      where: {
+        tenantId,
+        isActive: true,
+        code: {
+          in: codes,
+        },
+      },
+    });
+
+    if (count !== codes.length) {
+      throw new NotFoundException(
+        'One or more account codes were not found in tenant.',
+      );
     }
   }
 }
