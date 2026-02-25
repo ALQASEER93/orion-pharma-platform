@@ -18,6 +18,7 @@ import { GoodsReceiptsModule } from './goods-receipts/goods-receipts.module';
 import { ProcurementTransactionsModule } from './procurement-transactions/procurement-transactions.module';
 import { ProcurementReportsModule } from './procurement-reports/procurement-reports.module';
 import { SalesModule } from './sales/sales.module';
+import { AccountingModule } from './accounting/accounting.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { SalesModule } from './sales/sales.module';
     ProcurementTransactionsModule,
     ProcurementReportsModule,
     SalesModule,
+    AccountingModule,
   ],
   controllers: [HealthController],
   providers: [
