@@ -37,6 +37,11 @@ model Tenant {
   procurementAdjustments ProcurementAdjustment[]
   procurementAdjustmentLines ProcurementAdjustmentLine[]
   documentSequences  DocumentSequence[]
+  accounts           Account[]
+  fiscalPeriods      FiscalPeriod[]
+  journalEntries     JournalEntry[]
+  journalLines       JournalLine[]
+  postingKeys        PostingKey[]
 
   @@map("tenants")
 }
@@ -99,6 +104,8 @@ model Branch {
   purchaseReturns    PurchaseReturn[]
   procurementAdjustments ProcurementAdjustment[]
   salesInvoices      SalesInvoice[]
+  journalEntries     JournalEntry[]
+  journalLines       JournalLine[]
 
   @@map("branches")
 }
@@ -202,6 +209,31 @@ enum SalesPaymentMethod {
   CASH
   CARD
   MIXED
+}
+
+enum AccountType {
+  ASSET
+  LIAB
+  EQUITY
+  REV
+  EXP
+}
+
+enum NormalBalance {
+  DEBIT
+  CREDIT
+}
+
+enum FiscalPeriodStatus {
+  OPEN
+  CLOSED
+  LOCKED
+}
+
+enum JournalEntryStatus {
+  DRAFT
+  POSTED
+  VOID
 }
 
 model TherapeuticClass {
@@ -419,6 +451,103 @@ model SalesPayment {
 
   @@index([tenantId, invoiceId, paidAt])
   @@map("sales_payments")
+}
+
+model Account {
+  id            String        @id @default(uuid())
+  tenantId      String        @map("tenant_id")
+  code          String
+  nameAr        String        @map("name_ar")
+  nameEn        String        @map("name_en")
+  type          AccountType
+  normalBalance NormalBalance @map("normal_balance")
+  isControl     Boolean       @default(false) @map("is_control")
+  isActive      Boolean       @default(true) @map("is_active")
+  parentId      String?       @map("parent_id")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent        Account?      @relation("AccountTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children      Account[]     @relation("AccountTree")
+  journalLines  JournalLine[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, parentId])
+  @@map("accounts")
+}
+
+model FiscalPeriod {
+  id        String           @id @default(uuid())
+  tenantId  String           @map("tenant_id")
+  year      Int
+  month     Int
+  status    FiscalPeriodStatus @default(OPEN)
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  journalEntries JournalEntry[]
+
+  @@unique([tenantId, year, month])
+  @@index([tenantId, status])
+  @@map("fiscal_periods")
+}
+
+model JournalEntry {
+  id          String            @id @default(uuid())
+  tenantId    String            @map("tenant_id")
+  entryNo     String            @map("entry_no")
+  date        DateTime
+  description String
+  status      JournalEntryStatus @default(DRAFT)
+  sourceType  String?           @map("source_type")
+  sourceId    String?           @map("source_id")
+  branchId    String?           @map("branch_id")
+  fiscalPeriodId String?        @map("fiscal_period_id")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch      Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  fiscalPeriod FiscalPeriod?    @relation(fields: [fiscalPeriodId], references: [id], onDelete: SetNull)
+  lines       JournalLine[]
+
+  @@unique([tenantId, entryNo])
+  @@index([tenantId, date, status])
+  @@index([tenantId, sourceType, sourceId])
+  @@map("journal_entries")
+}
+
+model JournalLine {
+  id            String       @id @default(uuid())
+  tenantId      String       @map("tenant_id")
+  journalEntryId String      @map("journal_entry_id")
+  accountId     String       @map("account_id")
+  debit         Float        @default(0)
+  credit        Float        @default(0)
+  memo          String?
+  branchId      String?      @map("branch_id")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  journalEntry  JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account       Account      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  branch        Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, journalEntryId])
+  @@index([tenantId, accountId])
+  @@map("journal_lines")
+}
+
+model PostingKey {
+  id         String   @id @default(uuid())
+  tenantId   String   @map("tenant_id")
+  sourceType String   @map("source_type")
+  sourceId   String   @map("source_id")
+  stage      String
+  createdAt  DateTime @default(now()) @map("created_at")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, sourceType, sourceId, stage])
+  @@map("posting_keys")
 }
 
 model PurchaseOrder {

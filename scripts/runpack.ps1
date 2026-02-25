@@ -175,6 +175,7 @@ try {
   Invoke-LoggedCommand -Name 'prisma_generate' -Command 'corepack' -Arguments @('pnpm', '--filter', '@orion/api', 'prisma:generate') -Critical | Out-Null
   Invoke-LoggedCommand -Name 'prisma_deploy' -Command 'corepack' -Arguments @('pnpm', '--filter', '@orion/api', 'prisma:deploy') -Critical | Out-Null
   Invoke-LoggedCommand -Name 'prisma_seed' -Command 'corepack' -Arguments @('pnpm', '--filter', '@orion/api', 'prisma:seed') -Critical | Out-Null
+  Invoke-LoggedCommand -Name 'prisma_drift_signal' -Command 'corepack' -Arguments @('pnpm', '--filter', '@orion/api', 'prisma:drift-signal') | Out-Null
   $prismaSeedLogPath = Join-Path $logsDir 'prisma_seed.log'
   if (Test-Path $prismaSeedLogPath) {
     $prismaSeedLog = Get-Content -Path $prismaSeedLogPath -Raw
@@ -247,6 +248,7 @@ $overall = if ($blockers.Count -eq 0) { 'passed' } else { 'failed' }
 
 $checks['prisma_deploy'] = [ordered]@{ exit_code = $exitCodes['prisma_deploy'] }
 $checks['prisma_seed'] = [ordered]@{ exit_code = $exitCodes['prisma_seed'] }
+$checks['prisma_drift_signal'] = [ordered]@{ exit_code = $exitCodes['prisma_drift_signal'] }
 $checks['lint'] = [ordered]@{ exit_code = $exitCodes['lint'] }
 $checks['typecheck'] = [ordered]@{ exit_code = $exitCodes['typecheck'] }
 $checks['test'] = [ordered]@{ exit_code = $exitCodes['test'] }
