@@ -1,0 +1,103 @@
+{
+  "run_name": "run_20260226_054458",
+  "run_dir": "docs/_runs/run_20260226_054458",
+  "zip_path": "docs/_runs/run_20260226_054458.zip",
+  "logs_zip_path": "docs/_runs/run_20260226_054458_logs.zip",
+  "advisor_zip_path": "docs/_runs/run_20260226_054458_advisor.zip",
+  "created_at": "2026-02-26T05:46:07.3015708+03:00",
+  "overall_pass": true,
+  "overall": "passed",
+  "fatal_error": "",
+  "blockers": [],
+  "branch": "codex/block-5-s7-close-and-statements",
+  "commit": "6b9f74d7190830f1a1e655c9768b8a2f1d89bcbc",
+  "checks": {
+    "prisma_deploy": {
+      "exit_code": 0
+    },
+    "prisma_seed": {
+      "exit_code": 0
+    },
+    "prisma_drift_signal": {
+      "exit_code": 0
+    },
+    "lint": {
+      "exit_code": 0
+    },
+    "typecheck": {
+      "exit_code": 0
+    },
+    "test": {
+      "exit_code": 0
+    },
+    "api_e2e": {
+      "exit_code": 0
+    },
+    "build": {
+      "exit_code": 0
+    }
+  },
+  "steps": {
+    "docker_mode": {
+      "exit_code": 0,
+      "duration_seconds": 0,
+      "log": "logs/docker_mode.log",
+      "command": "docker skipped (ORION_RUNPACK_USE_DOCKER != 1)"
+    },
+    "prisma_generate": {
+      "exit_code": 0,
+      "duration_seconds": 2.53,
+      "log": "logs/prisma_generate.log",
+      "command": "corepack pnpm --filter @orion/api prisma:generate"
+    },
+    "prisma_deploy": {
+      "exit_code": 0,
+      "duration_seconds": 1.88,
+      "log": "logs/prisma_deploy.log",
+      "command": "corepack pnpm --filter @orion/api prisma:deploy"
+    },
+    "prisma_seed": {
+      "exit_code": 0,
+      "duration_seconds": 3.96,
+      "log": "logs/prisma_seed.log",
+      "command": "corepack pnpm --filter @orion/api prisma:seed"
+    },
+    "prisma_drift_signal": {
+      "exit_code": 0,
+      "duration_seconds": 0.43,
+      "log": "logs/prisma_drift_signal.log",
+      "command": "corepack pnpm --filter @orion/api prisma:drift-signal"
+    },
+    "lint": {
+      "exit_code": 0,
+      "duration_seconds": 10.76,
+      "log": "logs/lint.log",
+      "command": "corepack pnpm lint"
+    },
+    "typecheck": {
+      "exit_code": 0,
+      "duration_seconds": 3.98,
+      "log": "logs/typecheck.log",
+      "command": "corepack pnpm typecheck"
+    },
+    "test": {
+      "exit_code": 0,
+      "duration_seconds": 7.07,
+      "log": "logs/test.log",
+      "command": "corepack pnpm test"
+    },
+    "api_e2e": {
+      "exit_code": 0,
+      "duration_seconds": 13.98,
+      "log": "logs/api_e2e.log",
+      "command": "corepack pnpm --filter @orion/api run test:e2e --runInBand --testTimeout=30000",
+      "mode": "package-script:test:e2e"
+    },
+    "build": {
+      "exit_code": 0,
+      "duration_seconds": 20.74,
+      "log": "logs/build.log",
+      "command": "corepack pnpm build"
+    }
+  }
+}

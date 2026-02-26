@@ -47,6 +47,9 @@ model Tenant {
   postingKeys        PostingKey[]
   postingRuleSets    PostingRuleSet[]
   postingRules       PostingRule[]
+  periodCloses       PeriodClose[]
+  trialBalanceSnapshots TrialBalanceSnapshot[]
+  statementSnapshots StatementSnapshot[]
   arInvoices         ArInvoice[]
   arReceipts         ArReceipt[]
   arAllocations      ArAllocation[]
@@ -146,6 +149,7 @@ model User {
   salesInvoicesCreated SalesInvoice[]
   salesPaymentsCreated SalesPayment[]
   createdPostingRuleSets PostingRuleSet[] @relation("PostingRuleSetCreatedBy")
+  periodCloses      PeriodClose[] @relation("PeriodCloseByUser")
   arInvoicesCreated ArInvoice[] @relation("ArInvoiceCreatedBy")
   arReceiptsCreated ArReceipt[] @relation("ArReceiptCreatedBy")
   apBillsCreated ApBill[] @relation("ApBillCreatedBy")
@@ -255,6 +259,17 @@ enum JournalEntryStatus {
   DRAFT
   POSTED
   VOID
+}
+
+enum PeriodCloseStatus {
+  DRAFT
+  CLOSED
+  REOPENED
+}
+
+enum StatementType {
+  PL
+  BS
 }
 
 enum PostingRuleSetStatus {
@@ -602,10 +617,59 @@ model FiscalPeriod {
   updatedAt DateTime         @updatedAt @map("updated_at")
   tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   journalEntries JournalEntry[]
+  periodCloses PeriodClose[]
+  trialBalanceSnapshots TrialBalanceSnapshot[]
+  statementSnapshots StatementSnapshot[]
 
   @@unique([tenantId, year, month])
   @@index([tenantId, status])
   @@map("fiscal_periods")
+}
+
+model PeriodClose {
+  id             String            @id @default(uuid())
+  tenantId       String            @map("tenant_id")
+  fiscalPeriodId String            @map("fiscal_period_id")
+  status         PeriodCloseStatus
+  closedAt       DateTime          @default(now()) @map("closed_at")
+  closedByUserId String?           @map("closed_by_user_id")
+  notes          String?
+  createdAt      DateTime          @default(now()) @map("created_at")
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fiscalPeriod   FiscalPeriod      @relation(fields: [fiscalPeriodId], references: [id], onDelete: Cascade)
+  closedByUser   User?             @relation("PeriodCloseByUser", fields: [closedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, fiscalPeriodId, createdAt])
+  @@index([tenantId, status, createdAt])
+  @@map("period_closes")
+}
+
+model TrialBalanceSnapshot {
+  id             String      @id @default(uuid())
+  tenantId       String      @map("tenant_id")
+  fiscalPeriodId String      @map("fiscal_period_id")
+  asOfDate       DateTime    @map("as_of_date")
+  payload        Json
+  createdAt      DateTime    @default(now()) @map("created_at")
+  tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fiscalPeriod   FiscalPeriod @relation(fields: [fiscalPeriodId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, fiscalPeriodId, createdAt])
+  @@map("trial_balance_snapshots")
+}
+
+model StatementSnapshot {
+  id             String        @id @default(uuid())
+  tenantId       String        @map("tenant_id")
+  fiscalPeriodId String        @map("fiscal_period_id")
+  type           StatementType
+  payload        Json
+  createdAt      DateTime      @default(now()) @map("created_at")
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fiscalPeriod   FiscalPeriod  @relation(fields: [fiscalPeriodId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, fiscalPeriodId, type, createdAt])
+  @@map("statement_snapshots")
 }
 
 model JournalEntry {

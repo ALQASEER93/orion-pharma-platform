@@ -1,0 +1,24 @@
+$ corepack pnpm --filter @orion/api run test:e2e --runInBand --testTimeout=30000
+
+> @orion/api@0.1.0 test:e2e D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api
+> jest --config ./test/jest-e2e.json "--runInBand" "--testTimeout=30000"
+
+PASS test/purchase-returns.e2e-spec.ts
+PASS test/sales-invoices.e2e-spec.ts
+PASS test/accounting.e2e-spec.ts
+PASS test/purchase-orders.e2e-spec.ts
+PASS test/ar.e2e-spec.ts
+PASS test/inventory-valuation.e2e-spec.ts
+PASS test/ap.e2e-spec.ts
+PASS test/procurement-reports.e2e-spec.ts
+PASS test/suppliers.e2e-spec.ts
+PASS test/goods-receipts.e2e-spec.ts
+PASS test/products.e2e-spec.ts
+PASS test/customers.e2e-spec.ts
+PASS test/app.e2e-spec.ts
+
+Test Suites: 13 passed, 13 total
+Tests:       46 passed, 46 total
+Snapshots:   0 total
+Time:        12.469 s, estimated 41 s
+Ran all test suites.

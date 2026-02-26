@@ -9,8 +9,10 @@ import {
   FiscalPeriodStatus,
   JournalEntryStatus,
   NormalBalance,
+  PeriodCloseStatus,
   PostingRuleSetStatus,
   Prisma,
+  StatementType,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccountingPostingService } from './accounting-posting.service';
@@ -18,7 +20,9 @@ import { CreateJournalDto } from './dto/create-journal.dto';
 import { CreatePostingRuleDto } from './dto/create-posting-rule.dto';
 import { CreatePostingRuleSetDto } from './dto/create-posting-ruleset.dto';
 import { QueryJournalsDto } from './dto/query-journals.dto';
+import { QueryPeriodReportDto } from './dto/query-period-report.dto';
 import { QueryPostingRulesDto } from './dto/query-posting-rules.dto';
+import { ReopenPeriodDto } from './dto/reopen-period.dto';
 import { SimulatePostingRulesDto } from './dto/simulate-posting-rules.dto';
 import { UpdatePostingRuleDto } from './dto/update-posting-rule.dto';
 import { UpdatePostingRuleSetDto } from './dto/update-posting-ruleset.dto';
@@ -31,6 +35,7 @@ import { rangesOverlap } from './utils/posting-rules';
 
 const JOURNAL_SEQUENCE_KEY = 'JOURNAL_ENTRY';
 const JOURNAL_POST_STAGE = 'JOURNAL_POST';
+const CLOSE_TOLERANCE = 0.0001;
 
 export type JournalPreviewLineInput = {
   accountCode: string;
@@ -377,6 +382,247 @@ export class AccountingService {
         },
       });
     });
+  }
+
+  async closePeriod(
+    tenantId: string,
+    periodId: string,
+    closedByUserId: string | undefined,
+    notes?: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const period = await tx.fiscalPeriod.findFirst({
+        where: {
+          id: periodId,
+          tenantId,
+        },
+      });
+      if (!period) {
+        throw new NotFoundException('Fiscal period not found.');
+      }
+
+      if (period.status !== FiscalPeriodStatus.OPEN) {
+        throw new ConflictException('Fiscal period must be OPEN to close.');
+      }
+
+      const { startAt, endAt } = this.resolvePeriodWindow(period);
+      const draftCount = await tx.journalEntry.count({
+        where: {
+          tenantId,
+          status: JournalEntryStatus.DRAFT,
+          OR: [
+            { fiscalPeriodId: period.id },
+            {
+              date: {
+                gte: startAt,
+                lt: endAt,
+              },
+            },
+          ],
+        },
+      });
+      if (draftCount > 0) {
+        throw new ConflictException(
+          'Cannot close period with draft journals pending.',
+        );
+      }
+
+      const { trialBalancePayload, statementPayloadByType } =
+        await this.buildPeriodSnapshots(tx, tenantId, period.id, endAt);
+
+      if (
+        Math.abs(
+          Number(trialBalancePayload.totalDebit) -
+            Number(trialBalancePayload.totalCredit),
+        ) > CLOSE_TOLERANCE
+      ) {
+        throw new ConflictException('Posted journals are not balanced.');
+      }
+
+      const closedAt = new Date();
+      const updatedPeriod = await tx.fiscalPeriod.update({
+        where: { id: period.id },
+        data: {
+          status: FiscalPeriodStatus.CLOSED,
+        },
+      });
+
+      const closeRevision = await tx.periodClose.create({
+        data: {
+          tenantId,
+          fiscalPeriodId: period.id,
+          status: PeriodCloseStatus.CLOSED,
+          closedAt,
+          closedByUserId,
+          notes,
+        },
+      });
+
+      const tbSnapshot = await tx.trialBalanceSnapshot.create({
+        data: {
+          tenantId,
+          fiscalPeriodId: period.id,
+          asOfDate: endAt,
+          payload: trialBalancePayload as Prisma.JsonObject,
+        },
+      });
+
+      const plSnapshot = await tx.statementSnapshot.create({
+        data: {
+          tenantId,
+          fiscalPeriodId: period.id,
+          type: StatementType.PL,
+          payload: statementPayloadByType.PL as Prisma.JsonObject,
+        },
+      });
+
+      const bsSnapshot = await tx.statementSnapshot.create({
+        data: {
+          tenantId,
+          fiscalPeriodId: period.id,
+          type: StatementType.BS,
+          payload: statementPayloadByType.BS as Prisma.JsonObject,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          userId: closedByUserId,
+          action: 'PERIOD_CLOSE',
+          entity: 'fiscal_periods',
+          entityId: period.id,
+          before: { status: period.status },
+          after: {
+            status: FiscalPeriodStatus.CLOSED,
+            periodCloseId: closeRevision.id,
+            trialBalanceSnapshotId: tbSnapshot.id,
+            plSnapshotId: plSnapshot.id,
+            bsSnapshotId: bsSnapshot.id,
+          },
+        },
+      });
+
+      return {
+        periodId: period.id,
+        status: updatedPeriod.status,
+        periodCloseId: closeRevision.id,
+        trialBalanceSnapshotId: tbSnapshot.id,
+        statementSnapshotIds: {
+          PL: plSnapshot.id,
+          BS: bsSnapshot.id,
+        },
+      };
+    });
+  }
+
+  async reopenPeriod(
+    tenantId: string,
+    periodId: string,
+    reopenedByUserId: string | undefined,
+    dto: ReopenPeriodDto,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const period = await tx.fiscalPeriod.findFirst({
+        where: {
+          id: periodId,
+          tenantId,
+        },
+      });
+      if (!period) {
+        throw new NotFoundException('Fiscal period not found.');
+      }
+
+      if (
+        period.status !== FiscalPeriodStatus.CLOSED &&
+        period.status !== FiscalPeriodStatus.LOCKED
+      ) {
+        throw new ConflictException(
+          'Only CLOSED or LOCKED periods can reopen.',
+        );
+      }
+
+      const updatedPeriod = await tx.fiscalPeriod.update({
+        where: { id: period.id },
+        data: {
+          status: FiscalPeriodStatus.OPEN,
+        },
+      });
+
+      const reopenRevision = await tx.periodClose.create({
+        data: {
+          tenantId,
+          fiscalPeriodId: period.id,
+          status: PeriodCloseStatus.REOPENED,
+          closedAt: new Date(),
+          closedByUserId: reopenedByUserId,
+          notes: dto.notes,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          userId: reopenedByUserId,
+          action: 'PERIOD_REOPEN',
+          entity: 'fiscal_periods',
+          entityId: period.id,
+          before: { status: period.status },
+          after: {
+            status: FiscalPeriodStatus.OPEN,
+            periodCloseId: reopenRevision.id,
+            notes: dto.notes ?? null,
+          },
+        },
+      });
+
+      return {
+        periodId: period.id,
+        status: updatedPeriod.status,
+        periodCloseId: reopenRevision.id,
+      };
+    });
+  }
+
+  async getTrialBalanceSnapshot(tenantId: string, query: QueryPeriodReportDto) {
+    await this.assertPeriodInTenant(tenantId, query.periodId);
+
+    const snapshot = await this.prisma.trialBalanceSnapshot.findFirst({
+      where: {
+        tenantId,
+        fiscalPeriodId: query.periodId,
+      },
+      orderBy: [{ createdAt: 'desc' }],
+    });
+
+    if (!snapshot) {
+      throw new NotFoundException('Trial balance snapshot not found.');
+    }
+
+    return snapshot;
+  }
+
+  async getStatementSnapshot(
+    tenantId: string,
+    query: QueryPeriodReportDto,
+    type: StatementType,
+  ) {
+    await this.assertPeriodInTenant(tenantId, query.periodId);
+
+    const snapshot = await this.prisma.statementSnapshot.findFirst({
+      where: {
+        tenantId,
+        fiscalPeriodId: query.periodId,
+        type,
+      },
+      orderBy: [{ createdAt: 'desc' }],
+    });
+
+    if (!snapshot) {
+      throw new NotFoundException('Statement snapshot not found.');
+    }
+
+    return snapshot;
   }
 
   async listPostingRuleSets(tenantId: string) {
@@ -828,6 +1074,22 @@ export class AccountingService {
     }
   }
 
+  private async assertPeriodInTenant(tenantId: string, periodId: string) {
+    const period = await this.prisma.fiscalPeriod.findFirst({
+      where: {
+        id: periodId,
+        tenantId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!period) {
+      throw new NotFoundException('Fiscal period not found.');
+    }
+  }
+
   private async assertBranchInTenant(
     tx: Pick<Prisma.TransactionClient, 'branch'>,
     tenantId: string,
@@ -929,5 +1191,181 @@ export class AccountingService {
         'One or more account codes were not found in tenant.',
       );
     }
+  }
+
+  private resolvePeriodWindow(period: { year: number; month: number }) {
+    const startAt = new Date(
+      Date.UTC(period.year, period.month - 1, 1, 0, 0, 0),
+    );
+    const endAt = new Date(Date.UTC(period.year, period.month, 1, 0, 0, 0));
+    return { startAt, endAt };
+  }
+
+  private async buildPeriodSnapshots(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    fiscalPeriodId: string,
+    asOfDate: Date,
+  ) {
+    const groupedLines = await tx.journalLine.groupBy({
+      by: ['accountId'],
+      where: {
+        tenantId,
+        journalEntry: {
+          is: {
+            tenantId,
+            status: JournalEntryStatus.POSTED,
+            fiscalPeriodId,
+          },
+        },
+      },
+      _sum: {
+        debit: true,
+        credit: true,
+      },
+    });
+
+    const accountIds = groupedLines.map((line) => line.accountId);
+    const accounts = await tx.account.findMany({
+      where: {
+        tenantId,
+        id: {
+          in: accountIds,
+        },
+      },
+      select: {
+        id: true,
+        code: true,
+        nameAr: true,
+        nameEn: true,
+        type: true,
+      },
+      orderBy: [{ code: 'asc' }],
+    });
+    const accountMap = new Map(
+      accounts.map((account) => [account.id, account]),
+    );
+
+    const trialBalanceLines = groupedLines
+      .map((line) => {
+        const account = accountMap.get(line.accountId);
+        if (!account) {
+          throw new NotFoundException('Account missing for trial balance.');
+        }
+        const debit = Number(line._sum.debit ?? 0);
+        const credit = Number(line._sum.credit ?? 0);
+        return {
+          accountCode: account.code,
+          accountNameAr: account.nameAr,
+          accountNameEn: account.nameEn,
+          accountType: account.type,
+          debit,
+          credit,
+          balance: debit - credit,
+        };
+      })
+      .sort((a, b) => a.accountCode.localeCompare(b.accountCode));
+
+    const totalDebit = trialBalanceLines.reduce(
+      (sum, line) => sum + line.debit,
+      0,
+    );
+    const totalCredit = trialBalanceLines.reduce(
+      (sum, line) => sum + line.credit,
+      0,
+    );
+
+    const revenueLines = trialBalanceLines.filter(
+      (line) => line.accountType === AccountType.REV,
+    );
+    const expenseLines = trialBalanceLines.filter(
+      (line) => line.accountType === AccountType.EXP,
+    );
+    const assetLines = trialBalanceLines.filter(
+      (line) => line.accountType === AccountType.ASSET,
+    );
+    const liabilityLines = trialBalanceLines.filter(
+      (line) => line.accountType === AccountType.LIAB,
+    );
+    const equityLines = trialBalanceLines.filter(
+      (line) => line.accountType === AccountType.EQUITY,
+    );
+
+    const totalRevenue = revenueLines.reduce(
+      (sum, line) => sum + (line.credit - line.debit),
+      0,
+    );
+    const totalExpenses = expenseLines.reduce(
+      (sum, line) => sum + (line.debit - line.credit),
+      0,
+    );
+    const netIncome = totalRevenue - totalExpenses;
+
+    const assetsTotal = assetLines.reduce(
+      (sum, line) => sum + (line.debit - line.credit),
+      0,
+    );
+    const liabilitiesTotal = liabilityLines.reduce(
+      (sum, line) => sum + (line.credit - line.debit),
+      0,
+    );
+    const equityTotal = equityLines.reduce(
+      (sum, line) => sum + (line.credit - line.debit),
+      0,
+    );
+    const retainedEarnings = netIncome;
+    const equityTotalWithRetained = equityTotal + retainedEarnings;
+
+    const trialBalancePayload = {
+      asOfDate: asOfDate.toISOString(),
+      lines: trialBalanceLines,
+      totalDebit,
+      totalCredit,
+      difference: totalDebit - totalCredit,
+    };
+
+    const plPayload = {
+      asOfDate: asOfDate.toISOString(),
+      revenueLines,
+      expenseLines,
+      totalRevenue,
+      totalExpenses,
+      netIncome,
+    };
+
+    const bsPayload = {
+      asOfDate: asOfDate.toISOString(),
+      assetLines,
+      liabilityLines,
+      equityLines: [
+        ...equityLines,
+        {
+          accountCode: 'RETAINED_EARNINGS_CURRENT_PERIOD',
+          accountNameAr: 'أرباح محتجزة للفترة الحالية',
+          accountNameEn: 'Retained Earnings (Current Period)',
+          accountType: AccountType.EQUITY,
+          debit: 0,
+          credit: retainedEarnings,
+          balance: -retainedEarnings,
+        },
+      ],
+      totals: {
+        assets: assetsTotal,
+        liabilities: liabilitiesTotal,
+        equity: equityTotal,
+        retainedEarnings,
+        equityWithRetained: equityTotalWithRetained,
+        balanceCheck:
+          assetsTotal - (liabilitiesTotal + equityTotalWithRetained),
+      },
+    };
+
+    return {
+      trialBalancePayload,
+      statementPayloadByType: {
+        PL: plPayload,
+        BS: bsPayload,
+      },
+    };
   }
 }

@@ -8,6 +8,7 @@ import {
   FiscalPeriodStatus,
   JournalEntryStatus,
   NormalBalance,
+  PeriodCloseStatus,
   PostingRuleSetStatus,
   PrismaClient,
 } from '@prisma/client';
@@ -16,6 +17,7 @@ import { resolveOrionDatabaseUrl } from '../src/prisma/orion-database-url';
 
 const tenantId = '11111111-1111-1111-1111-111111111111';
 const otherTenantId = '99999999-9999-9999-9999-999999999999';
+const otherTenantPeriodId = '88888888-8888-8888-8888-888888888888';
 const branchId = '22222222-2222-2222-2222-222222222222';
 const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'Admin@123';
 
@@ -45,6 +47,7 @@ describe('Accounting Foundation (e2e)', () => {
   let accessToken = '';
   let otherTenantJournalId = '';
   let otherTenantRuleSetId = '';
+  let otherTenantPeriodFixtureId = '';
   const uniqueRunId = `${Date.now()}`;
 
   beforeAll(async () => {
@@ -55,6 +58,7 @@ describe('Accounting Foundation (e2e)', () => {
     const fixture = await ensureFixture();
     otherTenantJournalId = fixture.otherTenantJournalId;
     otherTenantRuleSetId = fixture.otherTenantRuleSetId;
+    otherTenantPeriodFixtureId = fixture.otherTenantPeriodId;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -492,6 +496,224 @@ describe('Accounting Foundation (e2e)', () => {
       .send({ status: PostingRuleSetStatus.ACTIVE });
     expect(patchOther.status).toBe(404);
   });
+
+  it('blocks period close when draft journals exist for the period', async () => {
+    const server = app.getHttpServer() as Server;
+    const [cash, sales] = await requiredAccounts(['1010', '4000']);
+    const closeDraftYear = 2100 + Number(uniqueRunId.slice(-2));
+
+    const period = await prisma.fiscalPeriod.upsert({
+      where: {
+        tenantId_year_month: {
+          tenantId,
+          year: closeDraftYear,
+          month: 5,
+        },
+      },
+      update: {
+        status: FiscalPeriodStatus.OPEN,
+      },
+      create: {
+        tenantId,
+        year: closeDraftYear,
+        month: 5,
+        status: FiscalPeriodStatus.OPEN,
+      },
+    });
+
+    const draftJournal = await request(server)
+      .post('/api/accounting/journals')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        date: `${closeDraftYear}-05-10T00:00:00.000Z`,
+        description: 'Draft prevents close',
+        lines: [
+          { accountId: cash.id, debit: 300, credit: 0, branchId },
+          { accountId: sales.id, debit: 0, credit: 300, branchId },
+        ],
+      });
+    expect(draftJournal.status).toBe(201);
+    expect(draftJournal.body.status).toBe(JournalEntryStatus.DRAFT);
+
+    const closeResponse = await request(server)
+      .post(`/api/accounting/periods/${period.id}/close`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({ notes: 'Attempt close with drafts' });
+    expect(closeResponse.status).toBe(409);
+  });
+
+  it('closes period, provides snapshots, rejects posting in closed period, and reopens with audit', async () => {
+    const server = app.getHttpServer() as Server;
+    const [cash, sales] = await requiredAccounts(['1010', '4000']);
+    const closeYear = 2200 + Number(uniqueRunId.slice(-2));
+
+    const period = await prisma.fiscalPeriod.upsert({
+      where: {
+        tenantId_year_month: {
+          tenantId,
+          year: closeYear,
+          month: 6,
+        },
+      },
+      update: {
+        status: FiscalPeriodStatus.OPEN,
+      },
+      create: {
+        tenantId,
+        year: closeYear,
+        month: 6,
+        status: FiscalPeriodStatus.OPEN,
+      },
+    });
+
+    const createPostedJournal = await request(server)
+      .post('/api/accounting/journals')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        date: `${closeYear}-06-15T00:00:00.000Z`,
+        description: 'Close period posted entry',
+        sourceType: 'TEST',
+        sourceId: `CLOSE-${uniqueRunId}`,
+        branchId,
+        lines: [
+          { accountId: cash.id, debit: 250, credit: 0, branchId },
+          { accountId: sales.id, debit: 0, credit: 250, branchId },
+        ],
+      });
+    expect(createPostedJournal.status).toBe(201);
+
+    const postJournal = await request(server)
+      .post(`/api/accounting/journals/${createPostedJournal.body.id}/post`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send();
+    expect(postJournal.status).toBe(201);
+    expect(postJournal.body.status).toBe(JournalEntryStatus.POSTED);
+
+    const closePeriod = await request(server)
+      .post(`/api/accounting/periods/${period.id}/close`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({ notes: 'Month-end close run' });
+    expect(closePeriod.status).toBe(201);
+    expect(closePeriod.body.status).toBe(FiscalPeriodStatus.CLOSED);
+
+    const trialBalance = await request(server)
+      .get('/api/accounting/trial-balance')
+      .query({ periodId: period.id })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId);
+    expect(trialBalance.status).toBe(200);
+    expect(trialBalance.body.fiscalPeriodId).toBe(period.id);
+    expect(trialBalance.body.payload.totalDebit).toBeCloseTo(
+      trialBalance.body.payload.totalCredit,
+      6,
+    );
+
+    const pl = await request(server)
+      .get('/api/accounting/statements/pl')
+      .query({ periodId: period.id })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId);
+    expect(pl.status).toBe(200);
+    expect(pl.body.type).toBe('PL');
+    expect(pl.body.payload.netIncome).toBe(250);
+
+    const bs = await request(server)
+      .get('/api/accounting/statements/bs')
+      .query({ periodId: period.id })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId);
+    expect(bs.status).toBe(200);
+    expect(bs.body.type).toBe('BS');
+    expect(bs.body.payload.totals.retainedEarnings).toBe(250);
+
+    const createAfterClose = await request(server)
+      .post('/api/accounting/journals')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        date: `${closeYear}-06-20T00:00:00.000Z`,
+        description: 'Posting blocked after close',
+        lines: [
+          { accountId: cash.id, debit: 70, credit: 0, branchId },
+          { accountId: sales.id, debit: 0, credit: 70, branchId },
+        ],
+      });
+    expect(createAfterClose.status).toBe(201);
+
+    const postAfterClose = await request(server)
+      .post(`/api/accounting/journals/${createAfterClose.body.id}/post`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send();
+    expect(postAfterClose.status).toBe(409);
+
+    const reopen = await request(server)
+      .post(`/api/accounting/periods/${period.id}/reopen`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({ notes: 'Audit-approved reopen for correction' });
+    expect(reopen.status).toBe(201);
+    expect(reopen.body.status).toBe(FiscalPeriodStatus.OPEN);
+
+    const closeRevisions = await prisma.periodClose.findMany({
+      where: {
+        tenantId,
+        fiscalPeriodId: period.id,
+      },
+      orderBy: [{ createdAt: 'asc' }],
+    });
+    expect(
+      closeRevisions.some(
+        (revision) => revision.status === PeriodCloseStatus.CLOSED,
+      ),
+    ).toBe(true);
+    expect(
+      closeRevisions.some(
+        (revision) => revision.status === PeriodCloseStatus.REOPENED,
+      ),
+    ).toBe(true);
+
+    const reopenAudit = await prisma.auditLog.findFirst({
+      where: {
+        tenantId,
+        action: 'PERIOD_REOPEN',
+        entity: 'fiscal_periods',
+        entityId: period.id,
+      },
+      orderBy: [{ createdAt: 'desc' }],
+    });
+    expect(reopenAudit).toBeTruthy();
+  });
+
+  it('enforces tenant isolation for close and statement endpoints', async () => {
+    const server = app.getHttpServer() as Server;
+
+    const closeOtherPeriod = await request(server)
+      .post(`/api/accounting/periods/${otherTenantPeriodFixtureId}/close`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({ notes: 'Cross tenant close attempt' });
+    expect(closeOtherPeriod.status).toBe(404);
+
+    const tbOtherPeriod = await request(server)
+      .get('/api/accounting/trial-balance')
+      .query({ periodId: otherTenantPeriodFixtureId })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId);
+    expect(tbOtherPeriod.status).toBe(404);
+
+    const reopenOtherPeriod = await request(server)
+      .post(`/api/accounting/periods/${otherTenantPeriodFixtureId}/reopen`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({ notes: 'Cross tenant reopen attempt' });
+    expect(reopenOtherPeriod.status).toBe(404);
+  });
 });
 
 async function requiredAccounts(codes: string[]) {
@@ -557,6 +779,23 @@ async function ensureFixture() {
       id: tenantId,
       name: 'ORION Pharma Demo Tenant',
       subscriptionPlan: 'enterprise',
+    },
+  });
+
+  await prisma.fiscalPeriod.upsert({
+    where: { id: otherTenantPeriodId },
+    update: {
+      tenantId: otherTenantId,
+      year: 2026,
+      month: 7,
+      status: FiscalPeriodStatus.OPEN,
+    },
+    create: {
+      id: otherTenantPeriodId,
+      tenantId: otherTenantId,
+      year: 2026,
+      month: 7,
+      status: FiscalPeriodStatus.OPEN,
     },
   });
 
@@ -719,5 +958,6 @@ async function ensureFixture() {
   return {
     otherTenantJournalId: otherJournal.id,
     otherTenantRuleSetId: otherRuleSet.id,
+    otherTenantPeriodId,
   };
 }

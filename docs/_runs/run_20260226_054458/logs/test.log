@@ -1,0 +1,62 @@
+$ corepack pnpm test
+
+> orion-pharma-platform@0.1.0 test D:\ORION_PHARMA_PLATFORM\orion-pharma-platform
+> corepack pnpm -r --if-present run test
+
+Scope: 7 of 8 workspace projects
+packages/accounting test$ echo test:accounting
+apps/web test$ node --test tests/smoke.test.mjs
+apps/api test$ corepack pnpm run test:unit
+packages/auth test$ echo test:auth
+packages/accounting test: test:accounting
+packages/auth test: test:auth
+packages/auth test: Done
+packages/accounting test: Done
+packages/core test$ echo test:core
+packages/intelligence test$ echo test:intelligence
+packages/core test: test:core
+packages/core test: Done
+packages/inventory test$ echo test:inventory
+packages/intelligence test: test:intelligence
+packages/intelligence test: Done
+packages/inventory test: test:inventory
+packages/inventory test: Done
+apps/web test: ▶ web smoke tests
+apps/web test:   ✔ has app router page and manifest (0.9164ms)
+apps/web test: ✔ web smoke tests (1.5074ms)
+apps/web test: ℹ tests 1
+apps/web test: ℹ suites 1
+apps/web test: ℹ pass 1
+apps/web test: ℹ fail 0
+apps/web test: ℹ cancelled 0
+apps/web test: ℹ skipped 0
+apps/web test: ℹ todo 0
+apps/web test: ℹ duration_ms 85.8192
+apps/web test: Done
+apps/api test: > @orion/api@0.1.0 test:unit D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api
+apps/api test: > jest
+apps/api test: PASS src/accounting/accounting-posting.service.spec.ts
+apps/api test: PASS src/accounting/posting-expression.spec.ts
+apps/api test: PASS src/customers/customers.service.spec.ts
+apps/api test: PASS src/goods-receipts/goods-receipts.service.spec.ts
+apps/api test: PASS src/inventory/inventory-valuation.service.spec.ts
+apps/api test: PASS src/accounting/accounting.service.spec.ts
+apps/api test: PASS src/inventory/valuation-math.spec.ts
+apps/api test: PASS src/inventory/stock-math.spec.ts
+apps/api test: PASS src/sales/sales.service.spec.ts
+apps/api test: PASS src/sales/stock-allocation.spec.ts
+apps/api test: PASS src/procurement-transactions/procurement-transactions.service.spec.ts
+apps/api test: PASS src/purchase-orders/purchase-orders.service.spec.ts
+apps/api test: PASS src/accounting/journal-validation.spec.ts
+apps/api test: PASS src/suppliers/suppliers.service.spec.ts
+apps/api test: PASS src/procurement-reports/procurement-reports.service.spec.ts
+apps/api test: PASS src/health/health.controller.spec.ts
+apps/api test: PASS src/sales/sales.controller.spec.ts
+apps/api test: PASS src/purchase-orders/purchase-orders.controller.spec.ts
+apps/api test: PASS src/customers/customers.controller.spec.ts
+apps/api test: Test Suites: 19 passed, 19 total
+apps/api test: Tests:       51 passed, 51 total
+apps/api test: Snapshots:   0 total
+apps/api test: Time:        5.04 s
+apps/api test: Ran all test suites.
+apps/api test: Done
