@@ -2,6 +2,10 @@ import { ConflictException } from '@nestjs/common';
 import { ProcurementTransactionsService } from './procurement-transactions.service';
 
 describe('ProcurementTransactionsService', () => {
+  const inventoryValuationService = {
+    applyMovement: jest.fn(),
+  };
+
   const prisma = {
     purchaseReturn: {
       findUnique: jest.fn(),
@@ -13,7 +17,10 @@ describe('ProcurementTransactionsService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new ProcurementTransactionsService(prisma as never);
+    service = new ProcurementTransactionsService(
+      prisma as never,
+      inventoryValuationService as never,
+    );
   });
 
   it('returns existing purchase return on idempotent replay without double decrement', async () => {

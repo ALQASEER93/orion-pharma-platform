@@ -122,6 +122,12 @@ export class SalesController {
     );
   }
 
+  @Post('sales/invoices/:id/post-cogs')
+  @Permissions('sales_invoices.manage')
+  postCogs(@Req() request: RequestWithContext, @Param('id') invoiceId: string) {
+    return this.salesService.postCogs(resolveTenantId(request), invoiceId);
+  }
+
   @Post('pos/checkout')
   @Permissions('pos.checkout')
   checkout(@Req() request: RequestWithContext, @Body() dto: PosCheckoutDto) {

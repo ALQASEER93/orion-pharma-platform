@@ -11,6 +11,7 @@ import {
   TrackingMode,
 } from '@prisma/client';
 import { createHash } from 'crypto';
+import { InventoryValuationService } from '../inventory/inventory-valuation.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type { JwtUserPayload } from '../common/types/request-with-context.type';
 import { CreateGoodsReceiptDto } from './dto/create-goods-receipt.dto';
@@ -20,7 +21,10 @@ const GOODS_RECEIPT_SEQUENCE_KEY = 'GOODS_RECEIPT';
 
 @Injectable()
 export class GoodsReceiptsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly inventoryValuationService: InventoryValuationService,
+  ) {}
 
   async list(tenantId: string, query: QueryGoodsReceiptsDto) {
     const where: Prisma.GoodsReceiptWhereInput = {
@@ -193,6 +197,7 @@ export class GoodsReceiptsService {
         {
           id: line.id,
           productId: line.productId,
+          unitPrice: line.unitPrice,
           quantity: line.quantity,
           receivedQuantity: line.receivedQuantity,
           trackingMode: line.product.trackingMode,
@@ -304,6 +309,7 @@ export class GoodsReceiptsService {
         expiryDate: line.expiryDate,
         createdBy: user.sub,
         reason: `Goods receipt ${grnNumber}`,
+        unitCost: poLine.unitPrice,
       });
 
       movementResults.push({
@@ -390,6 +396,7 @@ export class GoodsReceiptsService {
       expiryDate?: string;
       createdBy: string;
       reason: string;
+      unitCost?: number;
     },
   ) {
     const batchNoKey = args.batchNo ?? '';
@@ -429,7 +436,7 @@ export class GoodsReceiptsService {
       },
     });
 
-    return tx.inventoryMovement.create({
+    const movement = await tx.inventoryMovement.create({
       data: {
         tenantId: args.tenantId,
         branchId: args.branchId,
@@ -438,10 +445,26 @@ export class GoodsReceiptsService {
         expiryDate: args.expiryDate ? new Date(args.expiryDate) : null,
         movementType: InventoryMovementType.IN,
         quantity: args.qtyReceivedNow,
+        unitCost: args.unitCost,
+        costTotal:
+          args.unitCost !== undefined
+            ? args.qtyReceivedNow * args.unitCost
+            : null,
         reason: args.reason,
         createdBy: args.createdBy,
       },
     });
+
+    await this.inventoryValuationService.applyMovement(tx, {
+      tenantId: args.tenantId,
+      inventoryMovementId: movement.id,
+      branchId: args.branchId,
+      productId: args.productId,
+      quantityDelta: args.qtyReceivedNow,
+      unitCost: args.unitCost,
+    });
+
+    return movement;
   }
 
   private hashPayload(dto: CreateGoodsReceiptDto): string {

@@ -7,10 +7,14 @@ import {
 } from '@nestjs/common';
 import {
   InventoryMovementType,
+  JournalEntryStatus,
   Prisma,
   SalesInvoiceStatus,
   TrackingMode,
 } from '@prisma/client';
+import { AccountingPostingService } from '../accounting/accounting-posting.service';
+import { AccountingService } from '../accounting/accounting.service';
+import { InventoryValuationService } from '../inventory/inventory-valuation.service';
 import type { JwtUserPayload } from '../common/types/request-with-context.type';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSalesInvoiceDto } from './dto/create-sales-invoice.dto';
@@ -24,6 +28,9 @@ import { allocateStockFefo, type StockLotCandidate } from './stock-allocation';
 const SALES_INVOICE_SEQUENCE_KEY = 'SALES_INVOICE';
 const COST_METHOD_SNAPSHOT = 'MOVING_AVG';
 const STOCK_ERROR_CODE = 'STOCK_INSUFFICIENT';
+const EVENT_SALES_COGS_POSTED = 'SALES_COGS_POSTED';
+const SALES_INVOICE_SOURCE_TYPE = 'SALES_INVOICE';
+const COGS_POST_STAGE = 'COGS_POST';
 
 type StockInsufficientDetail = {
   lineId: string;
@@ -46,7 +53,12 @@ type LinePostingPlan = {
 
 @Injectable()
 export class SalesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accountingService: AccountingService,
+    private readonly accountingPostingService: AccountingPostingService,
+    private readonly inventoryValuationService: InventoryValuationService,
+  ) {}
 
   async listInvoices(tenantId: string, query: QuerySalesInvoicesDto) {
     const where: Prisma.SalesInvoiceWhereInput = {
@@ -70,6 +82,7 @@ export class SalesService {
         customer: true,
         lines: true,
         payments: true,
+        cogsPostingLink: true,
       },
     });
 
@@ -349,7 +362,7 @@ export class SalesService {
     invoiceId: string,
   ) {
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      const postedInvoiceId = await this.prisma.$transaction(async (tx) => {
         const invoice = await this.getInvoiceWithRelations(
           tx,
           tenantId,
@@ -357,7 +370,7 @@ export class SalesService {
         );
 
         if (invoice.status === SalesInvoiceStatus.POSTED) {
-          return this.toInvoiceResponse(invoice);
+          return invoice.id;
         }
 
         if (invoice.status !== SalesInvoiceStatus.DRAFT) {
@@ -406,24 +419,18 @@ export class SalesService {
           },
         });
 
-        return this.toInvoiceResponse(posted);
+        return posted.id;
       });
+
+      return this.toInvoiceResponse(
+        await this.ensureCogsPosted(tenantId, postedInvoiceId),
+      );
     } catch (error) {
       if (!this.isUniqueViolation(error)) {
         throw error;
       }
 
-      const existing = await this.prisma.salesInvoice.findFirst({
-        where: {
-          id: invoiceId,
-          tenantId,
-        },
-        include: {
-          customer: true,
-          lines: true,
-          payments: true,
-        },
-      });
+      const existing = await this.ensureCogsPosted(tenantId, invoiceId);
 
       if (existing?.status === SalesInvoiceStatus.POSTED) {
         return this.toInvoiceResponse(existing);
@@ -442,7 +449,7 @@ export class SalesService {
       throw new ForbiddenException('Authenticated user is required.');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const postedInvoiceId = await this.prisma.$transaction(async (tx) => {
       if (dto.customerId) {
         await this.assertCustomerInTenant(tx, tenantId, dto.customerId);
       }
@@ -551,8 +558,18 @@ export class SalesService {
         },
       });
 
-      return this.toInvoiceResponse(posted);
+      return posted.id;
     });
+
+    return this.toInvoiceResponse(
+      await this.ensureCogsPosted(tenantId, postedInvoiceId),
+    );
+  }
+
+  async postCogs(tenantId: string, invoiceId: string) {
+    return this.toInvoiceResponse(
+      await this.ensureCogsPosted(tenantId, invoiceId),
+    );
   }
 
   private async createDraftWithTransaction(
@@ -875,12 +892,13 @@ export class SalesService {
         continue;
       }
 
-      const unitCostSnapshot = await this.computeMovingAverageUnitCost(
-        tx,
-        tenantId,
-        branchId,
-        productId,
-      );
+      const unitCostSnapshot =
+        await this.inventoryValuationService.getCurrentAvgUnitCost(
+          tx,
+          tenantId,
+          branchId,
+          productId,
+        );
 
       plans.push({
         lineId: line.id,
@@ -1069,7 +1087,7 @@ export class SalesService {
           });
         }
 
-        await tx.inventoryMovement.create({
+        const movement = await tx.inventoryMovement.create({
           data: {
             tenantId,
             branchId,
@@ -1079,9 +1097,24 @@ export class SalesService {
             expiryDate: allocation.expiryDate,
             movementType: InventoryMovementType.OUT,
             quantity: -allocation.quantity,
+            unitCost: plan.unitCostSnapshot,
+            costTotal: this.roundMoney(
+              allocation.quantity * plan.unitCostSnapshot,
+            ),
             reason: `Sales invoice ${invoiceNo}`,
             createdBy: createdByUserId,
           },
+        });
+
+        await this.inventoryValuationService.applyMovement(tx, {
+          tenantId,
+          inventoryMovementId: movement.id,
+          branchId,
+          productId: plan.productId,
+          quantityDelta: -allocation.quantity,
+          unitCost: plan.unitCostSnapshot,
+          salesInvoiceLineId: plan.lineId,
+          writeSnapshot: true,
         });
       }
 
@@ -1095,50 +1128,153 @@ export class SalesService {
     }
   }
 
-  private async computeMovingAverageUnitCost(
-    tx: Prisma.TransactionClient,
-    tenantId: string,
-    branchId: string,
-    productId: string,
-  ): Promise<number> {
-    const receiptLines = await tx.goodsReceiptLine.findMany({
+  private async ensureCogsPosted(tenantId: string, invoiceId: string) {
+    const invoice = await this.prisma.salesInvoice.findFirst({
       where: {
+        id: invoiceId,
         tenantId,
-        productId,
-        goodsReceipt: {
-          branchId,
-        },
       },
-      select: {
-        qtyReceivedNow: true,
-        purchaseOrderLine: {
-          select: {
-            unitPrice: true,
-          },
-        },
+      include: {
+        customer: true,
+        lines: true,
+        payments: true,
+        cogsPostingLink: true,
       },
     });
-
-    const totals = receiptLines.reduce(
-      (acc, row) => {
-        const quantity = row.qtyReceivedNow;
-        if (quantity <= 0) {
-          return acc;
-        }
-
-        return {
-          quantity: acc.quantity + quantity,
-          value: acc.value + quantity * row.purchaseOrderLine.unitPrice,
-        };
-      },
-      { quantity: 0, value: 0 },
-    );
-
-    if (totals.quantity <= 0) {
-      return 0;
+    if (!invoice) {
+      throw new NotFoundException('Sales invoice not found.');
+    }
+    if (invoice.status !== SalesInvoiceStatus.POSTED) {
+      throw new ConflictException(
+        'COGS can only be posted for posted invoices.',
+      );
+    }
+    if (!invoice.branchId) {
+      throw new ConflictException(
+        'Invoice branch is required for COGS posting.',
+      );
+    }
+    if (invoice.cogsPostingLink) {
+      return invoice;
     }
 
-    return this.roundMoney(totals.value / totals.quantity);
+    const linesForPosting = await this.prisma.$transaction(async (tx) => {
+      const draftLines: Array<{
+        lineId: string;
+        productId: string;
+        qty: number;
+        unitCostSnapshot: number;
+        lineCogs: number;
+      }> = [];
+
+      for (const line of invoice.lines) {
+        if (!line.productId) {
+          continue;
+        }
+        const qty = this.assertStockLineQuantity(line.id, line.qty);
+        const snapshot =
+          line.unitCostSnapshot ??
+          (await this.inventoryValuationService.getCurrentAvgUnitCost(
+            tx,
+            tenantId,
+            invoice.branchId as string,
+            line.productId,
+          ));
+
+        if (line.unitCostSnapshot === null) {
+          await tx.salesInvoiceLine.update({
+            where: { id: line.id },
+            data: {
+              unitCostSnapshot: snapshot,
+              costMethodSnapshot: COST_METHOD_SNAPSHOT,
+            },
+          });
+        }
+
+        draftLines.push({
+          lineId: line.id,
+          productId: line.productId,
+          qty,
+          unitCostSnapshot: this.roundMoney(snapshot),
+          lineCogs: this.roundMoney(qty * snapshot),
+        });
+      }
+
+      return draftLines;
+    });
+
+    const totalCogs = this.roundMoney(
+      linesForPosting.reduce((sum, line) => sum + line.lineCogs, 0),
+    );
+
+    const payload = {
+      invoiceId: invoice.id,
+      invoiceNo: invoice.invoiceNo,
+      branchId: invoice.branchId,
+      totalCogs,
+      currency: invoice.currency,
+      lines: linesForPosting.map((line) => ({
+        productId: line.productId,
+        qty: line.qty,
+        unitCostSnapshot: line.unitCostSnapshot,
+        lineCogs: line.lineCogs,
+      })),
+    };
+
+    const simulation = await this.accountingPostingService.simulate({
+      tenantId,
+      eventType: EVENT_SALES_COGS_POSTED,
+      payload,
+      effectiveAt: invoice.issuedAt,
+      branchId: invoice.branchId,
+    });
+
+    if (simulation.journalPreview.lines.length === 0) {
+      throw new ConflictException(
+        'Posting rules did not produce a postable journal for COGS.',
+      );
+    }
+
+    const postedJournal = await this.accountingService.postJournalFromPreview({
+      tenantId,
+      date: invoice.issuedAt,
+      description: `COGS for ${invoice.invoiceNo}`,
+      sourceType: SALES_INVOICE_SOURCE_TYPE,
+      sourceId: invoice.id,
+      lines: simulation.journalPreview.lines,
+      defaultBranchId: invoice.branchId,
+      idempotencyStage: COGS_POST_STAGE,
+    });
+    if (!postedJournal || postedJournal.status !== JournalEntryStatus.POSTED) {
+      throw new ConflictException('Failed to post COGS journal.');
+    }
+
+    try {
+      await this.prisma.cogsPostingLink.create({
+        data: {
+          tenantId,
+          salesInvoiceId: invoice.id,
+          journalEntryId: postedJournal.id,
+        },
+      });
+    } catch (error) {
+      if (!this.isUniqueViolation(error)) {
+        throw error;
+      }
+    }
+
+    return this.prisma.salesInvoice.findFirstOrThrow({
+      where: {
+        id: invoice.id,
+        tenantId,
+      },
+      include: {
+        customer: true,
+        lines: true,
+        payments: true,
+        cogsPostingLink: true,
+      },
+    });
   }
 
   private isNegativeStockAllowed(): boolean {

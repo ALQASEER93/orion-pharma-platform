@@ -23,11 +23,14 @@ model Tenant {
   products           Product[]
   inventoryMovements InventoryMovement[]
   inventoryBalances  InventoryBalance[]
+  inventoryValuationStates InventoryValuationState[]
+  inventoryValuationApplied InventoryValuationApplied[]
   suppliers          Supplier[]
   customers          Customer[]
   salesInvoices      SalesInvoice[]
   salesInvoiceLines  SalesInvoiceLine[]
   salesPayments      SalesPayment[]
+  cogsPostingLinks   CogsPostingLink[]
   purchaseOrders     PurchaseOrder[]
   purchaseOrderLines PurchaseOrderLine[]
   goodsReceipts      GoodsReceipt[]
@@ -111,6 +114,7 @@ model Branch {
   users     User[]
   inventoryMovements InventoryMovement[]
   inventoryBalances  InventoryBalance[]
+  inventoryValuationStates InventoryValuationState[]
   purchaseOrders     PurchaseOrder[]
   goodsReceipts      GoodsReceipt[]
   purchaseReturns    PurchaseReturn[]
@@ -369,6 +373,7 @@ model Product {
   regulatoryType     RegulatoryType?       @relation(fields: [regulatoryTypeId], references: [id], onDelete: SetNull)
   inventoryMovements InventoryMovement[]
   inventoryBalances  InventoryBalance[]
+  inventoryValuationStates InventoryValuationState[]
   purchaseOrderLines PurchaseOrderLine[]
   goodsReceiptLines  GoodsReceiptLine[]
   purchaseReturnLines PurchaseReturnLine[]
@@ -390,6 +395,8 @@ model InventoryMovement {
   expiryDate   DateTime?             @map("expiry_date")
   movementType InventoryMovementType @map("movement_type")
   quantity     Int
+  unitCost     Float?               @map("unit_cost")
+  costTotal    Float?               @map("cost_total")
   reason       String?
   createdAt    DateTime              @default(now()) @map("created_at")
   createdBy    String?               @map("created_by")
@@ -402,6 +409,7 @@ model InventoryMovement {
   goodsReceiptLine GoodsReceiptLine?
   purchaseReturnLine PurchaseReturnLine?
   procurementAdjustmentLine ProcurementAdjustmentLine?
+  valuationApplied InventoryValuationApplied?
 
   @@index([tenantId, branchId, productId, batchNo])
   @@index([tenantId, salesInvoiceLineId])
@@ -425,6 +433,38 @@ model InventoryBalance {
   @@unique([tenantId, branchId, productId, batchNo])
   @@index([tenantId, branchId, productId])
   @@map("inventory_balances")
+}
+
+model InventoryValuationState {
+  id             String   @id @default(uuid())
+  tenantId       String   @map("tenant_id")
+  branchId       String   @map("branch_id")
+  productId      String   @map("product_id")
+  qtyOnHand      Float    @default(0) @map("qty_on_hand")
+  avgUnitCost    Float    @default(0) @map("avg_unit_cost")
+  inventoryValue Float    @default(0) @map("inventory_value")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch         Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, branchId, productId])
+  @@index([tenantId, branchId])
+  @@map("inventory_valuation_states")
+}
+
+model InventoryValuationApplied {
+  id                  String            @id @default(uuid())
+  tenantId            String            @map("tenant_id")
+  inventoryMovementId String            @map("inventory_movement_id")
+  appliedAt           DateTime          @default(now()) @map("applied_at")
+  tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  inventoryMovement   InventoryMovement @relation(fields: [inventoryMovementId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, inventoryMovementId])
+  @@unique([inventoryMovementId])
+  @@index([tenantId, appliedAt])
+  @@map("inventory_valuation_applied")
 }
 
 model DocumentSequence {
@@ -463,6 +503,7 @@ model SalesInvoice {
   lines           SalesInvoiceLine[]
   payments        SalesPayment[]
   arInvoice       ArInvoice?
+  cogsPostingLink CogsPostingLink?
 
   @@unique([tenantId, invoiceNo])
   @@index([tenantId, issuedAt])
@@ -511,6 +552,21 @@ model SalesPayment {
 
   @@index([tenantId, invoiceId, paidAt])
   @@map("sales_payments")
+}
+
+model CogsPostingLink {
+  id             String       @id @default(uuid())
+  tenantId       String       @map("tenant_id")
+  salesInvoiceId String       @unique @map("sales_invoice_id")
+  journalEntryId String       @map("journal_entry_id")
+  postedAt       DateTime     @default(now()) @map("posted_at")
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  salesInvoice   SalesInvoice @relation(fields: [salesInvoiceId], references: [id], onDelete: Cascade)
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, salesInvoiceId])
+  @@index([tenantId, postedAt])
+  @@map("cogs_posting_links")
 }
 
 model Account {
@@ -573,6 +629,7 @@ model JournalEntry {
   arReceipts  ArReceipt[]
   apBills     ApBill[]
   apPayments  ApPayment[]
+  cogsPostingLinks CogsPostingLink[]
 
   @@unique([tenantId, entryNo])
   @@index([tenantId, date, status])

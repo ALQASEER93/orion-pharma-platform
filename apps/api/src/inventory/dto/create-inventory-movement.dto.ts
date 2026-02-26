@@ -3,10 +3,12 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   MaxLength,
+  Min,
 } from 'class-validator';
 
 export class CreateInventoryMovementDto {
@@ -35,4 +37,9 @@ export class CreateInventoryMovementDto {
   @IsString()
   @MaxLength(300)
   reason?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  unitCost?: number;
 }

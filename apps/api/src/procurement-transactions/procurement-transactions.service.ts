@@ -8,6 +8,7 @@ import {
 import { InventoryMovementType, Prisma, TrackingMode } from '@prisma/client';
 import { createHash } from 'crypto';
 import type { JwtUserPayload } from '../common/types/request-with-context.type';
+import { InventoryValuationService } from '../inventory/inventory-valuation.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProcurementAdjustmentDto } from './dto/create-procurement-adjustment.dto';
 import { CreatePurchaseReturnDto } from './dto/create-purchase-return.dto';
@@ -18,7 +19,10 @@ const PROCUREMENT_ADJUSTMENT_SEQUENCE_KEY = 'PROCUREMENT_ADJUSTMENT';
 
 @Injectable()
 export class ProcurementTransactionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly inventoryValuationService: InventoryValuationService,
+  ) {}
 
   async listPurchaseReturns(tenantId: string, query: QueryPurchaseReturnsDto) {
     const where: Prisma.PurchaseReturnWhereInput = {
@@ -551,7 +555,7 @@ export class ProcurementTransactionsService {
       });
     }
 
-    return tx.inventoryMovement.create({
+    const movement = await tx.inventoryMovement.create({
       data: {
         tenantId: args.tenantId,
         branchId: args.branchId,
@@ -564,6 +568,16 @@ export class ProcurementTransactionsService {
         createdBy: args.createdBy,
       },
     });
+
+    await this.inventoryValuationService.applyMovement(tx, {
+      tenantId: args.tenantId,
+      inventoryMovementId: movement.id,
+      branchId: args.branchId,
+      productId: args.productId,
+      quantityDelta: args.quantityDelta,
+    });
+
+    return movement;
   }
 
   private async assertBranchInTenant(
