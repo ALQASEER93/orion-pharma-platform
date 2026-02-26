@@ -1,0 +1,11 @@
+$ corepack pnpm --filter @orion/api prisma:seed
+
+> @orion/api@0.1.0 prisma:seed D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api
+> node scripts/prisma-env.mjs db seed
+
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+Running seed command `ts-node prisma/seed.ts` ...
+
+The seed command has been executed.

@@ -1,0 +1,6 @@
+$ corepack pnpm --filter @orion/api prisma:drift-signal
+
+> @orion/api@0.1.0 prisma:drift-signal D:\ORION_PHARMA_PLATFORM\orion-pharma-platform\apps\api
+> node scripts/prisma-drift-signal.mjs
+
+drift-signal: skipped (no datasource)

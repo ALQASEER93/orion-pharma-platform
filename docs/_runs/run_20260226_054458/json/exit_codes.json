@@ -1,0 +1,12 @@
+{
+  "docker_mode": 0,
+  "prisma_generate": 0,
+  "prisma_deploy": 0,
+  "prisma_seed": 0,
+  "prisma_drift_signal": 0,
+  "lint": 0,
+  "typecheck": 0,
+  "test": 0,
+  "api_e2e": 0,
+  "build": 0
+}

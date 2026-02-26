@@ -12,14 +12,18 @@ import { Permissions } from '../common/decorators/permissions.decorator';
 import type { RequestWithContext } from '../common/types/request-with-context.type';
 import { resolveTenantId } from '../common/utils/tenant.util';
 import { AccountingService } from './accounting.service';
+import { ClosePeriodDto } from './dto/close-period.dto';
 import { CreateJournalDto } from './dto/create-journal.dto';
 import { CreatePostingRuleDto } from './dto/create-posting-rule.dto';
 import { CreatePostingRuleSetDto } from './dto/create-posting-ruleset.dto';
 import { QueryJournalsDto } from './dto/query-journals.dto';
+import { QueryPeriodReportDto } from './dto/query-period-report.dto';
 import { QueryPostingRulesDto } from './dto/query-posting-rules.dto';
+import { ReopenPeriodDto } from './dto/reopen-period.dto';
 import { SimulatePostingRulesDto } from './dto/simulate-posting-rules.dto';
 import { UpdatePostingRuleDto } from './dto/update-posting-rule.dto';
 import { UpdatePostingRuleSetDto } from './dto/update-posting-ruleset.dto';
+import { StatementType } from '@prisma/client';
 
 @Controller('accounting')
 export class AccountingController {
@@ -132,6 +136,74 @@ export class AccountingController {
     return this.accountingService.simulatePostingRules(
       resolveTenantId(req),
       dto,
+    );
+  }
+
+  @Post('periods/:id/close')
+  @Permissions('accounting.manage')
+  closePeriod(
+    @Req() req: RequestWithContext,
+    @Param('id') id: string,
+    @Body() dto: ClosePeriodDto,
+  ) {
+    return this.accountingService.closePeriod(
+      resolveTenantId(req),
+      id,
+      req.user?.sub,
+      dto.notes,
+    );
+  }
+
+  @Post('periods/:id/reopen')
+  @Permissions('accounting.manage')
+  reopenPeriod(
+    @Req() req: RequestWithContext,
+    @Param('id') id: string,
+    @Body() dto: ReopenPeriodDto,
+  ) {
+    return this.accountingService.reopenPeriod(
+      resolveTenantId(req),
+      id,
+      req.user?.sub,
+      dto,
+    );
+  }
+
+  @Get('trial-balance')
+  @Permissions('accounting.read')
+  getTrialBalance(
+    @Req() req: RequestWithContext,
+    @Query() query: QueryPeriodReportDto,
+  ) {
+    return this.accountingService.getTrialBalanceSnapshot(
+      resolveTenantId(req),
+      query,
+    );
+  }
+
+  @Get('statements/pl')
+  @Permissions('accounting.read')
+  getPlStatement(
+    @Req() req: RequestWithContext,
+    @Query() query: QueryPeriodReportDto,
+  ) {
+    return this.accountingService.getStatementSnapshot(
+      resolveTenantId(req),
+      query,
+      StatementType.PL,
+    );
+  }
+
+  @Get('statements/bs')
+  @Permissions('accounting.read')
+  getBsStatement(
+    @Req() req: RequestWithContext,
+    @Query() query: QueryPeriodReportDto,
+  ) {
+    return this.accountingService.getStatementSnapshot(
+      resolveTenantId(req),
+      query,
+      StatementType.BS,
     );
   }
 }
