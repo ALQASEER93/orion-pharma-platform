@@ -1,0 +1,54 @@
+name = "orion-autopilot"
+mode = "strict_isolation"
+task_template = "docs/_runs/templates/orion_tasks.csv"
+default_results = "docs/_runs/agent_results/orion_autopilot_results.csv"
+default_report = "docs/_runs/agent_results/orion_autopilot_report.md"
+
+[guardrails]
+orion_env_only = true
+orion_imports_only = true
+allow_schema_change = false
+allow_application_refactor = false
+require_tests_for_code = true
+
+[workflow.architect]
+role = "architect"
+phase = "planning"
+input = "user_request"
+outputs = ["plan", "fanout_tasks", "constraints"]
+next = ["backend", "frontend", "security", "qa", "deploy"]
+
+[workflow.backend]
+role = "backend"
+phase = "execution"
+area = "api work"
+outputs = ["backend_changes", "backend_tests", "backend_findings"]
+depends_on = ["architect"]
+
+[workflow.frontend]
+role = "frontend"
+phase = "execution"
+area = "ui work"
+outputs = ["ui_changes", "ui_tests", "ui_findings"]
+depends_on = ["architect"]
+
+[workflow.security]
+role = "security"
+phase = "review"
+area = "security checks"
+outputs = ["security_findings", "approval_or_blockers"]
+depends_on = ["architect", "backend", "frontend", "deploy"]
+
+[workflow.qa]
+role = "qa"
+phase = "verification"
+area = "test generation"
+outputs = ["test_plan", "regression_tests", "verification_notes"]
+depends_on = ["architect", "backend", "frontend"]
+
+[workflow.deploy]
+role = "deploy"
+phase = "validation"
+area = "deployment validation"
+outputs = ["deploy_checks", "rollback_notes", "ops_findings"]
+depends_on = ["architect"]
