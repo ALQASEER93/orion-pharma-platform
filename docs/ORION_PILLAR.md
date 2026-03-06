@@ -121,4 +121,4 @@
 - `Authorization`-backed API responses never enter Cache Storage.
 - Cookie-backed authenticated API responses never enter Cache Storage.
 - Static assets and non-API pages keep normal runtime caching behavior.
-- Evidence run for PWA cache isolation: `docs/_runs/run_20260306_114648/`
+- Evidence run for PWA cache isolation: `docs/_runs/run_20260306_114927/`
