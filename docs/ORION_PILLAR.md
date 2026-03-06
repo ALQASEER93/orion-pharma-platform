@@ -112,3 +112,13 @@
 - `GET /api/ap/aging?as_of_date=2026-08-19`
 - Inventory movement reporting date filters must bind to `businessDate`, not `createdAt`.
 - Evidence run for accounting timeline implementation: `docs/_runs/run_20260306_111929/`
+
+## Web/PWA Isolation Model
+- Authenticated API traffic under `/api/*` is not cached by the service worker.
+- ORION web pages send tenant and bearer context on API calls, so any shared Cache Storage entry on `/api/*` risks cross-user or cross-tenant replay.
+- The PWA runtime cache now forces `NetworkOnly` for same-origin `/api/*` requests.
+- Result:
+- `Authorization`-backed API responses never enter Cache Storage.
+- Cookie-backed authenticated API responses never enter Cache Storage.
+- Static assets and non-API pages keep normal runtime caching behavior.
+- Evidence run for PWA cache isolation: `docs/_runs/run_20260306_114648/`
