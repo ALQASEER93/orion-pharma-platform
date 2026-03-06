@@ -404,6 +404,7 @@ export class SalesService {
           tenantId,
           invoice.branchId,
           invoice.invoiceNo,
+          invoice.issuedAt,
           user?.sub ?? invoice.createdByUserId ?? undefined,
           postingPlans,
         );
@@ -578,6 +579,7 @@ export class SalesService {
           tenantId,
           refreshed.branchId,
           refreshed.invoiceNo,
+          refreshed.issuedAt,
           user.sub,
           postingPlans,
         );
@@ -1083,6 +1085,7 @@ export class SalesService {
     tenantId: string,
     branchId: string,
     invoiceNo: string,
+    issuedAt: Date,
     createdByUserId: string | undefined,
     plans: LinePostingPlan[],
   ) {
@@ -1165,6 +1168,7 @@ export class SalesService {
             salesInvoiceLineId: plan.lineId,
             batchNo: allocation.batchNo,
             expiryDate: allocation.expiryDate,
+            businessDate: issuedAt,
             movementType: InventoryMovementType.OUT,
             quantity: -allocation.quantity,
             unitCost: plan.unitCostSnapshot,

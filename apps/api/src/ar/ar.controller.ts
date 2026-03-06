@@ -37,7 +37,10 @@ export class ArController {
   @Get('aging')
   @Permissions('ar.read')
   aging(@Req() req: RequestWithContext, @Query() query: QueryArAgingDto) {
-    return this.arService.getAging(resolveTenantId(req), query);
+    return this.arService.getAging(resolveTenantId(req), {
+      ...query,
+      asOf: query.asOf ?? (req.query.as_of_date as string | undefined),
+    });
   }
 
   @Post('receipts')

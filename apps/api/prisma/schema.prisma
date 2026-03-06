@@ -50,6 +50,9 @@ model Tenant {
   periodCloses       PeriodClose[]
   trialBalanceSnapshots TrialBalanceSnapshot[]
   statementSnapshots StatementSnapshot[]
+  accountingSetting AccountingSetting?
+  reconciliationRuns ReconciliationRun[]
+  reconciliationResults ReconciliationResult[]
   arInvoices         ArInvoice[]
   arReceipts         ArReceipt[]
   arAllocations      ArAllocation[]
@@ -150,6 +153,7 @@ model User {
   salesPaymentsCreated SalesPayment[]
   createdPostingRuleSets PostingRuleSet[] @relation("PostingRuleSetCreatedBy")
   periodCloses      PeriodClose[] @relation("PeriodCloseByUser")
+  reconciliationRunsCreated ReconciliationRun[] @relation("ReconciliationRunCreatedBy")
   arInvoicesCreated ArInvoice[] @relation("ArInvoiceCreatedBy")
   arReceiptsCreated ArReceipt[] @relation("ArReceiptCreatedBy")
   apBillsCreated ApBill[] @relation("ApBillCreatedBy")
@@ -270,6 +274,16 @@ enum PeriodCloseStatus {
 enum StatementType {
   PL
   BS
+}
+
+enum ReconciliationRunStatus {
+  COMPLETED
+}
+
+enum ReconciliationType {
+  AR
+  AP
+  INV
 }
 
 enum PostingRuleSetStatus {
@@ -408,6 +422,7 @@ model InventoryMovement {
   productId    String                @map("product_id")
   batchNo      String?               @map("batch_no")
   expiryDate   DateTime?             @map("expiry_date")
+  businessDate DateTime              @default(now()) @map("business_date")
   movementType InventoryMovementType @map("movement_type")
   quantity     Int
   unitCost     Float?               @map("unit_cost")
@@ -427,6 +442,7 @@ model InventoryMovement {
   valuationApplied InventoryValuationApplied?
 
   @@index([tenantId, branchId, productId, batchNo])
+  @@index([tenantId, businessDate])
   @@index([tenantId, salesInvoiceLineId])
   @@unique([salesInvoiceLineId, batchNo])
   @@map("inventory_movements")
@@ -499,6 +515,8 @@ model SalesInvoice {
   id              String             @id @default(uuid())
   tenantId        String             @map("tenant_id")
   invoiceNo       String             @map("invoice_no")
+  idempotencyKey  String?            @map("idempotency_key")
+  payloadHash     String?            @map("payload_hash")
   status          SalesInvoiceStatus @default(DRAFT)
   issuedAt        DateTime           @default(now()) @map("issued_at")
   branchId        String?            @map("branch_id")
@@ -511,8 +529,6 @@ model SalesInvoice {
   createdByUserId String?            @map("created_by_user_id")
   createdAt       DateTime           @default(now()) @map("created_at")
   updatedAt       DateTime           @updatedAt @map("updated_at")
-  idempotencyKey  String?            @map("idempotency_key")
-  payloadHash     String?            @map("payload_hash")
   tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branch          Branch?            @relation(fields: [branchId], references: [id], onDelete: SetNull)
   customer        Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
@@ -623,6 +639,7 @@ model FiscalPeriod {
   periodCloses PeriodClose[]
   trialBalanceSnapshots TrialBalanceSnapshot[]
   statementSnapshots StatementSnapshot[]
+  reconciliationRuns ReconciliationRun[]
 
   @@unique([tenantId, year, month])
   @@index([tenantId, status])
@@ -673,6 +690,56 @@ model StatementSnapshot {
 
   @@index([tenantId, fiscalPeriodId, type, createdAt])
   @@map("statement_snapshots")
+}
+
+model AccountingSetting {
+  id                         String   @id @default(uuid())
+  tenantId                   String   @unique @map("tenant_id")
+  arControlAccountCode       String   @map("ar_control_account_code")
+  apControlAccountCode       String   @map("ap_control_account_code")
+  inventoryControlAccountCode String  @map("inventory_control_account_code")
+  createdAt                  DateTime @default(now()) @map("created_at")
+  updatedAt                  DateTime @updatedAt @map("updated_at")
+  tenant                     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("accounting_settings")
+}
+
+model ReconciliationRun {
+  id              String                  @id @default(uuid())
+  tenantId        String                  @map("tenant_id")
+  fiscalPeriodId  String?                 @map("fiscal_period_id")
+  asOfDate        DateTime                @map("as_of_date")
+  status          ReconciliationRunStatus
+  createdByUserId String?                 @map("created_by_user_id")
+  createdAt       DateTime                @default(now()) @map("created_at")
+  tenant          Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fiscalPeriod    FiscalPeriod?           @relation(fields: [fiscalPeriodId], references: [id], onDelete: SetNull)
+  createdBy       User?                   @relation("ReconciliationRunCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  results         ReconciliationResult[]
+
+  @@index([tenantId, fiscalPeriodId, createdAt])
+  @@index([tenantId, asOfDate, createdAt])
+  @@map("reconciliation_runs")
+}
+
+model ReconciliationResult {
+  id               String             @id @default(uuid())
+  runId            String             @map("run_id")
+  tenantId         String             @map("tenant_id")
+  type             ReconciliationType
+  controlAccountCode String           @map("control_account_code")
+  glBalance        Float              @map("gl_balance")
+  subledgerBalance Float              @map("subledger_balance")
+  delta            Float
+  details          Json
+  createdAt        DateTime           @default(now()) @map("created_at")
+  run              ReconciliationRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  tenant           Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, type, createdAt])
+  @@index([runId, type])
+  @@map("reconciliation_results")
 }
 
 model JournalEntry {
@@ -789,6 +856,7 @@ model ArInvoice {
   invoiceNo         String          @map("invoice_no")
   issueDate         DateTime        @map("issue_date")
   dueDate           DateTime?       @map("due_date")
+  voidedAt          DateTime?       @map("voided_at")
   originalAmount    Float           @map("original_amount")
   paidAmount        Float           @default(0) @map("paid_amount")
   outstandingAmount Float           @map("outstanding_amount")
@@ -803,6 +871,7 @@ model ArInvoice {
   allocations       ArAllocation[]
 
   @@index([tenantId, status, issueDate])
+  @@index([tenantId, voidedAt])
   @@index([tenantId, customerId, status])
   @@map("ar_invoices")
 }
@@ -859,6 +928,7 @@ model ApBill {
   billNo            String       @map("bill_no")
   issueDate         DateTime     @map("issue_date")
   dueDate           DateTime?    @map("due_date")
+  voidedAt          DateTime?    @map("voided_at")
   status            ApBillStatus @default(OPEN)
   originalAmount    Float        @map("original_amount")
   paidAmount        Float        @default(0) @map("paid_amount")
@@ -875,6 +945,7 @@ model ApBill {
 
   @@unique([tenantId, billNo])
   @@index([tenantId, status, issueDate])
+  @@index([tenantId, voidedAt])
   @@index([tenantId, supplierId, status])
   @@index([tenantId, sourceType, sourceId])
   @@map("ap_bills")

@@ -25,6 +25,8 @@ const AR_RECEIPT_SOURCE_TYPE = 'AR_RECEIPT';
 const AR_RECEIPT_POST_STAGE = 'POST';
 const AR_INVOICE_SOURCE_TYPE = 'AR_INVOICE';
 const AR_INVOICE_POST_STAGE = 'POST';
+const AR_INVOICE_VOID_SOURCE_TYPE = 'AR_INVOICE_VOID';
+const AR_INVOICE_VOID_POST_STAGE = 'VOID';
 const EVENT_AR_INVOICE_CREATED = 'AR_INVOICE_CREATED';
 const EVENT_AR_RECEIPT_POSTED = 'AR_RECEIPT_POSTED';
 const EPSILON = 0.000001;
@@ -215,18 +217,43 @@ export class ArService {
     const invoices = await this.prisma.arInvoice.findMany({
       where: {
         tenantId,
-        status: {
-          in: [ArInvoiceStatus.OPEN, ArInvoiceStatus.PAID],
+        issueDate: {
+          lte: asOf,
         },
-        outstandingAmount: {
-          gt: 0,
-        },
+        OR: [
+          {
+            status: {
+              not: ArInvoiceStatus.VOID,
+            },
+          },
+          {
+            voidedAt: {
+              gt: asOf,
+            },
+          },
+        ],
       },
       include: {
         customer: {
           select: {
             id: true,
             name: true,
+          },
+        },
+        allocations: {
+          where: {
+            receipt: {
+              is: {
+                tenantId,
+                status: ArReceiptStatus.POSTED,
+                date: {
+                  lte: asOf,
+                },
+              },
+            },
+          },
+          select: {
+            amount: true,
           },
         },
       },
@@ -252,11 +279,14 @@ export class ArService {
     }> = [];
 
     for (const invoice of invoices) {
+      const outstanding = this.resolveArOutstandingAsOf(invoice);
+      if (outstanding <= 0) {
+        continue;
+      }
       const dueBase = invoice.dueDate ?? invoice.issueDate;
       const diffDays = Math.floor(
         (asOf.getTime() - dueBase.getTime()) / (1000 * 60 * 60 * 24),
       );
-      const outstanding = this.roundMoney(invoice.outstandingAmount);
       const bucket = this.resolveAgingBucket(diffDays);
       buckets[bucket] = this.roundMoney(buckets[bucket] + outstanding);
       totalOutstanding = this.roundMoney(totalOutstanding + outstanding);
@@ -586,6 +616,19 @@ export class ArService {
           allocations: true,
           customer: true,
           salesInvoice: true,
+          journalEntry: {
+            include: {
+              lines: {
+                include: {
+                  account: {
+                    select: {
+                      code: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       });
       if (!invoice) {
@@ -600,6 +643,31 @@ export class ArService {
         );
       }
 
+      if (!invoice.journalEntry) {
+        throw new ConflictException(
+          'AR invoice cannot be voided without a posted journal entry.',
+        );
+      }
+
+      const voidedAt = new Date();
+      await this.accountingService.postJournalFromPreviewWithTx(tx, {
+        tenantId,
+        date: voidedAt,
+        description: `Void AR invoice ${invoice.invoiceNo}`,
+        sourceType: AR_INVOICE_VOID_SOURCE_TYPE,
+        sourceId: invoice.id,
+        idempotencyStage: AR_INVOICE_VOID_POST_STAGE,
+        defaultBranchId: invoice.journalEntry.branchId ?? undefined,
+        lines: invoice.journalEntry.lines.map((line) => ({
+          accountCode: line.account.code,
+          debit: Number(line.credit),
+          credit: Number(line.debit),
+          memo: line.memo ?? `Void AR invoice ${invoice.invoiceNo}`,
+          branchId:
+            line.branchId ?? invoice.journalEntry?.branchId ?? undefined,
+        })),
+      });
+
       return tx.arInvoice.update({
         where: {
           id: invoice.id,
@@ -607,6 +675,7 @@ export class ArService {
         data: {
           status: ArInvoiceStatus.VOID,
           outstandingAmount: 0,
+          voidedAt,
         },
         include: {
           allocations: true,
@@ -631,6 +700,21 @@ export class ArService {
       return 'days_61_90' as const;
     }
     return 'days_91_plus' as const;
+  }
+
+  private resolveArOutstandingAsOf(invoice: {
+    originalAmount: number;
+    allocations: Array<{ amount: number }>;
+  }) {
+    const allocated = invoice.allocations.reduce(
+      (sum, allocation) => sum + Number(allocation.amount),
+      0,
+    );
+
+    return Math.max(
+      0,
+      this.roundMoney(Number(invoice.originalAmount) - allocated),
+    );
   }
 
   private async assertCustomerInTenant(

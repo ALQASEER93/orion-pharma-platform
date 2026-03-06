@@ -96,3 +96,19 @@
 - POS checkout idempotency via `(tenantId, idempotencyKey)` with payload hash replay/conflict behavior.
 - Deterministic 401 JSON for missing role context in authenticated request pipeline, with no raw stack leakage in the tested path.
 - ORION-only JWT secret enforcement with startup hard-fail on missing/weak secret.
+
+## Accounting Timeline Model
+- Inventory ledger and inventory reconciliation now use `businessDate` as the business-effective timeline.
+- `createdAt` remains audit-only and must not be used for historical inventory valuation or reconciliation cutoffs.
+- AR/AP exposure is evaluated against `as_of_date` using document issue date plus `voidedAt`.
+- Rule:
+- `as_of_date < voidedAt` means the original AR/AP exposure remains included.
+- `as_of_date >= voidedAt` means the original AR/AP exposure is excluded.
+- A posted reversal journal must exist at void time so GL and subledger tie out after the void boundary.
+- Example queries:
+- `GET /api/accounting/reconciliation/run?as_of_date=2026-08-31`
+- `GET /api/ar/aging?as_of_date=2026-08-19`
+- `GET /api/ar/aging?as_of_date=2026-08-21`
+- `GET /api/ap/aging?as_of_date=2026-08-19`
+- Inventory movement reporting date filters must bind to `businessDate`, not `createdAt`.
+- Evidence run for accounting timeline implementation: `docs/_runs/run_20260306_111929/`

@@ -27,6 +27,10 @@ export class CreateInventoryMovementDto {
   @IsDateString()
   expiryDate?: string;
 
+  @IsOptional()
+  @IsDateString()
+  businessDate?: string;
+
   @IsEnum(InventoryMovementType)
   movementType!: InventoryMovementType;
 

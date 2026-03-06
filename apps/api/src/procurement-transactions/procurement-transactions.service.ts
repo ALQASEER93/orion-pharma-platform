@@ -296,6 +296,7 @@ export class ProcurementTransactionsService {
         productId: receiptLine.productId,
         batchNo: receiptLine.batchNo ?? undefined,
         expiryDate: receiptLine.expiryDate?.toISOString() ?? undefined,
+        businessDate: dto.returnedAt,
         quantityDelta: -line.qtyReturnNow,
         movementType: InventoryMovementType.OUT,
         allowNegative: false,
@@ -425,6 +426,7 @@ export class ProcurementTransactionsService {
           productId: line.productId,
           batchNo: line.batchNo,
           expiryDate: line.expiryDate,
+          businessDate: dto.adjustedAt,
           quantityDelta: line.quantityDelta,
           movementType: InventoryMovementType.ADJUSTMENT,
           allowNegative: canOverrideNegative,
@@ -488,6 +490,7 @@ export class ProcurementTransactionsService {
       productId: string;
       batchNo?: string;
       expiryDate?: string;
+      businessDate?: string;
       quantityDelta: number;
       movementType: InventoryMovementType;
       allowNegative: boolean;
@@ -562,6 +565,9 @@ export class ProcurementTransactionsService {
         productId: args.productId,
         batchNo: args.batchNo,
         expiryDate: args.expiryDate ? new Date(args.expiryDate) : null,
+        businessDate: args.businessDate
+          ? new Date(args.businessDate)
+          : new Date(),
         movementType: args.movementType,
         quantity: args.quantityDelta,
         reason: args.reason,

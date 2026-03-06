@@ -28,7 +28,10 @@ export class ApController {
   @Get('aging')
   @Permissions('ap.read')
   aging(@Req() req: RequestWithContext, @Query() query: QueryApAgingDto) {
-    return this.apService.getAging(resolveTenantId(req), query);
+    return this.apService.getAging(resolveTenantId(req), {
+      ...query,
+      asOf: query.asOf ?? (req.query.as_of_date as string | undefined),
+    });
   }
 
   @Post('payments')
