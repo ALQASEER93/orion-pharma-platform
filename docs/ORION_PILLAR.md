@@ -122,3 +122,13 @@
 - Cookie-backed authenticated API responses never enter Cache Storage.
 - Static assets and non-API pages keep normal runtime caching behavior.
 - Evidence run for PWA cache isolation: `docs/_runs/run_20260306_114927/`
+
+## P0-Deployment Guardrails Implemented
+- Scope implemented on branch `codex/p0-deployment-guardrails`: `DEP-P0-001`, `DEP-P0-002`, `DEP-P0-003`.
+- Delivered:
+- `docker-compose.prod.yml` with `reverse-proxy`, `api`, `web`, and `postgres` on an internal-only Compose network.
+- Only `reverse-proxy` publishes `80/443`; `api` and `postgres` are internal-only.
+- HTTP to HTTPS redirect and `/api/health` TLS probe via `deploy/Caddyfile` + reverse-proxy healthcheck.
+- `scripts/deploy-check.mjs` production preflight for `ORION_JWT_SECRET`, `ORION_DB_URL`, and `ORION_ENCRYPTION_KEY`.
+- `scripts/backup-db.sh` for local dump plus optional S3-compatible or SFTP upload.
+- Deployment runbook: `docs/ORION_MIN_COST_DEPLOYMENT.md`
