@@ -12,6 +12,7 @@ import {
   SalesInvoiceStatus,
   TrackingMode,
 } from '@prisma/client';
+import { createHash } from 'crypto';
 import { AccountingPostingService } from '../accounting/accounting-posting.service';
 import { AccountingService } from '../accounting/accounting.service';
 import { InventoryValuationService } from '../inventory/inventory-valuation.service';
@@ -449,121 +450,186 @@ export class SalesService {
       throw new ForbiddenException('Authenticated user is required.');
     }
 
-    const postedInvoiceId = await this.prisma.$transaction(async (tx) => {
-      if (dto.customerId) {
-        await this.assertCustomerInTenant(tx, tenantId, dto.customerId);
-      }
+    const payloadHash = this.hashCheckoutPayload(dto);
 
-      const branchId = await this.resolveBranchForDraft(
-        tx,
-        tenantId,
-        user,
-        dto.branchId,
-      );
+    try {
+      const postedInvoiceId = await this.prisma.$transaction(async (tx) => {
+        const replay = await tx.salesInvoice.findUnique({
+          where: {
+            tenantId_idempotencyKey: {
+              tenantId,
+              idempotencyKey: dto.idempotencyKey,
+            },
+          },
+          select: {
+            id: true,
+            payloadHash: true,
+          },
+        });
 
-      const draft = await this.createDraftWithTransaction(tx, tenantId, user, {
-        branchId,
-        customerId: dto.customerId,
-        currency: dto.currency ?? 'JOD',
-      });
+        if (replay) {
+          if (replay.payloadHash !== payloadHash) {
+            throw new ConflictException(
+              'Idempotency key already used with different payload.',
+            );
+          }
 
-      for (const line of dto.lines) {
-        const resolved = await this.resolveLine(tx, tenantId, line);
-        if (!resolved.productId) {
-          throw new BadRequestException(
-            'POS checkout requires productId for all lines.',
+          return replay.id;
+        }
+
+        if (dto.customerId) {
+          await this.assertCustomerInTenant(tx, tenantId, dto.customerId);
+        }
+
+        const branchId = await this.resolveBranchForDraft(
+          tx,
+          tenantId,
+          user,
+          dto.branchId,
+        );
+
+        const draft = await this.createDraftWithTransaction(
+          tx,
+          tenantId,
+          user,
+          {
+            branchId,
+            customerId: dto.customerId,
+            currency: dto.currency ?? 'JOD',
+            idempotencyKey: dto.idempotencyKey,
+            payloadHash,
+          },
+        );
+
+        for (const line of dto.lines) {
+          const resolved = await this.resolveLine(tx, tenantId, line);
+          if (!resolved.productId) {
+            throw new BadRequestException(
+              'POS checkout requires productId for all lines.',
+            );
+          }
+
+          const lineTotal = this.computeLineTotal(
+            line.qty,
+            line.unitPrice,
+            line.discount ?? 0,
+            line.taxRate,
+          );
+
+          await tx.salesInvoiceLine.create({
+            data: {
+              invoiceId: draft.id,
+              tenantId,
+              productId: resolved.productId,
+              itemName: resolved.itemName,
+              qty: line.qty,
+              unitPrice: line.unitPrice,
+              discount: line.discount ?? 0,
+              taxRate: line.taxRate,
+              lineTotal,
+            },
+          });
+        }
+
+        const totals = await this.recalculateInvoiceTotals(
+          tx,
+          tenantId,
+          draft.id,
+        );
+        if (totals.grandTotal <= 0) {
+          throw new ConflictException(
+            'Checkout requires a positive grand total.',
           );
         }
 
-        const lineTotal = this.computeLineTotal(
-          line.qty,
-          line.unitPrice,
-          line.discount ?? 0,
-          line.taxRate,
-        );
+        if (dto.payment.amount < totals.grandTotal) {
+          throw new ConflictException('Payment amount is below grand total.');
+        }
 
-        await tx.salesInvoiceLine.create({
+        await tx.salesPayment.create({
           data: {
             invoiceId: draft.id,
             tenantId,
-            productId: resolved.productId,
-            itemName: resolved.itemName,
-            qty: line.qty,
-            unitPrice: line.unitPrice,
-            discount: line.discount ?? 0,
-            taxRate: line.taxRate,
-            lineTotal,
+            method: dto.payment.method,
+            amount: dto.payment.amount,
+            createdByUserId: user.sub,
           },
         });
-      }
 
-      const totals = await this.recalculateInvoiceTotals(
-        tx,
-        tenantId,
-        draft.id,
-      );
-      if (totals.grandTotal <= 0) {
-        throw new ConflictException(
-          'Checkout requires a positive grand total.',
-        );
-      }
-
-      if (dto.payment.amount < totals.grandTotal) {
-        throw new ConflictException('Payment amount is below grand total.');
-      }
-
-      await tx.salesPayment.create({
-        data: {
-          invoiceId: draft.id,
+        const refreshed = await this.getInvoiceWithRelations(
+          tx,
           tenantId,
-          method: dto.payment.method,
-          amount: dto.payment.amount,
-          createdByUserId: user.sub,
+          draft.id,
+        );
+        if (!refreshed.branchId) {
+          throw new ConflictException(
+            'Invoice branch is required before posting.',
+          );
+        }
+
+        const postingPlans = await this.buildPostingPlans(
+          tx,
+          tenantId,
+          refreshed.branchId,
+          refreshed.lines,
+        );
+        await this.applyPostingPlans(
+          tx,
+          tenantId,
+          refreshed.branchId,
+          refreshed.invoiceNo,
+          user.sub,
+          postingPlans,
+        );
+
+        const posted = await tx.salesInvoice.update({
+          where: { id: draft.id },
+          data: { status: SalesInvoiceStatus.POSTED },
+          include: {
+            customer: true,
+            lines: true,
+            payments: true,
+          },
+        });
+
+        return posted.id;
+      });
+
+      return this.toInvoiceResponse(
+        await this.ensureCogsPosted(tenantId, postedInvoiceId),
+      );
+    } catch (error) {
+      if (!this.isCheckoutIdempotencyViolation(error)) {
+        throw error;
+      }
+
+      const existing = await this.prisma.salesInvoice.findUnique({
+        where: {
+          tenantId_idempotencyKey: {
+            tenantId,
+            idempotencyKey: dto.idempotencyKey,
+          },
+        },
+        select: {
+          id: true,
+          payloadHash: true,
         },
       });
 
-      const refreshed = await this.getInvoiceWithRelations(
-        tx,
-        tenantId,
-        draft.id,
-      );
-      if (!refreshed.branchId) {
+      if (!existing) {
+        throw error;
+      }
+
+      if (existing.payloadHash !== payloadHash) {
         throw new ConflictException(
-          'Invoice branch is required before posting.',
+          'Idempotency key already used with different payload.',
         );
       }
 
-      const postingPlans = await this.buildPostingPlans(
-        tx,
-        tenantId,
-        refreshed.branchId,
-        refreshed.lines,
+      return this.toInvoiceResponse(
+        await this.ensureCogsPosted(tenantId, existing.id),
       );
-      await this.applyPostingPlans(
-        tx,
-        tenantId,
-        refreshed.branchId,
-        refreshed.invoiceNo,
-        user.sub,
-        postingPlans,
-      );
-
-      const posted = await tx.salesInvoice.update({
-        where: { id: draft.id },
-        data: { status: SalesInvoiceStatus.POSTED },
-        include: {
-          customer: true,
-          lines: true,
-          payments: true,
-        },
-      });
-
-      return posted.id;
-    });
-
-    return this.toInvoiceResponse(
-      await this.ensureCogsPosted(tenantId, postedInvoiceId),
-    );
+    }
   }
 
   async postCogs(tenantId: string, invoiceId: string) {
@@ -581,6 +647,8 @@ export class SalesService {
       customerId?: string;
       currency?: string;
       issuedAt?: string;
+      idempotencyKey?: string;
+      payloadHash?: string;
     },
   ) {
     const sequence = await tx.documentSequence.upsert({
@@ -616,6 +684,8 @@ export class SalesService {
         branchId: dto.branchId,
         customerId: dto.customerId,
         currency: dto.currency ?? 'JOD',
+        idempotencyKey: dto.idempotencyKey,
+        payloadHash: dto.payloadHash,
         createdByUserId: user.sub,
       },
     });
@@ -1297,6 +1367,59 @@ export class SalesService {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     );
+  }
+
+  private isCheckoutIdempotencyViolation(error: unknown): boolean {
+    if (
+      !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+      error.code !== 'P2002'
+    ) {
+      return false;
+    }
+
+    const target = error.meta?.target;
+    if (!target) {
+      return false;
+    }
+
+    if (typeof target === 'string') {
+      return target.includes('tenant_id') && target.includes('idempotency_key');
+    }
+
+    const targetFields = target as string[];
+    return (
+      targetFields.includes('tenant_id') &&
+      targetFields.includes('idempotency_key')
+    );
+  }
+
+  private hashCheckoutPayload(dto: PosCheckoutDto): string {
+    const normalized = {
+      branchId: dto.branchId ?? null,
+      customerId: dto.customerId ?? null,
+      currency: dto.currency ?? 'JOD',
+      lines: [...dto.lines]
+        .map((line) => ({
+          productId: line.productId,
+          qty: line.qty,
+          unitPrice: line.unitPrice,
+          discount: line.discount ?? 0,
+          taxRate: line.taxRate ?? null,
+        }))
+        .sort((a, b) =>
+          `${a.productId}:${a.qty}:${a.unitPrice}:${a.discount}:${a.taxRate ?? ''}`.localeCompare(
+            `${b.productId}:${b.qty}:${b.unitPrice}:${b.discount}:${b.taxRate ?? ''}`,
+          ),
+        ),
+      payment: {
+        method: dto.payment.method,
+        amount: dto.payment.amount,
+      },
+    };
+
+    return createHash('sha256')
+      .update(JSON.stringify(normalized))
+      .digest('hex');
   }
 
   private computeLineTotal(

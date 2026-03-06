@@ -6,8 +6,8 @@ import { HealthController } from './health/health.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
+import { RoleContextGuard } from './common/guards/role-context.guard';
 import { TenantIsolationMiddleware } from './common/middleware/tenant-isolation.middleware';
-import { RoleCheckMiddleware } from './common/middleware/role-check.middleware';
 import { ProductsModule } from './products/products.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { TaxonomyModule } from './taxonomy/taxonomy.module';
@@ -49,14 +49,16 @@ import { ApModule } from './ap/ap.module';
     },
     {
       provide: APP_GUARD,
+      useClass: RoleContextGuard,
+    },
+    {
+      provide: APP_GUARD,
       useClass: PermissionsGuard,
     },
   ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer
-      .apply(TenantIsolationMiddleware, RoleCheckMiddleware)
-      .forRoutes('*');
+    consumer.apply(TenantIsolationMiddleware).forRoutes('*');
   }
 }

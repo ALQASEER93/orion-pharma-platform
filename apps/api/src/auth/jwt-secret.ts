@@ -1,7 +1,23 @@
-const DEFAULT_DEV_SECRET = 'ORION_local_dev_jwt_secret_change_in_production';
+const MIN_SECRET_LENGTH = 32;
+
+export function validateOrionJwtSecret(secret: string | undefined): string {
+  const normalized = secret?.trim();
+
+  if (!normalized) {
+    throw new Error(
+      'ORION_JWT_SECRET is required and must be at least 32 characters long.',
+    );
+  }
+
+  if (normalized.length < MIN_SECRET_LENGTH) {
+    throw new Error(
+      'ORION_JWT_SECRET is too weak; provide at least 32 characters.',
+    );
+  }
+
+  return normalized;
+}
 
 export function resolveJwtSecret(): string {
-  return (
-    process.env.ORION_JWT_SECRET ?? process.env.JWT_SECRET ?? DEFAULT_DEV_SECRET
-  );
+  return validateOrionJwtSecret(process.env.ORION_JWT_SECRET);
 }

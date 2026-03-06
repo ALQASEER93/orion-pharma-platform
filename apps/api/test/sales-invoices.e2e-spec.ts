@@ -48,7 +48,7 @@ describe('Sales Invoices + POS (e2e)', () => {
   let otherTenantInvoiceId = '';
 
   beforeAll(async () => {
-    process.env.ORION_JWT_SECRET = 'ORION_e2e_test_secret';
+    process.env.ORION_JWT_SECRET = 'ORION_e2e_test_secret_value_123456';
     process.env.ORION_ALLOW_NEGATIVE_STOCK = 'false';
     delete process.env.JWT_SECRET;
     ensureDatabaseUrl();
@@ -224,12 +224,14 @@ describe('Sales Invoices + POS (e2e)', () => {
     await resetStock(4);
 
     const server = app.getHttpServer() as Server;
+    const idempotencyKey = `pos-checkout-${Date.now()}-a`;
 
     const checkout = await request(server)
       .post('/api/pos/checkout')
       .set('Authorization', `Bearer ${accessToken}`)
       .set('x-tenant-id', tenantId)
       .send({
+        idempotencyKey,
         branchId,
         customerId,
         lines: [{ productId, qty: 2, unitPrice: 15 }],
@@ -265,6 +267,7 @@ describe('Sales Invoices + POS (e2e)', () => {
       .set('Authorization', `Bearer ${accessToken}`)
       .set('x-tenant-id', tenantId)
       .send({
+        idempotencyKey: `pos-checkout-${Date.now()}-b`,
         branchId,
         customerId,
         lines: [{ productId, qty: 3, unitPrice: 15 }],
@@ -273,6 +276,120 @@ describe('Sales Invoices + POS (e2e)', () => {
 
     expect(checkout.status).toBe(409);
     expect(checkout.body.code).toBe('STOCK_INSUFFICIENT');
+  });
+
+  it('returns same invoice/payment result on idempotent replay without duplicate financial rows', async () => {
+    await resetStock(6);
+
+    const server = app.getHttpServer() as Server;
+    const idempotencyKey = `pos-checkout-${Date.now()}-c`;
+    const payload = {
+      idempotencyKey,
+      branchId,
+      customerId,
+      lines: [{ productId, qty: 2, unitPrice: 15 }],
+      payment: { method: 'CASH', amount: 30 },
+    };
+
+    const first = await request(server)
+      .post('/api/pos/checkout')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send(payload);
+
+    const second = await request(server)
+      .post('/api/pos/checkout')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send(payload);
+
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    expect(second.body.id).toBe(first.body.id);
+    expect(second.body.payments).toEqual(first.body.payments);
+
+    const invoiceId = first.body.id as string;
+    const lineId = (first.body.lines as Array<{ id: string }>)[0].id;
+
+    expect(
+      await prisma.salesInvoice.count({
+        where: {
+          tenantId,
+          idempotencyKey,
+        },
+      }),
+    ).toBe(1);
+    expect(
+      await prisma.salesPayment.count({
+        where: {
+          tenantId,
+          invoiceId,
+        },
+      }),
+    ).toBe(1);
+    expect(
+      await prisma.inventoryMovement.count({
+        where: {
+          tenantId,
+          salesInvoiceLineId: lineId,
+          movementType: 'OUT',
+        },
+      }),
+    ).toBe(1);
+    expect(
+      await prisma.cogsPostingLink.count({
+        where: {
+          tenantId,
+          salesInvoiceId: invoiceId,
+        },
+      }),
+    ).toBe(1);
+    expect(
+      await prisma.journalEntry.count({
+        where: {
+          tenantId,
+          sourceType: 'SALES_INVOICE',
+          sourceId: invoiceId,
+        },
+      }),
+    ).toBe(1);
+  });
+
+  it('returns 409 when idempotency key is replayed with a different payload', async () => {
+    await resetStock(6);
+
+    const server = app.getHttpServer() as Server;
+    const idempotencyKey = `pos-checkout-${Date.now()}-d`;
+
+    const first = await request(server)
+      .post('/api/pos/checkout')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        idempotencyKey,
+        branchId,
+        customerId,
+        lines: [{ productId, qty: 1, unitPrice: 15 }],
+        payment: { method: 'CASH', amount: 15 },
+      });
+
+    const second = await request(server)
+      .post('/api/pos/checkout')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        idempotencyKey,
+        branchId,
+        customerId,
+        lines: [{ productId, qty: 2, unitPrice: 15 }],
+        payment: { method: 'CASH', amount: 30 },
+      });
+
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(409);
+    expect(second.body.message).toBe(
+      'Idempotency key already used with different payload.',
+    );
   });
 });
 

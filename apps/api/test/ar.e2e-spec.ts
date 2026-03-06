@@ -54,7 +54,7 @@ describe('AR Subledger (e2e)', () => {
   const uniqueRunId = fixtureRunId;
 
   beforeAll(async () => {
-    process.env.ORION_JWT_SECRET = 'ORION_e2e_test_secret';
+    process.env.ORION_JWT_SECRET = 'ORION_e2e_test_secret_value_123456';
     delete process.env.JWT_SECRET;
     ensureDatabaseUrl();
     prisma = new PrismaClient();

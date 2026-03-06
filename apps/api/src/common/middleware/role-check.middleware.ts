@@ -1,4 +1,8 @@
-import { Injectable, NestMiddleware } from '@nestjs/common';
+import {
+  Injectable,
+  NestMiddleware,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { NextFunction, Response } from 'express';
 import { RequestWithContext } from '../types/request-with-context.type';
 
@@ -6,7 +10,9 @@ import { RequestWithContext } from '../types/request-with-context.type';
 export class RoleCheckMiddleware implements NestMiddleware {
   use(req: RequestWithContext, _res: Response, next: NextFunction): void {
     if (req.user && !req.user.role) {
-      throw new Error('Authenticated user missing role context.');
+      throw new UnauthorizedException(
+        'Authenticated user missing role context.',
+      );
     }
 
     next();

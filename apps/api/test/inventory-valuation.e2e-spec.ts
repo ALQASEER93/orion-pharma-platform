@@ -54,7 +54,8 @@ describe('Inventory Valuation + COGS (e2e)', () => {
   let otherTenantInvoiceId = '';
 
   beforeAll(async () => {
-    process.env.ORION_JWT_SECRET = 'ORION_inventory_valuation_e2e_secret';
+    process.env.ORION_JWT_SECRET =
+      'ORION_inventory_valuation_e2e_secret_value_123456';
     process.env.ORION_ALLOW_NEGATIVE_STOCK = 'false';
     delete process.env.JWT_SECRET;
     ensureDatabaseUrl();

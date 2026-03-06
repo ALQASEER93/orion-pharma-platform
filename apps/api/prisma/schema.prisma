@@ -511,6 +511,8 @@ model SalesInvoice {
   createdByUserId String?            @map("created_by_user_id")
   createdAt       DateTime           @default(now()) @map("created_at")
   updatedAt       DateTime           @updatedAt @map("updated_at")
+  idempotencyKey  String?            @map("idempotency_key")
+  payloadHash     String?            @map("payload_hash")
   tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branch          Branch?            @relation(fields: [branchId], references: [id], onDelete: SetNull)
   customer        Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
@@ -525,6 +527,7 @@ model SalesInvoice {
   @@index([tenantId, status, createdAt])
   @@index([tenantId, customerId])
   @@index([tenantId, branchId])
+  @@unique([tenantId, idempotencyKey])
   @@map("sales_invoices")
 }
 
