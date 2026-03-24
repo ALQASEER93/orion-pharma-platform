@@ -6,12 +6,18 @@ import {
 } from '@nestjs/common';
 import {
   AccountType,
+  ApBillStatus,
+  ApPaymentStatus,
+  ArInvoiceStatus,
+  ArReceiptStatus,
   FiscalPeriodStatus,
   JournalEntryStatus,
   NormalBalance,
   PeriodCloseStatus,
   PostingRuleSetStatus,
   Prisma,
+  ReconciliationRunStatus,
+  ReconciliationType,
   StatementType,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -20,9 +26,11 @@ import { CreateJournalDto } from './dto/create-journal.dto';
 import { CreatePostingRuleDto } from './dto/create-posting-rule.dto';
 import { CreatePostingRuleSetDto } from './dto/create-posting-ruleset.dto';
 import { QueryJournalsDto } from './dto/query-journals.dto';
+import { ListReconciliationRunsDto } from './dto/list-reconciliation-runs.dto';
 import { QueryPeriodReportDto } from './dto/query-period-report.dto';
 import { QueryPostingRulesDto } from './dto/query-posting-rules.dto';
 import { ReopenPeriodDto } from './dto/reopen-period.dto';
+import { RunReconciliationDto } from './dto/run-reconciliation.dto';
 import { SimulatePostingRulesDto } from './dto/simulate-posting-rules.dto';
 import { UpdatePostingRuleDto } from './dto/update-posting-rule.dto';
 import { UpdatePostingRuleSetDto } from './dto/update-posting-ruleset.dto';
@@ -625,6 +633,119 @@ export class AccountingService {
     return snapshot;
   }
 
+  async runReconciliation(
+    tenantId: string,
+    query: RunReconciliationDto & { createdByUserId?: string },
+  ) {
+    const period = query.periodId
+      ? await this.resolveReconciliationPeriod(tenantId, query.periodId)
+      : null;
+    const asOfDate = this.resolveAsOfDate(query.asOf, period ?? undefined);
+    if (period) {
+      const { startAt, endAt } = this.resolvePeriodWindow(period);
+      if (asOfDate < startAt || asOfDate >= endAt) {
+        throw new BadRequestException(
+          'asOf date must be within the requested fiscal period.',
+        );
+      }
+    }
+    const inferredPeriod =
+      period ??
+      (await this.resolveReconciliationPeriod(tenantId, undefined, asOfDate));
+    const settings = await this.prisma.accountingSetting.findUnique({
+      where: { tenantId },
+    });
+    if (!settings) {
+      throw new NotFoundException(
+        'Accounting settings not configured for tenant.',
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const run = await tx.reconciliationRun.create({
+        data: {
+          tenantId,
+          fiscalPeriodId: inferredPeriod?.id,
+          asOfDate,
+          status: ReconciliationRunStatus.COMPLETED,
+          createdByUserId: query.createdByUserId,
+        },
+      });
+
+      const [ar, ap, inv] = await Promise.all([
+        this.buildArReconciliation(
+          tx,
+          tenantId,
+          asOfDate,
+          inferredPeriod?.id,
+          settings,
+        ),
+        this.buildApReconciliation(
+          tx,
+          tenantId,
+          asOfDate,
+          inferredPeriod?.id,
+          settings,
+        ),
+        this.buildInventoryReconciliation(
+          tx,
+          tenantId,
+          asOfDate,
+          inferredPeriod?.id,
+          settings,
+        ),
+      ]);
+
+      await tx.reconciliationResult.createMany({
+        data: [ar, ap, inv].map((entry) => ({
+          runId: run.id,
+          tenantId,
+          type: entry.type,
+          controlAccountCode: entry.controlAccountCode,
+          glBalance: this.roundMoney(entry.glBalance),
+          subledgerBalance: this.roundMoney(entry.subledgerBalance),
+          delta: this.roundMoney(entry.delta),
+          details: entry.details as Prisma.JsonObject,
+        })),
+      });
+
+      return this.getReconciliationRunById(tx, tenantId, run.id);
+    });
+  }
+
+  async listReconciliationRuns(
+    tenantId: string,
+    query: ListReconciliationRunsDto,
+  ) {
+    if (query.periodId) {
+      await this.assertPeriodInTenant(tenantId, query.periodId);
+    }
+
+    return this.prisma.reconciliationRun.findMany({
+      where: {
+        tenantId,
+        ...(query.periodId ? { fiscalPeriodId: query.periodId } : {}),
+      },
+      orderBy: [{ createdAt: 'desc' }],
+      include: {
+        results: true,
+      },
+    });
+  }
+
+  async getReconciliationRun(tenantId: string, runId: string) {
+    const run = await this.getReconciliationRunById(
+      this.prisma,
+      tenantId,
+      runId,
+    );
+    if (!run) {
+      throw new NotFoundException('Reconciliation run not found.');
+    }
+
+    return run;
+  }
+
   async listPostingRuleSets(tenantId: string) {
     return this.prisma.postingRuleSet.findMany({
       where: { tenantId },
@@ -872,6 +993,24 @@ export class AccountingService {
     defaultBranchId?: string;
     idempotencyStage?: string;
   }) {
+    return this.prisma.$transaction((tx) =>
+      this.postJournalFromPreviewWithTx(tx, params),
+    );
+  }
+
+  async postJournalFromPreviewWithTx(
+    tx: Prisma.TransactionClient,
+    params: {
+      tenantId: string;
+      date: Date;
+      description: string;
+      sourceType: string;
+      sourceId: string;
+      lines: JournalPreviewLineInput[];
+      defaultBranchId?: string;
+      idempotencyStage?: string;
+    },
+  ) {
     if (params.lines.length === 0) {
       return null;
     }
@@ -883,156 +1022,154 @@ export class AccountingService {
       throw new ConflictException('Journal preview is not balanced.');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      if (params.idempotencyStage) {
-        try {
-          await tx.postingKey.create({
-            data: {
+    if (params.idempotencyStage) {
+      try {
+        await tx.postingKey.create({
+          data: {
+            tenantId: params.tenantId,
+            sourceType: params.sourceType,
+            sourceId: params.sourceId,
+            stage: params.idempotencyStage,
+          },
+        });
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
+          const existing = await tx.journalEntry.findFirst({
+            where: {
               tenantId: params.tenantId,
               sourceType: params.sourceType,
               sourceId: params.sourceId,
-              stage: params.idempotencyStage,
+              status: JournalEntryStatus.POSTED,
+            },
+            include: {
+              lines: true,
             },
           });
-        } catch (error) {
-          if (
-            error instanceof Prisma.PrismaClientKnownRequestError &&
-            error.code === 'P2002'
-          ) {
-            const existing = await tx.journalEntry.findFirst({
-              where: {
-                tenantId: params.tenantId,
-                sourceType: params.sourceType,
-                sourceId: params.sourceId,
-                status: JournalEntryStatus.POSTED,
-              },
-              include: {
-                lines: true,
-              },
-            });
 
-            if (existing) {
-              return existing;
-            }
-
-            throw new ConflictException('Posting key already consumed.');
+          if (existing) {
+            return existing;
           }
 
-          throw error;
+          throw new ConflictException('Posting key already consumed.');
         }
+
+        throw error;
       }
+    }
 
-      const postingDate = new Date(params.date);
-      if (Number.isNaN(postingDate.getTime())) {
-        throw new BadRequestException('Posting date is invalid.');
-      }
+    const postingDate = new Date(params.date);
+    if (Number.isNaN(postingDate.getTime())) {
+      throw new BadRequestException('Posting date is invalid.');
+    }
 
-      const period = await tx.fiscalPeriod.findUnique({
-        where: {
-          tenantId_year_month: {
-            tenantId: params.tenantId,
-            year: postingDate.getUTCFullYear(),
-            month: postingDate.getUTCMonth() + 1,
-          },
-        },
-      });
-
-      if (!period) {
-        throw new ConflictException(
-          'Fiscal period is not configured for posting date.',
-        );
-      }
-
-      if (period.status !== FiscalPeriodStatus.OPEN) {
-        throw new ConflictException('Fiscal period is closed or locked.');
-      }
-
-      const allBranchIds = [
-        ...new Set(
-          params.lines
-            .map((line) => line.branchId ?? params.defaultBranchId)
-            .filter((value): value is string => Boolean(value)),
-        ),
-      ];
-      for (const branchId of allBranchIds) {
-        await this.assertBranchInTenant(tx, params.tenantId, branchId);
-      }
-
-      const accountCodes = [
-        ...new Set(params.lines.map((line) => line.accountCode.trim())),
-      ];
-      const accounts = await tx.account.findMany({
-        where: {
+    const period = await tx.fiscalPeriod.findUnique({
+      where: {
+        tenantId_year_month: {
           tenantId: params.tenantId,
-          isActive: true,
-          code: {
-            in: accountCodes,
-          },
+          year: postingDate.getUTCFullYear(),
+          month: postingDate.getUTCMonth() + 1,
         },
-        select: {
-          id: true,
-          code: true,
-        },
-      });
-      if (accounts.length !== accountCodes.length) {
-        throw new NotFoundException(
-          'One or more account codes were not found in tenant.',
-        );
-      }
-      const accountMap = new Map(
-        accounts.map((account) => [account.code, account.id]),
-      );
+      },
+    });
 
-      const sequence = await tx.documentSequence.upsert({
-        where: {
-          tenantId_key: {
-            tenantId: params.tenantId,
-            key: JOURNAL_SEQUENCE_KEY,
-          },
+    if (!period) {
+      throw new ConflictException(
+        'Fiscal period is not configured for posting date.',
+      );
+    }
+
+    if (period.status !== FiscalPeriodStatus.OPEN) {
+      throw new ConflictException('Fiscal period is closed or locked.');
+    }
+
+    const allBranchIds = [
+      ...new Set(
+        params.lines
+          .map((line) => line.branchId ?? params.defaultBranchId)
+          .filter((value): value is string => Boolean(value)),
+      ),
+    ];
+    for (const branchId of allBranchIds) {
+      await this.assertBranchInTenant(tx, params.tenantId, branchId);
+    }
+
+    const accountCodes = [
+      ...new Set(params.lines.map((line) => line.accountCode.trim())),
+    ];
+    const accounts = await tx.account.findMany({
+      where: {
+        tenantId: params.tenantId,
+        isActive: true,
+        code: {
+          in: accountCodes,
         },
-        create: {
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+    if (accounts.length !== accountCodes.length) {
+      throw new NotFoundException(
+        'One or more account codes were not found in tenant.',
+      );
+    }
+    const accountMap = new Map(
+      accounts.map((account) => [account.code, account.id]),
+    );
+
+    const sequence = await tx.documentSequence.upsert({
+      where: {
+        tenantId_key: {
           tenantId: params.tenantId,
           key: JOURNAL_SEQUENCE_KEY,
-          nextNumber: 2,
         },
-        update: {
-          nextNumber: {
-            increment: 1,
-          },
+      },
+      create: {
+        tenantId: params.tenantId,
+        key: JOURNAL_SEQUENCE_KEY,
+        nextNumber: 2,
+      },
+      update: {
+        nextNumber: {
+          increment: 1,
         },
-      });
+      },
+    });
 
-      const sequenceNumber = sequence.nextNumber - 1;
-      const entryNo = `JE-${postingDate.getUTCFullYear()}-${sequenceNumber
-        .toString()
-        .padStart(6, '0')}`;
+    const sequenceNumber = sequence.nextNumber - 1;
+    const entryNo = `JE-${postingDate.getUTCFullYear()}-${sequenceNumber
+      .toString()
+      .padStart(6, '0')}`;
 
-      return tx.journalEntry.create({
-        data: {
-          tenantId: params.tenantId,
-          entryNo,
-          date: postingDate,
-          description: params.description,
-          status: JournalEntryStatus.POSTED,
-          sourceType: params.sourceType,
-          sourceId: params.sourceId,
-          branchId: params.defaultBranchId,
-          fiscalPeriodId: period.id,
-          lines: {
-            create: params.lines.map((line) => ({
-              tenantId: params.tenantId,
-              accountId: accountMap.get(line.accountCode.trim()) as string,
-              debit: line.debit,
-              credit: line.credit,
-              memo: line.memo ?? undefined,
-              branchId: line.branchId ?? params.defaultBranchId,
-            })),
-          },
+    return tx.journalEntry.create({
+      data: {
+        tenantId: params.tenantId,
+        entryNo,
+        date: postingDate,
+        description: params.description,
+        status: JournalEntryStatus.POSTED,
+        sourceType: params.sourceType,
+        sourceId: params.sourceId,
+        branchId: params.defaultBranchId,
+        fiscalPeriodId: period.id,
+        lines: {
+          create: params.lines.map((line) => ({
+            tenantId: params.tenantId,
+            accountId: accountMap.get(line.accountCode.trim()) as string,
+            debit: line.debit,
+            credit: line.credit,
+            memo: line.memo ?? undefined,
+            branchId: line.branchId ?? params.defaultBranchId,
+          })),
         },
-        include: {
-          lines: true,
-        },
-      });
+      },
+      include: {
+        lines: true,
+      },
     });
   }
 
@@ -1052,6 +1189,590 @@ export class AccountingService {
         throw new BadRequestException((error as Error).message);
       }
     }
+  }
+
+  private resolveAsOfDate(
+    asOf?: string,
+    period?: {
+      year: number;
+      month: number;
+    },
+  ) {
+    const date = asOf
+      ? new Date(asOf)
+      : period
+        ? new Date(Date.UTC(period.year, period.month, 0, 23, 59, 59, 999))
+        : new Date();
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException('Invalid asOf date.');
+    }
+
+    return new Date(
+      Date.UTC(
+        date.getUTCFullYear(),
+        date.getUTCMonth(),
+        date.getUTCDate(),
+        23,
+        59,
+        59,
+        999,
+      ),
+    );
+  }
+
+  private async resolveReconciliationPeriod(
+    tenantId: string,
+    periodId: string | undefined,
+    asOfDate?: Date,
+  ) {
+    if (periodId) {
+      const period = await this.prisma.fiscalPeriod.findFirst({
+        where: {
+          id: periodId,
+          tenantId,
+        },
+      });
+      if (!period) {
+        throw new NotFoundException('Fiscal period not found.');
+      }
+
+      return period;
+    }
+
+    if (!asOfDate) {
+      return null;
+    }
+
+    return this.prisma.fiscalPeriod.findUnique({
+      where: {
+        tenantId_year_month: {
+          tenantId,
+          year: asOfDate.getUTCFullYear(),
+          month: asOfDate.getUTCMonth() + 1,
+        },
+      },
+    });
+  }
+
+  private async getReconciliationRunById(
+    tx: {
+      reconciliationRun: PrismaService['reconciliationRun'];
+    },
+    tenantId: string,
+    runId: string,
+  ) {
+    return tx.reconciliationRun.findFirst({
+      where: {
+        id: runId,
+        tenantId,
+      },
+      include: {
+        results: true,
+      },
+    });
+  }
+
+  private async buildArReconciliation(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    asOfDate: Date,
+    fiscalPeriodId: string | undefined,
+    settings: {
+      arControlAccountCode: string;
+    },
+  ) {
+    const invoices = await tx.arInvoice.findMany({
+      where: {
+        tenantId,
+        issueDate: {
+          lte: asOfDate,
+        },
+        OR: [
+          {
+            status: {
+              not: ArInvoiceStatus.VOID,
+            },
+          },
+          {
+            voidedAt: {
+              gt: asOfDate,
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        customerId: true,
+        originalAmount: true,
+      },
+    });
+    const invoiceIds = invoices.map((row) => row.id);
+    const allocations = invoiceIds.length
+      ? await tx.arAllocation.groupBy({
+          by: ['invoiceId'],
+          where: {
+            tenantId,
+            invoiceId: {
+              in: invoiceIds,
+            },
+            receipt: {
+              is: {
+                tenantId,
+                status: ArReceiptStatus.POSTED,
+                date: {
+                  lte: asOfDate,
+                },
+              },
+            },
+          },
+          _sum: {
+            amount: true,
+          },
+        })
+      : [];
+    const allocatedByInvoiceId = new Map(
+      allocations.map((row) => [row.invoiceId, Number(row._sum.amount ?? 0)]),
+    );
+    const outstandingByCustomer = new Map<string, number>();
+    for (const invoice of invoices) {
+      const allocated = allocatedByInvoiceId.get(invoice.id) ?? 0;
+      const outstanding = Math.max(
+        0,
+        this.roundMoney(invoice.originalAmount - allocated),
+      );
+      outstandingByCustomer.set(
+        invoice.customerId,
+        this.roundMoney(
+          (outstandingByCustomer.get(invoice.customerId) ?? 0) + outstanding,
+        ),
+      );
+    }
+
+    const customerIds = [...outstandingByCustomer.keys()];
+    const customers = await tx.customer.findMany({
+      where: {
+        tenantId,
+        id: {
+          in: customerIds,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+    const customerMap = new Map(customers.map((row) => [row.id, row.name]));
+    const contributors = customerIds.map((customerId) => ({
+      customerId,
+      customerName: customerMap.get(customerId) ?? customerId,
+      outstandingAmount: this.roundMoney(
+        outstandingByCustomer.get(customerId) ?? 0,
+      ),
+    }));
+    const topCustomers = contributors
+      .filter((row) => row.outstandingAmount > 0)
+      .map((row) => ({
+        customerId: row.customerId,
+        customerName: row.customerName,
+        outstandingAmount: row.outstandingAmount,
+      }))
+      .sort((a, b) => b.outstandingAmount - a.outstandingAmount)
+      .slice(0, 5);
+
+    const subledgerBalance = this.roundMoney(
+      contributors.reduce((sum, row) => sum + row.outstandingAmount, 0),
+    );
+    const glBalance = await this.resolveControlGlBalance(
+      tx,
+      tenantId,
+      settings.arControlAccountCode,
+      asOfDate,
+      fiscalPeriodId,
+    );
+
+    return {
+      type: ReconciliationType.AR,
+      controlAccountCode: settings.arControlAccountCode,
+      glBalance,
+      subledgerBalance,
+      delta: this.roundMoney(glBalance - subledgerBalance),
+      details: {
+        asOfDate: asOfDate.toISOString(),
+        topContributors: topCustomers,
+      },
+    };
+  }
+
+  private async buildApReconciliation(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    asOfDate: Date,
+    fiscalPeriodId: string | undefined,
+    settings: {
+      apControlAccountCode: string;
+    },
+  ) {
+    const bills = await tx.apBill.findMany({
+      where: {
+        tenantId,
+        issueDate: {
+          lte: asOfDate,
+        },
+        OR: [
+          {
+            status: {
+              not: ApBillStatus.VOID,
+            },
+          },
+          {
+            voidedAt: {
+              gt: asOfDate,
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        supplierId: true,
+        originalAmount: true,
+      },
+    });
+    const billIds = bills.map((row) => row.id);
+    const allocations = billIds.length
+      ? await tx.apAllocation.groupBy({
+          by: ['billId'],
+          where: {
+            tenantId,
+            billId: {
+              in: billIds,
+            },
+            payment: {
+              is: {
+                tenantId,
+                status: ApPaymentStatus.POSTED,
+                date: {
+                  lte: asOfDate,
+                },
+              },
+            },
+          },
+          _sum: {
+            amount: true,
+          },
+        })
+      : [];
+    const allocatedByBillId = new Map(
+      allocations.map((row) => [row.billId, Number(row._sum.amount ?? 0)]),
+    );
+    const outstandingBySupplier = new Map<string, number>();
+    for (const bill of bills) {
+      const allocated = allocatedByBillId.get(bill.id) ?? 0;
+      const outstanding = Math.max(
+        0,
+        this.roundMoney(bill.originalAmount - allocated),
+      );
+      outstandingBySupplier.set(
+        bill.supplierId,
+        this.roundMoney(
+          (outstandingBySupplier.get(bill.supplierId) ?? 0) + outstanding,
+        ),
+      );
+    }
+
+    const supplierIds = [...outstandingBySupplier.keys()];
+    const suppliers = await tx.supplier.findMany({
+      where: {
+        tenantId,
+        id: {
+          in: supplierIds,
+        },
+      },
+      select: {
+        id: true,
+        nameEn: true,
+      },
+    });
+    const supplierMap = new Map(suppliers.map((row) => [row.id, row.nameEn]));
+    const contributors = supplierIds.map((supplierId) => ({
+      supplierId,
+      supplierName: supplierMap.get(supplierId) ?? supplierId,
+      outstandingAmount: this.roundMoney(
+        outstandingBySupplier.get(supplierId) ?? 0,
+      ),
+    }));
+    const topSuppliers = contributors
+      .filter((row) => row.outstandingAmount > 0)
+      .map((row) => ({
+        supplierId: row.supplierId,
+        supplierName: row.supplierName,
+        outstandingAmount: row.outstandingAmount,
+      }))
+      .sort((a, b) => b.outstandingAmount - a.outstandingAmount)
+      .slice(0, 5);
+
+    const subledgerBalance = this.roundMoney(
+      contributors.reduce((sum, row) => sum + row.outstandingAmount, 0),
+    );
+    const glBalance = await this.resolveControlGlBalance(
+      tx,
+      tenantId,
+      settings.apControlAccountCode,
+      asOfDate,
+      fiscalPeriodId,
+    );
+
+    return {
+      type: ReconciliationType.AP,
+      controlAccountCode: settings.apControlAccountCode,
+      glBalance,
+      subledgerBalance,
+      delta: this.roundMoney(glBalance - subledgerBalance),
+      details: {
+        asOfDate: asOfDate.toISOString(),
+        topContributors: topSuppliers,
+      },
+    };
+  }
+
+  private async buildInventoryReconciliation(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    asOfDate: Date,
+    fiscalPeriodId: string | undefined,
+    settings: {
+      inventoryControlAccountCode: string;
+    },
+  ) {
+    const movementRows = await tx.inventoryMovement.findMany({
+      where: {
+        tenantId,
+        businessDate: {
+          lte: asOfDate,
+        },
+      },
+      select: {
+        productId: true,
+        quantity: true,
+        costTotal: true,
+      },
+    });
+
+    const totalsByProduct = new Map<
+      string,
+      { qtyOnHand: number; inventoryValue: number }
+    >();
+    for (const row of movementRows) {
+      const current = totalsByProduct.get(row.productId) ?? {
+        qtyOnHand: 0,
+        inventoryValue: 0,
+      };
+      const quantity = Number(row.quantity ?? 0);
+      const signedCost =
+        row.costTotal !== null
+          ? Math.sign(quantity) * Number(row.costTotal)
+          : 0;
+      totalsByProduct.set(row.productId, {
+        qtyOnHand: current.qtyOnHand + quantity,
+        inventoryValue: current.inventoryValue + signedCost,
+      });
+    }
+
+    const productIds = [...totalsByProduct.keys()];
+    const products = await tx.product.findMany({
+      where: {
+        tenantId,
+        id: {
+          in: productIds,
+        },
+      },
+      select: {
+        id: true,
+        nameEn: true,
+      },
+    });
+    const productMap = new Map(products.map((row) => [row.id, row.nameEn]));
+    const contributors = [...totalsByProduct.entries()].map(
+      ([productId, totals]) => ({
+        productId,
+        productName: productMap.get(productId) ?? productId,
+        qtyOnHand: this.roundMoney(totals.qtyOnHand),
+        inventoryValue: this.roundMoney(totals.inventoryValue),
+      }),
+    );
+    const topProducts = contributors
+      .map((row) => ({
+        productId: row.productId,
+        productName: row.productName,
+        qtyOnHand: row.qtyOnHand,
+        inventoryValue: row.inventoryValue,
+      }))
+      .sort((a, b) => b.inventoryValue - a.inventoryValue)
+      .slice(0, 5);
+
+    const subledgerBalance = this.roundMoney(
+      contributors.reduce((sum, row) => sum + row.inventoryValue, 0),
+    );
+    const glBalance = await this.resolveControlGlBalance(
+      tx,
+      tenantId,
+      settings.inventoryControlAccountCode,
+      asOfDate,
+      fiscalPeriodId,
+    );
+
+    return {
+      type: ReconciliationType.INV,
+      controlAccountCode: settings.inventoryControlAccountCode,
+      glBalance,
+      subledgerBalance,
+      delta: this.roundMoney(glBalance - subledgerBalance),
+      details: {
+        asOfDate: asOfDate.toISOString(),
+        valuationBasis: 'movement_cost_to_asof',
+        topContributors: topProducts,
+      },
+    };
+  }
+
+  private async resolveControlGlBalance(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    accountCode: string,
+    asOfDate: Date,
+    fiscalPeriodId: string | undefined,
+  ) {
+    const account = await tx.account.findFirst({
+      where: {
+        tenantId,
+        code: accountCode,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        code: true,
+        normalBalance: true,
+      },
+    });
+    if (!account) {
+      throw new NotFoundException(
+        `Control account not found for code ${accountCode}.`,
+      );
+    }
+
+    if (fiscalPeriodId) {
+      const period = await tx.fiscalPeriod.findFirst({
+        where: {
+          id: fiscalPeriodId,
+          tenantId,
+        },
+        select: {
+          status: true,
+        },
+      });
+      if (period && period.status !== FiscalPeriodStatus.OPEN) {
+        const snapshot = await tx.trialBalanceSnapshot.findFirst({
+          where: {
+            tenantId,
+            fiscalPeriodId,
+            asOfDate: {
+              lte: asOfDate,
+            },
+          },
+          orderBy: [{ asOfDate: 'desc' }, { createdAt: 'desc' }],
+          select: {
+            payload: true,
+          },
+        });
+        const fromSnapshot = this.readTrialBalanceAccountFromSnapshot(
+          snapshot?.payload,
+          accountCode,
+          account.normalBalance,
+        );
+        if (fromSnapshot !== null) {
+          return this.roundMoney(fromSnapshot);
+        }
+      }
+    }
+
+    const aggregates = await tx.journalLine.aggregate({
+      where: {
+        tenantId,
+        accountId: account.id,
+        journalEntry: {
+          is: {
+            tenantId,
+            status: JournalEntryStatus.POSTED,
+            date: {
+              lte: asOfDate,
+            },
+          },
+        },
+      },
+      _sum: {
+        debit: true,
+        credit: true,
+      },
+    });
+
+    const debit = Number(aggregates._sum.debit ?? 0);
+    const credit = Number(aggregates._sum.credit ?? 0);
+    return this.roundMoney(
+      this.toNaturalBalance(account.normalBalance, debit, credit),
+    );
+  }
+
+  private readTrialBalanceAccountFromSnapshot(
+    payload: Prisma.JsonValue | undefined,
+    accountCode: string,
+    normalBalance: NormalBalance,
+  ) {
+    if (!payload || typeof payload !== 'object') {
+      return null;
+    }
+
+    const lines = (payload as { lines?: unknown }).lines;
+    if (!Array.isArray(lines)) {
+      return null;
+    }
+
+    const line = lines.find((entry) => {
+      if (!entry || typeof entry !== 'object') {
+        return false;
+      }
+
+      const code = (entry as { accountCode?: unknown }).accountCode;
+      return typeof code === 'string' && code === accountCode;
+    }) as { debit?: number; credit?: number; balance?: number } | undefined;
+
+    if (!line) {
+      return null;
+    }
+
+    if (typeof line.debit === 'number' && typeof line.credit === 'number') {
+      return this.toNaturalBalance(normalBalance, line.debit, line.credit);
+    }
+
+    if (typeof line.balance === 'number') {
+      return normalBalance === NormalBalance.DEBIT
+        ? line.balance
+        : line.balance * -1;
+    }
+
+    return null;
+  }
+
+  private toNaturalBalance(
+    normalBalance: NormalBalance,
+    debit: number,
+    credit: number,
+  ) {
+    return normalBalance === NormalBalance.DEBIT
+      ? debit - credit
+      : credit - debit;
+  }
+
+  private roundMoney(value: number) {
+    return Math.round(value * 100) / 100;
   }
 
   private async assertAccountsInTenant(

@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -13,16 +12,10 @@ import { JwtStrategy } from './jwt.strategy';
     PrismaModule,
     PassportModule,
     JwtModule.registerAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret:
-          configService.get<string>('ORION_JWT_SECRET') ??
-          configService.get<string>('JWT_SECRET') ??
-          resolveJwtSecret(),
+      useFactory: () => ({
+        secret: resolveJwtSecret(),
         signOptions: {
-          expiresIn: Number(
-            configService.get<string>('ORION_JWT_EXPIRES_IN_SECONDS') ?? 86400,
-          ),
+          expiresIn: Number(process.env.ORION_JWT_EXPIRES_IN_SECONDS ?? 86400),
         },
       }),
     }),

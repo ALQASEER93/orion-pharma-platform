@@ -3,6 +3,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsEnum,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
@@ -51,6 +52,11 @@ export class PosCheckoutPaymentDto {
 }
 
 export class PosCheckoutDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(128)
+  idempotencyKey!: string;
+
   @IsOptional()
   @IsUUID()
   branchId?: string;

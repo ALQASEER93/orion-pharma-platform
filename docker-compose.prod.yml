@@ -1,0 +1,107 @@
+services:
+  reverse-proxy:
+    image: caddy:2.10.2-alpine
+    container_name: orion-reverse-proxy
+    restart: always
+    env_file:
+      - .env.production
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - orion_internal
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget --no-check-certificate --header="Host: $$ORION_PUBLIC_DOMAIN" -qO- https://127.0.0.1/api/health | grep -q "\"status\":\"ok\""',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  postgres:
+    image: postgres:16.8-alpine
+    container_name: orion-postgres
+    restart: always
+    env_file:
+      - .env.production
+    environment:
+      POSTGRES_DB: ${ORION_DB_NAME}
+      POSTGRES_USER: ${ORION_DB_USER}
+      POSTGRES_PASSWORD: ${ORION_DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - orion_internal
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${ORION_DB_USER} -d ${ORION_DB_NAME}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: orion-api
+    restart: always
+    env_file:
+      - .env.production
+    environment:
+      ORION_DB_PROVIDER: postgresql
+      ORION_DATABASE_URL: ${ORION_DB_URL}
+      ORION_PORT: 3001
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - orion_internal
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3001/api/health | grep -q "\"status\":\"ok\""']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: orion-web
+    restart: always
+    env_file:
+      - .env.production
+    environment:
+      ORION_WEB_API_BASE_URL: http://api:3001/api
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - orion_internal
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000 >/dev/null']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+networks:
+  orion_internal:
+    internal: true
+
+volumes:
+  caddy_config:
+  caddy_data:
+  postgres_data:

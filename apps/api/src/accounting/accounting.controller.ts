@@ -17,9 +17,11 @@ import { CreateJournalDto } from './dto/create-journal.dto';
 import { CreatePostingRuleDto } from './dto/create-posting-rule.dto';
 import { CreatePostingRuleSetDto } from './dto/create-posting-ruleset.dto';
 import { QueryJournalsDto } from './dto/query-journals.dto';
+import { ListReconciliationRunsDto } from './dto/list-reconciliation-runs.dto';
 import { QueryPeriodReportDto } from './dto/query-period-report.dto';
 import { QueryPostingRulesDto } from './dto/query-posting-rules.dto';
 import { ReopenPeriodDto } from './dto/reopen-period.dto';
+import { RunReconciliationDto } from './dto/run-reconciliation.dto';
 import { SimulatePostingRulesDto } from './dto/simulate-posting-rules.dto';
 import { UpdatePostingRuleDto } from './dto/update-posting-rule.dto';
 import { UpdatePostingRuleSetDto } from './dto/update-posting-ruleset.dto';
@@ -204,6 +206,43 @@ export class AccountingController {
       resolveTenantId(req),
       query,
       StatementType.BS,
+    );
+  }
+
+  @Post('reconciliation/run')
+  @Permissions('accounting.manage')
+  runReconciliation(
+    @Req() req: RequestWithContext,
+    @Query() query: RunReconciliationDto,
+  ) {
+    return this.accountingService.runReconciliation(resolveTenantId(req), {
+      ...query,
+      asOf: query.asOf ?? (req.query.as_of_date as string | undefined),
+      createdByUserId: req.user?.sub,
+    });
+  }
+
+  @Get('reconciliation/runs')
+  @Permissions('accounting.read')
+  listReconciliationRuns(
+    @Req() req: RequestWithContext,
+    @Query() query: ListReconciliationRunsDto,
+  ) {
+    return this.accountingService.listReconciliationRuns(
+      resolveTenantId(req),
+      query,
+    );
+  }
+
+  @Get('reconciliation/runs/:id')
+  @Permissions('accounting.read')
+  getReconciliationRun(
+    @Req() req: RequestWithContext,
+    @Param('id') id: string,
+  ) {
+    return this.accountingService.getReconciliationRun(
+      resolveTenantId(req),
+      id,
     );
   }
 }

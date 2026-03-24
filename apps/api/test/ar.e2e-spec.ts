@@ -9,6 +9,7 @@ import {
   ArReceiptMethod,
   ArReceiptStatus,
   FiscalPeriodStatus,
+  JournalEntryStatus,
   NormalBalance,
   PostingRuleSetStatus,
   PrismaClient,
@@ -54,7 +55,7 @@ describe('AR Subledger (e2e)', () => {
   const uniqueRunId = fixtureRunId;
 
   beforeAll(async () => {
-    process.env.ORION_JWT_SECRET = 'ORION_e2e_test_secret';
+    process.env.ORION_JWT_SECRET = 'ORION_e2e_test_secret_value_123456';
     delete process.env.JWT_SECRET;
     ensureDatabaseUrl();
     prisma = new PrismaClient();
@@ -240,6 +241,199 @@ describe('AR Subledger (e2e)', () => {
     expect(
       response.body.totals.days_31_60 + response.body.totals.days_91_plus,
     ).toBeGreaterThan(0);
+  });
+
+  it('keeps AR exposure before void, excludes it after void, and posts reversal journal', async () => {
+    const server = app.getHttpServer() as Server;
+    const baselineBefore = await request(server)
+      .get('/api/ar/aging')
+      .query({ as_of_date: '2026-08-19' })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId);
+    const baselineAfter = await request(server)
+      .get('/api/ar/aging')
+      .query({ as_of_date: '2026-08-21' })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId);
+    const baselineGlBefore = await sumControlAccountBalance(
+      prisma,
+      tenantId,
+      '1100',
+      new Date('2026-08-19T23:59:59.999Z'),
+    );
+    const baselineGlAfter = await sumControlAccountBalance(
+      prisma,
+      tenantId,
+      '1100',
+      new Date('2026-08-21T23:59:59.999Z'),
+    );
+    expect(baselineBefore.status).toBe(200);
+    expect(baselineAfter.status).toBe(200);
+
+    const controlAccounts = await prisma.account.findMany({
+      where: {
+        tenantId,
+        code: {
+          in: ['1100', '4000'],
+        },
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+    const accountMap = new Map(
+      controlAccounts.map((account) => [account.code, account.id]),
+    );
+    const salesInvoice = await prisma.salesInvoice.create({
+      data: {
+        tenantId,
+        invoiceNo: `SI-AR-VOID-${uniqueRunId}`,
+        status: SalesInvoiceStatus.POSTED,
+        customerId,
+        branchId,
+        subtotal: 90,
+        discountTotal: 0,
+        taxTotal: 0,
+        grandTotal: 90,
+        issuedAt: new Date('2026-08-10T00:00:00.000Z'),
+      },
+    });
+
+    const originalJournal = await prisma.journalEntry.create({
+      data: {
+        tenantId,
+        entryNo: `JE-AR-VOID-${uniqueRunId}`,
+        date: new Date('2026-08-10T00:00:00.000Z'),
+        description: 'AR void fixture original journal',
+        status: JournalEntryStatus.POSTED,
+        sourceType: 'AR_INVOICE',
+        sourceId: salesInvoice.id,
+        branchId,
+        lines: {
+          create: [
+            {
+              tenantId,
+              accountId: accountMap.get('1100') as string,
+              debit: 90,
+              credit: 0,
+              branchId,
+            },
+            {
+              tenantId,
+              accountId: accountMap.get('4000') as string,
+              debit: 0,
+              credit: 90,
+              branchId,
+            },
+          ],
+        },
+      },
+    });
+    const invoice = await prisma.arInvoice.create({
+      data: {
+        tenantId,
+        customerId,
+        salesInvoiceId: salesInvoice.id,
+        journalEntryId: originalJournal.id,
+        invoiceNo: `AR-VOID-${uniqueRunId}`,
+        issueDate: new Date('2026-08-10T00:00:00.000Z'),
+        dueDate: new Date('2026-08-25T00:00:00.000Z'),
+        originalAmount: 90,
+        paidAmount: 0,
+        outstandingAmount: 90,
+        status: ArInvoiceStatus.OPEN,
+      },
+    });
+
+    const voidResponse = await request(server)
+      .post(`/api/ar/invoices/${invoice.id}/void`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send();
+    expect(voidResponse.status).toBe(201);
+    expect(voidResponse.body.status).toBe(ArInvoiceStatus.VOID);
+    expect(voidResponse.body.voidedAt).toBeTruthy();
+
+    const fixedVoidDate = new Date('2026-08-20T00:00:00.000Z');
+    const reversalJournal = await prisma.journalEntry.findFirstOrThrow({
+      where: {
+        tenantId,
+        sourceType: 'AR_INVOICE_VOID',
+        sourceId: invoice.id,
+      },
+    });
+
+    await prisma.$transaction([
+      prisma.arInvoice.update({
+        where: {
+          id: invoice.id,
+        },
+        data: {
+          voidedAt: fixedVoidDate,
+        },
+      }),
+      prisma.journalEntry.update({
+        where: {
+          id: reversalJournal.id,
+        },
+        data: {
+          date: fixedVoidDate,
+        },
+      }),
+    ]);
+
+    const beforeVoid = await request(server)
+      .get('/api/ar/aging')
+      .query({ as_of_date: '2026-08-19' })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId);
+    expect(beforeVoid.status).toBe(200);
+    expect(
+      (beforeVoid.body.invoices as Array<{ invoiceId: string }>).some(
+        (row) => row.invoiceId === invoice.id,
+      ),
+    ).toBe(true);
+
+    const afterVoid = await request(server)
+      .get('/api/ar/aging')
+      .query({ as_of_date: '2026-08-21' })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId);
+    expect(afterVoid.status).toBe(200);
+    expect(
+      (afterVoid.body.invoices as Array<{ invoiceId: string }>).some(
+        (row) => row.invoiceId === invoice.id,
+      ),
+    ).toBe(false);
+
+    const glBefore = await sumControlAccountBalance(
+      prisma,
+      tenantId,
+      '1100',
+      new Date('2026-08-19T23:59:59.999Z'),
+    );
+    const glAfter = await sumControlAccountBalance(
+      prisma,
+      tenantId,
+      '1100',
+      new Date('2026-08-21T23:59:59.999Z'),
+    );
+
+    expect(
+      beforeVoid.body.totals.totalOutstanding -
+        baselineBefore.body.totals.totalOutstanding,
+    ).toBe(90);
+    expect(
+      afterVoid.body.totals.totalOutstanding -
+        baselineAfter.body.totals.totalOutstanding,
+    ).toBe(0);
+    expect(glBefore - baselineGlBefore).toBe(90);
+    expect(glAfter - baselineGlAfter).toBe(0);
+    expect(
+      beforeVoid.body.totals.totalOutstanding -
+        baselineBefore.body.totals.totalOutstanding,
+    ).toBe(glBefore - baselineGlBefore);
   });
 
   it('enforces tenant isolation with cross-tenant sales invoice id', async () => {
@@ -496,6 +690,26 @@ async function ensureFixture() {
     },
   });
 
+  const now = new Date();
+  await prisma.fiscalPeriod.upsert({
+    where: {
+      tenantId_year_month: {
+        tenantId,
+        year: now.getUTCFullYear(),
+        month: now.getUTCMonth() + 1,
+      },
+    },
+    update: {
+      status: FiscalPeriodStatus.OPEN,
+    },
+    create: {
+      tenantId,
+      year: now.getUTCFullYear(),
+      month: now.getUTCMonth() + 1,
+      status: FiscalPeriodStatus.OPEN,
+    },
+  });
+
   await prisma.postingRuleSet.upsert({
     where: {
       tenantId_name_version: {
@@ -576,4 +790,36 @@ async function ensureFixture() {
     postedSalesInvoiceId: postedSalesInvoice.id,
     otherTenantSalesInvoiceId: otherSalesInvoice.id,
   };
+}
+
+async function sumControlAccountBalance(
+  prismaClient: PrismaClient,
+  scopedTenantId: string,
+  accountCode: string,
+  asOf: Date,
+) {
+  const lines = await prismaClient.journalLine.findMany({
+    where: {
+      tenantId: scopedTenantId,
+      account: {
+        code: accountCode,
+      },
+      journalEntry: {
+        status: JournalEntryStatus.POSTED,
+        date: {
+          lte: asOf,
+        },
+      },
+    },
+    select: {
+      debit: true,
+      credit: true,
+    },
+  });
+
+  return (
+    Math.round(
+      lines.reduce((sum, line) => sum + line.debit - line.credit, 0) * 100,
+    ) / 100
+  );
 }

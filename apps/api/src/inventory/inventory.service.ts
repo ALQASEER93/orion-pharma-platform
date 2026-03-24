@@ -163,6 +163,9 @@ export class InventoryService {
           productId: dto.productId,
           batchNo: dto.batchNo,
           expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : null,
+          businessDate: dto.businessDate
+            ? new Date(dto.businessDate)
+            : new Date(),
           movementType: dto.movementType,
           quantity: dto.quantity,
           unitCost: dto.unitCost,

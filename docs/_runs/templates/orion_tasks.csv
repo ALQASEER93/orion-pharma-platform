@@ -1,0 +1,7 @@
+agent,area,goal,outputs
+architect,planning,"Break request into bounded ORION tasks with acceptance criteria","plan.md;fanout.json;constraints.md"
+backend,api work,"Implement or review backend/API work within assigned scope","backend_changes.md;backend_tests.md;backend_findings.md"
+frontend,ui work,"Implement or review web/PWA changes within assigned scope","frontend_changes.md;frontend_tests.md;frontend_findings.md"
+security,security checks,"Review secret, auth, tenant, and transport boundaries","security_findings.md;security_approval.md"
+qa,test generation,"Produce deterministic regression coverage and acceptance validation","qa_plan.md;qa_tests.md;qa_results.md"
+deploy,deployment validation,"Validate deployment guardrails, runbooks, and rollback assumptions","deploy_checks.md;rollback_notes.md;ops_findings.md"

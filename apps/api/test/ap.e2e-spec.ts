@@ -52,7 +52,7 @@ describe('AP Subledger (e2e)', () => {
   const uniqueRunId = fixtureRunId;
 
   beforeAll(async () => {
-    process.env.ORION_JWT_SECRET = 'ORION_ap_e2e_test_secret';
+    process.env.ORION_JWT_SECRET = 'ORION_ap_e2e_test_secret_value_123456';
     delete process.env.JWT_SECRET;
     ensureDatabaseUrl();
     prisma = new PrismaClient();
@@ -202,6 +202,105 @@ describe('AP Subledger (e2e)', () => {
     expect(
       response.body.totals.days_31_60 + response.body.totals.days_91_plus,
     ).toBeGreaterThan(0);
+  });
+
+  it('keeps AP exposure before void, excludes it after void, and posts reversal journal', async () => {
+    const server = app.getHttpServer() as Server;
+    const baselineBefore = await request(server)
+      .get('/api/ap/aging')
+      .query({ as_of_date: '2026-08-19' })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId);
+    const baselineAfter = await request(server)
+      .get('/api/ap/aging')
+      .query({ as_of_date: '2026-08-21' })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId);
+    expect(baselineBefore.status).toBe(200);
+    expect(baselineAfter.status).toBe(200);
+
+    const createBill = await request(server)
+      .post('/api/ap/bills')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send({
+        supplierId,
+        issueDate: '2026-08-10T00:00:00.000Z',
+        dueDate: '2026-08-25T00:00:00.000Z',
+        originalAmount: 90,
+        sourceType: 'MANUAL',
+        sourceId: `VOID-MANUAL-${uniqueRunId}`,
+      });
+    expect(createBill.status).toBe(201);
+
+    const voidResponse = await request(server)
+      .post(`/api/ap/bills/${createBill.body.id}/void`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId)
+      .send();
+    expect(voidResponse.status).toBe(201);
+    expect(voidResponse.body.status).toBe(ApBillStatus.VOID);
+    expect(voidResponse.body.voidedAt).toBeTruthy();
+
+    const fixedVoidDate = new Date('2026-08-20T00:00:00.000Z');
+    const reversalJournal = await prisma.journalEntry.findFirstOrThrow({
+      where: {
+        tenantId,
+        sourceType: 'AP_BILL_VOID',
+        sourceId: createBill.body.id as string,
+      },
+    });
+
+    await prisma.$transaction([
+      prisma.apBill.update({
+        where: {
+          id: createBill.body.id as string,
+        },
+        data: {
+          voidedAt: fixedVoidDate,
+        },
+      }),
+      prisma.journalEntry.update({
+        where: {
+          id: reversalJournal.id,
+        },
+        data: {
+          date: fixedVoidDate,
+        },
+      }),
+    ]);
+
+    const beforeVoid = await request(server)
+      .get('/api/ap/aging')
+      .query({ as_of_date: '2026-08-19' })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId);
+    expect(beforeVoid.status).toBe(200);
+    expect(
+      (beforeVoid.body.bills as Array<{ billId: string }>).some(
+        (bill) => bill.billId === createBill.body.id,
+      ),
+    ).toBe(true);
+
+    const afterVoid = await request(server)
+      .get('/api/ap/aging')
+      .query({ as_of_date: '2026-08-21' })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('x-tenant-id', tenantId);
+    expect(afterVoid.status).toBe(200);
+    expect(
+      (afterVoid.body.bills as Array<{ billId: string }>).some(
+        (bill) => bill.billId === createBill.body.id,
+      ),
+    ).toBe(false);
+    expect(
+      beforeVoid.body.totals.totalOutstanding -
+        baselineBefore.body.totals.totalOutstanding,
+    ).toBe(90);
+    expect(
+      afterVoid.body.totals.totalOutstanding -
+        baselineAfter.body.totals.totalOutstanding,
+    ).toBe(0);
   });
 
   it('enforces tenant isolation with cross-tenant bill id', async () => {
@@ -426,6 +525,26 @@ async function ensureFixture() {
       tenantId,
       year: 2026,
       month: 8,
+      status: FiscalPeriodStatus.OPEN,
+    },
+  });
+
+  const now = new Date();
+  await prisma.fiscalPeriod.upsert({
+    where: {
+      tenantId_year_month: {
+        tenantId,
+        year: now.getUTCFullYear(),
+        month: now.getUTCMonth() + 1,
+      },
+    },
+    update: {
+      status: FiscalPeriodStatus.OPEN,
+    },
+    create: {
+      tenantId,
+      year: now.getUTCFullYear(),
+      month: now.getUTCMonth() + 1,
       status: FiscalPeriodStatus.OPEN,
     },
   });

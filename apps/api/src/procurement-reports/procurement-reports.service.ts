@@ -271,7 +271,7 @@ export class ProcurementReportsService {
       },
       ...(query.dateFrom || query.dateTo
         ? {
-            createdAt: {
+            businessDate: {
               ...(query.dateFrom ? { gte: new Date(query.dateFrom) } : {}),
               ...(query.dateTo ? { lte: new Date(query.dateTo) } : {}),
             },
@@ -287,7 +287,7 @@ export class ProcurementReportsService {
         where,
         skip,
         take: pageSize,
-        orderBy: [{ createdAt: 'desc' }],
+        orderBy: [{ businessDate: 'desc' }, { createdAt: 'desc' }],
         include: {
           branch: true,
           product: true,
@@ -331,7 +331,7 @@ export class ProcurementReportsService {
         quantity: record.quantity,
         source,
         sourceDocumentNumber: sourceDoc,
-        movementAt: record.createdAt.toISOString(),
+        movementAt: (record.businessDate ?? record.createdAt).toISOString(),
         branchId: record.branchId,
         branchName: record.branch.name,
         productId: record.productId,

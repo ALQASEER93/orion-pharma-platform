@@ -307,6 +307,7 @@ export class GoodsReceiptsService {
         qtyReceivedNow: line.qtyReceivedNow,
         batchNo: line.batchNo,
         expiryDate: line.expiryDate,
+        receivedAt: dto.receivedAt,
         createdBy: user.sub,
         reason: `Goods receipt ${grnNumber}`,
         unitCost: poLine.unitPrice,
@@ -394,6 +395,7 @@ export class GoodsReceiptsService {
       qtyReceivedNow: number;
       batchNo?: string;
       expiryDate?: string;
+      receivedAt?: string;
       createdBy: string;
       reason: string;
       unitCost?: number;
@@ -443,6 +445,7 @@ export class GoodsReceiptsService {
         productId: args.productId,
         batchNo: args.batchNo,
         expiryDate: args.expiryDate ? new Date(args.expiryDate) : null,
+        businessDate: args.receivedAt ? new Date(args.receivedAt) : new Date(),
         movementType: InventoryMovementType.IN,
         quantity: args.qtyReceivedNow,
         unitCost: args.unitCost,

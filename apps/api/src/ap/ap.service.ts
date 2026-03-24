@@ -25,6 +25,8 @@ const AP_PAYMENT_SEQUENCE_KEY = 'AP_PAYMENT';
 const AP_BILL_SOURCE_TYPE = 'AP_BILL';
 const AP_PAYMENT_SOURCE_TYPE = 'AP_PAYMENT';
 const AP_POST_STAGE = 'POST';
+const AP_BILL_VOID_SOURCE_TYPE = 'AP_BILL_VOID';
+const AP_BILL_VOID_POST_STAGE = 'VOID';
 const EVENT_AP_BILL_CREATED = 'AP_BILL_CREATED';
 const EVENT_AP_PAYMENT_POSTED = 'AP_PAYMENT_POSTED';
 const EPSILON = 0.000001;
@@ -184,18 +186,43 @@ export class ApService {
     const bills = await this.prisma.apBill.findMany({
       where: {
         tenantId,
-        status: {
-          in: [ApBillStatus.OPEN, ApBillStatus.PAID],
+        issueDate: {
+          lte: asOf,
         },
-        outstandingAmount: {
-          gt: 0,
-        },
+        OR: [
+          {
+            status: {
+              not: ApBillStatus.VOID,
+            },
+          },
+          {
+            voidedAt: {
+              gt: asOf,
+            },
+          },
+        ],
       },
       include: {
         supplier: {
           select: {
             id: true,
             nameEn: true,
+          },
+        },
+        allocations: {
+          where: {
+            payment: {
+              is: {
+                tenantId,
+                status: ApPaymentStatus.POSTED,
+                date: {
+                  lte: asOf,
+                },
+              },
+            },
+          },
+          select: {
+            amount: true,
           },
         },
       },
@@ -221,11 +248,14 @@ export class ApService {
     }> = [];
 
     for (const bill of bills) {
+      const outstanding = this.resolveApOutstandingAsOf(bill);
+      if (outstanding <= 0) {
+        continue;
+      }
       const dueBase = bill.dueDate ?? bill.issueDate;
       const diffDays = Math.floor(
         (asOf.getTime() - dueBase.getTime()) / (1000 * 60 * 60 * 24),
       );
-      const outstanding = this.roundMoney(bill.outstandingAmount);
       const bucket = this.resolveAgingBucket(diffDays);
       buckets[bucket] = this.roundMoney(buckets[bucket] + outstanding);
       totalOutstanding = this.roundMoney(totalOutstanding + outstanding);
@@ -538,6 +568,19 @@ export class ApService {
         include: {
           allocations: true,
           supplier: true,
+          journalEntry: {
+            include: {
+              lines: {
+                include: {
+                  account: {
+                    select: {
+                      code: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       });
       if (!bill) {
@@ -552,6 +595,30 @@ export class ApService {
         );
       }
 
+      if (!bill.journalEntry) {
+        throw new ConflictException(
+          'AP bill cannot be voided without a posted journal entry.',
+        );
+      }
+
+      const voidedAt = new Date();
+      await this.accountingService.postJournalFromPreviewWithTx(tx, {
+        tenantId,
+        date: voidedAt,
+        description: `Void AP bill ${bill.billNo}`,
+        sourceType: AP_BILL_VOID_SOURCE_TYPE,
+        sourceId: bill.id,
+        idempotencyStage: AP_BILL_VOID_POST_STAGE,
+        defaultBranchId: bill.journalEntry.branchId ?? undefined,
+        lines: bill.journalEntry.lines.map((line) => ({
+          accountCode: line.account.code,
+          debit: Number(line.credit),
+          credit: Number(line.debit),
+          memo: line.memo ?? `Void AP bill ${bill.billNo}`,
+          branchId: line.branchId ?? bill.journalEntry?.branchId ?? undefined,
+        })),
+      });
+
       return tx.apBill.update({
         where: {
           id: bill.id,
@@ -559,6 +626,7 @@ export class ApService {
         data: {
           status: ApBillStatus.VOID,
           outstandingAmount: 0,
+          voidedAt,
         },
         include: {
           allocations: true,
@@ -583,6 +651,21 @@ export class ApService {
       return 'days_61_90' as const;
     }
     return 'days_91_plus' as const;
+  }
+
+  private resolveApOutstandingAsOf(bill: {
+    originalAmount: number;
+    allocations: Array<{ amount: number }>;
+  }) {
+    const allocated = bill.allocations.reduce(
+      (sum, allocation) => sum + Number(allocation.amount),
+      0,
+    );
+
+    return Math.max(
+      0,
+      this.roundMoney(Number(bill.originalAmount) - allocated),
+    );
   }
 
   private async assertSupplierInTenant(
