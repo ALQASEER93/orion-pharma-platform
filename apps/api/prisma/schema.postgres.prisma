@@ -30,6 +30,10 @@ model Tenant {
   salesInvoices      SalesInvoice[]
   salesInvoiceLines  SalesInvoiceLine[]
   salesPayments      SalesPayment[]
+  posShifts          PosShift[]
+  posShiftTenderCloses PosShiftTenderClose[]
+  posCloseoutHandoffs PosCloseoutHandoff[]
+  posCloseoutAccountMappings PosCloseoutAccountMapping[]
   cogsPostingLinks   CogsPostingLink[]
   purchaseOrders     PurchaseOrder[]
   purchaseOrderLines PurchaseOrderLine[]
@@ -59,6 +63,12 @@ model Tenant {
   apBills            ApBill[]
   apPayments         ApPayment[]
   apAllocations      ApAllocation[]
+  prescriptions      Prescription[]
+  prescriptionItems  PrescriptionItem[]
+  pharmacistVerifications PharmacistVerification[]
+  productWorkspaceDrafts ProductWorkspaceDraft[]
+  productWorkspaceRecordStates ProductWorkspaceRecordState[]
+  productWorkspaceWorklists ProductWorkspaceWorklist[]
 
   @@map("tenants")
 }
@@ -104,6 +114,7 @@ model Customer {
   salesInvoices SalesInvoice[]
   arInvoices ArInvoice[]
   arReceipts ArReceipt[]
+  prescriptions Prescription[]
 
   @@index([tenantId, name])
   @@index([tenantId, createdAt])
@@ -126,6 +137,10 @@ model Branch {
   purchaseReturns    PurchaseReturn[]
   procurementAdjustments ProcurementAdjustment[]
   salesInvoices      SalesInvoice[]
+  posShifts          PosShift[]
+  posCloseoutHandoffs PosCloseoutHandoff[]
+  prescriptions      Prescription[]
+  pharmacistVerifications PharmacistVerification[]
   journalEntries     JournalEntry[]
   journalLines       JournalLine[]
 
@@ -151,6 +166,10 @@ model User {
   procurementAdjustmentsCreated ProcurementAdjustment[]
   salesInvoicesCreated SalesInvoice[]
   salesPaymentsCreated SalesPayment[]
+  openedPosShifts  PosShift[] @relation("PosShiftOpenedBy")
+  closedPosShifts  PosShift[] @relation("PosShiftClosedBy")
+  generatedPosCloseoutHandoffs PosCloseoutHandoff[] @relation("PosCloseoutHandoffGeneratedBy")
+  statusPosCloseoutHandoffs PosCloseoutHandoff[] @relation("PosCloseoutHandoffStatusBy")
   createdPostingRuleSets PostingRuleSet[] @relation("PostingRuleSetCreatedBy")
   periodCloses      PeriodClose[] @relation("PeriodCloseByUser")
   reconciliationRunsCreated ReconciliationRun[] @relation("ReconciliationRunCreatedBy")
@@ -158,6 +177,8 @@ model User {
   arReceiptsCreated ArReceipt[] @relation("ArReceiptCreatedBy")
   apBillsCreated ApBill[] @relation("ApBillCreatedBy")
   apPaymentsCreated ApPayment[] @relation("ApPaymentCreatedBy")
+  prescriptionsCreated Prescription[] @relation("PrescriptionCreatedBy")
+  pharmacistVerifications PharmacistVerification[] @relation("PharmacistVerificationByUser")
 
   @@map("users")
 }
@@ -214,6 +235,37 @@ enum TrackingMode {
   LOT_EXPIRY
 }
 
+enum MedicationAccessMode {
+  UNSPECIFIED
+  OTC
+  RX
+}
+
+enum ProductWorkspaceFilter {
+  ALL
+  INCOMPLETE
+  REVIEWABLE
+  READY_TO_PROMOTE
+  ACTIVE
+  INACTIVE
+}
+
+enum ProductWorkspaceRecordKind {
+  DRAFT
+  PRODUCT
+}
+
+enum PrescriptionStatus {
+  DRAFT
+  VERIFIED
+  CANCELLED
+}
+
+enum PharmacistVerificationOutcome {
+  VERIFIED
+  FLAGGED
+}
+
 enum InventoryMovementType {
   IN
   OUT
@@ -234,10 +286,36 @@ enum SalesInvoiceStatus {
   VOID
 }
 
+enum PosDraftState {
+  ACTIVE
+  ON_HOLD
+}
+
+enum PosShiftStatus {
+  OPEN
+  CLOSED
+}
+
+enum PosCloseoutHandoffStatus {
+  draft_or_pending
+  ready_for_posting
+  posted_stub
+  failed
+}
+
 enum SalesPaymentMethod {
   CASH
   CARD
   MIXED
+}
+
+enum PosCloseoutMappingKey {
+  CASH_ON_HAND
+  CASH_CLEARING
+  CARD_CLEARING
+  MIXED_CLEARING
+  SALES_REVENUE
+  CASH_OVER_SHORT
 }
 
 enum AccountType {
@@ -389,9 +467,19 @@ model Product {
   regulatoryTypeId   String?               @map("regulatory_type_id")
   nameAr             String                @map("name_ar")
   nameEn             String                @map("name_en")
+  tradeNameAr        String?               @map("trade_name_ar")
+  tradeNameEn        String?               @map("trade_name_en")
+  genericNameAr      String?               @map("generic_name_ar")
+  genericNameEn      String?               @map("generic_name_en")
+  categoryAr         String?               @map("category_ar")
+  categoryEn         String?               @map("category_en")
   barcode            String
   strength           String
   packSize           String                @map("pack_size")
+  unitOfMeasure      String?               @map("unit_of_measure")
+  taxProfileCode     String?               @map("tax_profile_code")
+  medicationAccessMode MedicationAccessMode @default(UNSPECIFIED) @map("medication_access_mode")
+  isActive           Boolean               @default(true) @map("is_active")
   trackingMode       TrackingMode          @default(NONE) @map("tracking_mode")
   createdAt          DateTime              @default(now()) @map("created_at")
   updatedAt          DateTime              @updatedAt @map("updated_at")
@@ -408,11 +496,155 @@ model Product {
   purchaseReturnLines PurchaseReturnLine[]
   procurementAdjustmentLines ProcurementAdjustmentLine[]
   salesInvoiceLines  SalesInvoiceLine[]
+  prescriptionItems  PrescriptionItem[]
+  workspaceCatalogDrafts ProductWorkspaceDraft[] @relation("WorkspaceCatalogProduct")
+  workspaceBasedDrafts ProductWorkspaceDraft[] @relation("WorkspaceBasedProduct")
 
   @@unique([tenantId, barcode])
   @@index([tenantId, nameEn])
   @@index([tenantId, nameAr])
+  @@index([tenantId, tradeNameEn])
+  @@index([tenantId, genericNameEn])
+  @@index([tenantId, isActive, nameEn])
   @@map("products")
+}
+
+model ProductWorkspaceDraft {
+  id              String       @id @default(uuid())
+  tenantId        String       @unique @map("tenant_id")
+  nameAr          String       @default("") @map("name_ar")
+  nameEn          String       @default("") @map("name_en")
+  barcode         String       @default("")
+  strength        String       @default("")
+  packSize        String       @default("") @map("pack_size")
+  trackingMode    TrackingMode @default(NONE) @map("tracking_mode")
+  catalogProductId String?     @map("catalog_product_id")
+  basedOnProductId String?     @map("based_on_product_id")
+  lastPromotedAt  DateTime?    @map("last_promoted_at")
+  lastActivatedAt DateTime?    @map("last_activated_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  catalogProduct  Product?     @relation("WorkspaceCatalogProduct", fields: [catalogProductId], references: [id], onDelete: SetNull)
+  basedOnProduct  Product?     @relation("WorkspaceBasedProduct", fields: [basedOnProductId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, updatedAt])
+  @@index([tenantId, catalogProductId])
+  @@index([tenantId, basedOnProductId])
+  @@map("product_workspace_drafts")
+}
+
+model ProductWorkspaceRecordState {
+  id          String                     @id @default(uuid())
+  tenantId    String                     @map("tenant_id")
+  recordKind  ProductWorkspaceRecordKind @map("record_kind")
+  recordId    String                     @map("record_id")
+  queued      Boolean                    @default(false)
+  prioritized Boolean                    @default(false)
+  reviewed    Boolean                    @default(false)
+  createdAt   DateTime                   @default(now()) @map("created_at")
+  updatedAt   DateTime                   @updatedAt @map("updated_at")
+  tenant      Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, recordKind, recordId])
+  @@index([tenantId, updatedAt])
+  @@map("product_workspace_record_states")
+}
+
+model ProductWorkspaceWorklist {
+  id          String                 @id @default(uuid())
+  tenantId    String                 @map("tenant_id")
+  name        String
+  query       String                 @default("")
+  filter      ProductWorkspaceFilter @default(ALL)
+  selectedKeys Json                  @map("selected_keys")
+  focusedKey  String                 @default("") @map("focused_key")
+  scopeSummary String                @default("") @map("scope_summary")
+  createdAt   DateTime               @default(now()) @map("created_at")
+  updatedAt   DateTime               @updatedAt @map("updated_at")
+  tenant      Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, updatedAt])
+  @@map("product_workspace_worklists")
+}
+
+model Prescription {
+  id                String             @id @default(uuid())
+  tenantId          String             @map("tenant_id")
+  branchId          String             @map("branch_id")
+  customerId        String?            @map("customer_id")
+  prescriptionNo    String             @map("prescription_no")
+  status            PrescriptionStatus @default(DRAFT)
+  patientName       String             @map("patient_name")
+  patientIdentifier String?            @map("patient_identifier")
+  prescriberName    String             @map("prescriber_name")
+  prescriberLicenseNo String?          @map("prescriber_license_no")
+  writtenAt         DateTime           @map("written_at")
+  expiresAt         DateTime?          @map("expires_at")
+  sourceType        String?            @map("source_type")
+  externalRef       String?            @map("external_ref")
+  notes             String?
+  createdByUserId   String?            @map("created_by_user_id")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch            Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  customer          Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdBy         User?              @relation("PrescriptionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  items             PrescriptionItem[]
+  verifications     PharmacistVerification[]
+  salesInvoices     SalesInvoice[]
+
+  @@unique([tenantId, prescriptionNo])
+  @@index([tenantId, branchId, status, writtenAt])
+  @@index([tenantId, customerId, writtenAt])
+  @@map("prescriptions")
+}
+
+model PrescriptionItem {
+  id                   String               @id @default(uuid())
+  prescriptionId       String               @map("prescription_id")
+  tenantId             String               @map("tenant_id")
+  lineNo               Int                  @map("line_no")
+  productId            String?              @map("product_id")
+  itemName             String               @map("item_name")
+  dosageInstructions   String?              @map("dosage_instructions")
+  quantityPrescribed   Float                @map("quantity_prescribed")
+  quantityUnit         String?              @map("quantity_unit")
+  refillsAuthorized    Int?                 @map("refills_authorized")
+  medicationAccessMode MedicationAccessMode @default(UNSPECIFIED) @map("medication_access_mode")
+  notes                String?
+  createdAt            DateTime             @default(now()) @map("created_at")
+  prescription         Prescription         @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  tenant               Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product              Product?             @relation(fields: [productId], references: [id], onDelete: SetNull)
+  salesInvoiceLines    SalesInvoiceLine[]
+
+  @@unique([prescriptionId, lineNo])
+  @@index([tenantId, productId])
+  @@index([tenantId, medicationAccessMode])
+  @@map("prescription_items")
+}
+
+model PharmacistVerification {
+  id               String                       @id @default(uuid())
+  prescriptionId   String                       @map("prescription_id")
+  tenantId         String                       @map("tenant_id")
+  branchId         String                       @map("branch_id")
+  verifiedByUserId String                       @map("verified_by_user_id")
+  verifiedAt       DateTime                     @default(now()) @map("verified_at")
+  outcome          PharmacistVerificationOutcome
+  verifiedFields   Json                         @map("verified_fields")
+  notes            String?
+  createdAt        DateTime                     @default(now()) @map("created_at")
+  prescription     Prescription                 @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  tenant           Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch           Branch                       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  verifiedBy       User                         @relation("PharmacistVerificationByUser", fields: [verifiedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, branchId, verifiedAt])
+  @@index([prescriptionId, verifiedAt])
+  @@map("pharmacist_verifications")
 }
 
 model InventoryMovement {
@@ -518,9 +750,12 @@ model SalesInvoice {
   idempotencyKey  String?            @map("idempotency_key")
   payloadHash     String?            @map("payload_hash")
   status          SalesInvoiceStatus @default(DRAFT)
+  posDraftState   PosDraftState      @default(ACTIVE) @map("pos_draft_state")
+  heldAt          DateTime?          @map("held_at")
   issuedAt        DateTime           @default(now()) @map("issued_at")
   branchId        String?            @map("branch_id")
   customerId      String?            @map("customer_id")
+  prescriptionId  String?            @map("prescription_id")
   currency        String             @default("JOD")
   subtotal        Float              @default(0)
   discountTotal   Float              @default(0) @map("discount_total")
@@ -532,6 +767,7 @@ model SalesInvoice {
   tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branch          Branch?            @relation(fields: [branchId], references: [id], onDelete: SetNull)
   customer        Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  prescription    Prescription?      @relation(fields: [prescriptionId], references: [id], onDelete: SetNull)
   createdBy       User?              @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
   lines           SalesInvoiceLine[]
   payments        SalesPayment[]
@@ -543,6 +779,7 @@ model SalesInvoice {
   @@index([tenantId, status, createdAt])
   @@index([tenantId, customerId])
   @@index([tenantId, branchId])
+  @@index([tenantId, prescriptionId])
   @@unique([tenantId, idempotencyKey])
   @@map("sales_invoices")
 }
@@ -552,6 +789,7 @@ model SalesInvoiceLine {
   invoiceId      String       @map("invoice_id")
   tenantId       String       @map("tenant_id")
   productId      String?      @map("product_id")
+  prescriptionItemId String?  @map("prescription_item_id")
   itemName       String       @map("item_name")
   qty            Float
   unitPrice      Float        @map("unit_price")
@@ -564,10 +802,12 @@ model SalesInvoiceLine {
   salesInvoice   SalesInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   product        Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+  prescriptionItem PrescriptionItem? @relation(fields: [prescriptionItemId], references: [id], onDelete: SetNull)
   inventoryMovements InventoryMovement[]
 
   @@index([tenantId, invoiceId])
   @@index([tenantId, productId])
+  @@index([tenantId, prescriptionItemId])
   @@map("sales_invoice_lines")
 }
 
@@ -575,6 +815,7 @@ model SalesPayment {
   id          String             @id @default(uuid())
   invoiceId   String             @map("invoice_id")
   tenantId    String             @map("tenant_id")
+  posShiftId  String?            @map("pos_shift_id")
   method      SalesPaymentMethod
   amount      Float
   paidAt      DateTime           @default(now()) @map("paid_at")
@@ -582,10 +823,122 @@ model SalesPayment {
   createdAt   DateTime           @default(now()) @map("created_at")
   salesInvoice SalesInvoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  posShift    PosShift?          @relation(fields: [posShiftId], references: [id], onDelete: SetNull)
   createdBy   User?              @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, invoiceId, paidAt])
+  @@index([tenantId, posShiftId, paidAt])
   @@map("sales_payments")
+}
+
+model PosShift {
+  id            String         @id @default(uuid())
+  tenantId      String         @map("tenant_id")
+  branchId      String         @map("branch_id")
+  status        PosShiftStatus @default(OPEN)
+  openedAt      DateTime       @default(now()) @map("opened_at")
+  openedByUserId String        @map("opened_by_user_id")
+  openingFloat  Float          @default(0) @map("opening_float")
+  closedAt      DateTime?      @map("closed_at")
+  closedByUserId String?       @map("closed_by_user_id")
+  expectedTotal Float          @default(0) @map("expected_total")
+  declaredTotal Float          @default(0) @map("declared_total")
+  varianceTotal Float          @default(0) @map("variance_total")
+  closeNote     String?        @map("close_note")
+  varianceNote  String?        @map("variance_note")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch        Branch         @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  openedBy      User           @relation("PosShiftOpenedBy", fields: [openedByUserId], references: [id], onDelete: Restrict)
+  closedBy      User?          @relation("PosShiftClosedBy", fields: [closedByUserId], references: [id], onDelete: SetNull)
+  payments      SalesPayment[]
+  tenderClosures PosShiftTenderClose[]
+  closeoutHandoffs PosCloseoutHandoff[]
+
+  @@index([tenantId, branchId, status, openedAt])
+  @@index([tenantId, openedByUserId, status])
+  @@index([tenantId, closedAt])
+  @@map("pos_shifts")
+}
+
+model PosShiftTenderClose {
+  id             String             @id @default(uuid())
+  shiftId        String             @map("shift_id")
+  tenantId       String             @map("tenant_id")
+  method         SalesPaymentMethod
+  expectedAmount Float              @default(0) @map("expected_amount")
+  declaredAmount Float              @default(0) @map("declared_amount")
+  varianceAmount Float              @default(0) @map("variance_amount")
+  note           String?
+  createdAt      DateTime           @default(now()) @map("created_at")
+  shift          PosShift           @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  tenant         Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([shiftId, method])
+  @@index([tenantId, shiftId])
+  @@map("pos_shift_tender_closes")
+}
+
+model PosCloseoutHandoff {
+  id                    String                   @id @default(uuid())
+  tenantId              String                   @map("tenant_id")
+  branchId              String                   @map("branch_id")
+  posShiftId            String?                  @map("pos_shift_id")
+  dayCloseId            String?                  @map("day_close_id")
+  posSessionId          String?                  @map("pos_session_id")
+  businessDate          DateTime                 @map("business_date")
+  closedAt              DateTime                 @map("closed_at")
+  currency              String
+  openingFloat          Float                    @default(0) @map("opening_float")
+  tenderTotals          Json                     @map("tender_totals")
+  expectedTotals        Json                     @map("expected_totals")
+  declaredTotals        Json                     @map("declared_totals")
+  overShortTotals       Json                     @map("over_short_totals")
+  netSalesBasis         Json                     @map("net_sales_basis")
+  sourceStatus          String                   @map("source_status")
+  lifecycleStatus       PosCloseoutHandoffStatus @default(draft_or_pending) @map("lifecycle_status")
+  sourcePayloadHash     String                   @map("source_payload_hash")
+  sourcePayload         Json                     @map("source_payload")
+  generatedByUserId     String?                  @map("generated_by_user_id")
+  generatedAt           DateTime                 @default(now()) @map("generated_at")
+  lastStatusActorUserId String?                  @map("last_status_actor_user_id")
+  lastStatusAt          DateTime?                @map("last_status_at")
+  lastStatusReason      String?                  @map("last_status_reason")
+  supersedesHandoffId   String?                  @map("supersedes_handoff_id")
+  supersededAt          DateTime?                @map("superseded_at")
+  deferredFields        Json?                    @map("deferred_fields")
+  createdAt             DateTime                 @default(now()) @map("created_at")
+  updatedAt             DateTime                 @updatedAt @map("updated_at")
+  tenant                Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch                Branch                   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  posShift              PosShift?                @relation(fields: [posShiftId], references: [id], onDelete: SetNull)
+  generatedBy           User?                    @relation("PosCloseoutHandoffGeneratedBy", fields: [generatedByUserId], references: [id], onDelete: SetNull)
+  lastStatusActor       User?                    @relation("PosCloseoutHandoffStatusBy", fields: [lastStatusActorUserId], references: [id], onDelete: SetNull)
+  supersedesHandoff     PosCloseoutHandoff?      @relation("PosCloseoutHandoffSupersedes", fields: [supersedesHandoffId], references: [id], onDelete: SetNull)
+  regeneratedHandoffs   PosCloseoutHandoff[]     @relation("PosCloseoutHandoffSupersedes")
+
+  @@unique([tenantId, posShiftId, sourcePayloadHash])
+  @@index([tenantId, branchId, businessDate, generatedAt])
+  @@index([tenantId, posShiftId, generatedAt])
+  @@index([tenantId, lifecycleStatus, generatedAt])
+  @@map("pos_closeout_handoffs")
+}
+
+model PosCloseoutAccountMapping {
+  id         String               @id @default(uuid())
+  tenantId   String               @map("tenant_id")
+  mappingKey PosCloseoutMappingKey @map("mapping_key")
+  accountRef String               @map("account_ref")
+  notes      String?
+  isRequired Boolean              @default(true) @map("is_required")
+  createdAt  DateTime             @default(now()) @map("created_at")
+  updatedAt  DateTime             @updatedAt @map("updated_at")
+  tenant     Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, mappingKey])
+  @@index([tenantId, createdAt])
+  @@map("pos_closeout_account_mappings")
 }
 
 model CogsPostingLink {
@@ -1181,6 +1534,7 @@ model ProcurementAdjustmentLine {
   reasonCode              String?                @map("reason_code")
   batchNo                 String?                @map("batch_no")
   expiryDate              DateTime?              @map("expiry_date")
+  unitCost                Float?                 @map("unit_cost")
   notes                   String?
   createdAt               DateTime               @default(now()) @map("created_at")
   procurementAdjustment   ProcurementAdjustment  @relation(fields: [procurementAdjustmentId], references: [id], onDelete: Cascade)
