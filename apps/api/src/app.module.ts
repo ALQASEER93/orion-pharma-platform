@@ -21,6 +21,7 @@ import { SalesModule } from './sales/sales.module';
 import { AccountingModule } from './accounting/accounting.module';
 import { ArModule } from './ar/ar.module';
 import { ApModule } from './ap/ap.module';
+import { InventoryFiscalFoundationModule } from './foundation/inventory-fiscal-foundation.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ApModule } from './ap/ap.module';
     ProcurementTransactionsModule,
     ProcurementReportsModule,
     SalesModule,
+    InventoryFiscalFoundationModule,
     AccountingModule,
     ArModule,
     ApModule,
