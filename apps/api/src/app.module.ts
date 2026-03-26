@@ -22,6 +22,7 @@ import { AccountingModule } from './accounting/accounting.module';
 import { ArModule } from './ar/ar.module';
 import { ApModule } from './ap/ap.module';
 import { InventoryFiscalFoundationModule } from './foundation/inventory-fiscal-foundation.module';
+import { InventoryLedgerModule } from './inventory-ledger/inventory-ledger.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { InventoryFiscalFoundationModule } from './foundation/inventory-fiscal-f
     TaxonomyModule,
     ProductsModule,
     InventoryModule,
+    InventoryLedgerModule,
     SuppliersModule,
     CustomersModule,
     PurchaseOrdersModule,

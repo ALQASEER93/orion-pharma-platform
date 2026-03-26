@@ -25,6 +25,8 @@ model Tenant {
   products                     Product[]
   productPacks                 ProductPack[]
   lotBatches                   LotBatch[]
+  inventoryLedgerEntries       InventoryLedgerEntry[]
+  inventoryLotBalances         InventoryLotBalance[]
   inventoryMovements           InventoryMovement[]
   inventoryBalances            InventoryBalance[]
   inventoryValuationStates     InventoryValuationState[]
@@ -136,6 +138,8 @@ model Branch {
   legalEntity              LegalEntity?              @relation(fields: [legalEntityId], references: [id], onDelete: SetNull)
   users                    User[]
   registers                Register[]
+  inventoryLedgerEntries   InventoryLedgerEntry[]
+  inventoryLotBalances     InventoryLotBalance[]
   inventoryMovements       InventoryMovement[]
   inventoryBalances        InventoryBalance[]
   inventoryValuationStates InventoryValuationState[]
@@ -169,6 +173,7 @@ model LegalEntity {
   tenant             Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branches           Branch[]
   registers          Register[]
+  inventoryLedgerEntries InventoryLedgerEntry[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive, nameEn])
@@ -189,6 +194,7 @@ model Register {
   tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   legalEntity   LegalEntity @relation(fields: [legalEntityId], references: [id], onDelete: Restrict)
   branch        Branch      @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  inventoryLedgerEntries InventoryLedgerEntry[]
 
   @@unique([tenantId, branchId, code])
   @@index([tenantId, legalEntityId, isActive])
@@ -209,6 +215,7 @@ model User {
   branch                        Branch?                  @relation(fields: [branchId], references: [id], onDelete: SetNull)
   role                          Role                     @relation(fields: [roleId], references: [id], onDelete: Restrict)
   auditLogs                     AuditLog[]
+  inventoryLedgerEntries        InventoryLedgerEntry[]
   inventoryMovements            InventoryMovement[]
   goodsReceiptsCreated          GoodsReceipt[]
   purchaseReturnsCreated        PurchaseReturn[]
@@ -339,6 +346,35 @@ enum InventoryMovementType {
   IN
   OUT
   ADJUSTMENT
+}
+
+enum InventoryLedgerEntryType {
+  STOCK_IN
+  STOCK_OUT
+  ADJUSTMENT
+  RESERVE
+  RELEASE
+  WRITE_OFF
+}
+
+enum InventoryLedgerReferenceType {
+  FOUNDATION
+  MANUAL_ADJUSTMENT
+  RECEIPT
+  SALE
+  RETURN
+  TRANSFER
+}
+
+enum InventoryPostingSurface {
+  BRANCH
+  REGISTER
+}
+
+enum InventoryStockBucket {
+  SELLABLE
+  QUARANTINED
+  EXPIRED
 }
 
 enum PurchaseOrderStatus {
@@ -594,6 +630,8 @@ model ProductPack {
   tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   product      Product                @relation(fields: [productId], references: [id], onDelete: Restrict)
   lotBatches   LotBatch[]
+  inventoryLedgerEntries InventoryLedgerEntry[]
+  inventoryLotBalances   InventoryLotBalance[]
 
   @@unique([tenantId, code])
   @@index([tenantId, productId, status])
@@ -616,6 +654,8 @@ model LotBatch {
   updatedAt        DateTime       @updatedAt @map("updated_at")
   tenant           Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   productPack      ProductPack    @relation(fields: [productPackId], references: [id], onDelete: Restrict)
+  inventoryLedgerEntries InventoryLedgerEntry[]
+  inventoryLotBalances   InventoryLotBalance[]
 
   @@unique([tenantId, productPackId, batchNo])
   @@index([tenantId, status, expiryDate])
@@ -810,6 +850,65 @@ model InventoryBalance {
   @@unique([tenantId, branchId, productId, batchNo])
   @@index([tenantId, branchId, productId])
   @@map("inventory_balances")
+}
+
+model InventoryLedgerEntry {
+  id             String                       @id @default(uuid())
+  tenantId       String                       @map("tenant_id")
+  legalEntityId  String?                      @map("legal_entity_id")
+  branchId       String                       @map("branch_id")
+  registerId     String?                      @map("register_id")
+  productPackId  String                       @map("product_pack_id")
+  lotBatchId     String                       @map("lot_batch_id")
+  entryType      InventoryLedgerEntryType     @map("entry_type")
+  postingSurface InventoryPostingSurface      @default(BRANCH) @map("posting_surface")
+  referenceType  InventoryLedgerReferenceType @map("reference_type")
+  referenceId    String?                      @map("reference_id")
+  referenceLineId String?                     @map("reference_line_id")
+  reasonCode     String?                      @map("reason_code")
+  stockBucket    InventoryStockBucket         @default(SELLABLE) @map("stock_bucket")
+  quantityDelta  Int                          @map("quantity_delta")
+  unitCost       Float?                       @map("unit_cost")
+  amountTotal    Float?                       @map("amount_total")
+  occurredAt     DateTime                     @default(now()) @map("occurred_at")
+  createdAt      DateTime                     @default(now()) @map("created_at")
+  createdBy      String?                      @map("created_by")
+  tenant         Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  legalEntity    LegalEntity?                 @relation(fields: [legalEntityId], references: [id], onDelete: SetNull)
+  branch         Branch                       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  register       Register?                    @relation(fields: [registerId], references: [id], onDelete: SetNull)
+  productPack    ProductPack                  @relation(fields: [productPackId], references: [id], onDelete: Restrict)
+  lotBatch       LotBatch                     @relation(fields: [lotBatchId], references: [id], onDelete: Restrict)
+  user           User?                        @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, branchId, occurredAt])
+  @@index([tenantId, registerId, occurredAt])
+  @@index([tenantId, productPackId, lotBatchId, occurredAt])
+  @@index([tenantId, referenceType, referenceId])
+  @@map("inventory_ledger_entries")
+}
+
+model InventoryLotBalance {
+  id                 String             @id @default(uuid())
+  tenantId           String             @map("tenant_id")
+  branchId           String             @map("branch_id")
+  productPackId      String             @map("product_pack_id")
+  lotBatchId         String             @map("lot_batch_id")
+  onHandQuantity     Int                @default(0) @map("on_hand_quantity")
+  sellableQuantity   Int                @default(0) @map("sellable_quantity")
+  quarantinedQuantity Int               @default(0) @map("quarantined_quantity")
+  expiredQuantity    Int                @default(0) @map("expired_quantity")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch             Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  productPack        ProductPack        @relation(fields: [productPackId], references: [id], onDelete: Restrict)
+  lotBatch           LotBatch           @relation(fields: [lotBatchId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, branchId, productPackId, lotBatchId])
+  @@index([tenantId, branchId, productPackId])
+  @@index([tenantId, branchId, onHandQuantity])
+  @@map("inventory_lot_balances")
 }
 
 model InventoryValuationState {
