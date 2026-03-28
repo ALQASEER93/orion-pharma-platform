@@ -24,6 +24,7 @@ import { ApModule } from './ap/ap.module';
 import { InventoryFiscalFoundationModule } from './foundation/inventory-fiscal-foundation.module';
 import { InventoryLedgerModule } from './inventory-ledger/inventory-ledger.module';
 import { FiscalDocumentsModule } from './fiscal-documents/fiscal-documents.module';
+import { ProcurementReceivingModule } from './procurement-receiving/procurement-receiving.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { FiscalDocumentsModule } from './fiscal-documents/fiscal-documents.modul
     InventoryModule,
     InventoryLedgerModule,
     FiscalDocumentsModule,
+    ProcurementReceivingModule,
     SuppliersModule,
     CustomersModule,
     PurchaseOrdersModule,

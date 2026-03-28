@@ -27,6 +27,10 @@ model Tenant {
   lotBatches         LotBatch[]
   inventoryLedgerEntries InventoryLedgerEntry[]
   inventoryLotBalances InventoryLotBalance[]
+  supplierStockReceipts SupplierStockReceipt[]
+  supplierStockReceiptLines SupplierStockReceiptLine[]
+  supplierStockReturns SupplierStockReturn[]
+  supplierStockReturnLines SupplierStockReturnLine[]
   fiscalSaleDocuments FiscalSaleDocument[]
   fiscalSaleDocumentLines FiscalSaleDocumentLine[]
   fiscalReturnDocuments FiscalReturnDocument[]
@@ -103,6 +107,8 @@ model Supplier {
   purchaseOrders       PurchaseOrder[]
   goodsReceipts        GoodsReceipt[]
   purchaseReturns      PurchaseReturn[]
+  supplierStockReceipts SupplierStockReceipt[]
+  supplierStockReturns SupplierStockReturn[]
   apBills              ApBill[]
   apPayments           ApPayment[]
 
@@ -146,6 +152,8 @@ model Branch {
   registers Register[]
   inventoryLedgerEntries InventoryLedgerEntry[]
   inventoryLotBalances InventoryLotBalance[]
+  supplierStockReceipts SupplierStockReceipt[]
+  supplierStockReturns SupplierStockReturn[]
   fiscalSaleDocuments FiscalSaleDocument[]
   fiscalReturnDocuments FiscalReturnDocument[]
   fiscalCreditNoteDocuments FiscalCreditNoteDocument[]
@@ -183,6 +191,8 @@ model LegalEntity {
   branches           Branch[]
   registers          Register[]
   inventoryLedgerEntries InventoryLedgerEntry[]
+  supplierStockReceipts SupplierStockReceipt[]
+  supplierStockReturns SupplierStockReturn[]
   fiscalSaleDocuments FiscalSaleDocument[]
   fiscalReturnDocuments FiscalReturnDocument[]
   fiscalCreditNoteDocuments FiscalCreditNoteDocument[]
@@ -232,6 +242,8 @@ model User {
   auditLogs    AuditLog[]
   inventoryLedgerEntries InventoryLedgerEntry[]
   inventoryMovements InventoryMovement[]
+  supplierStockReceiptsCreated SupplierStockReceipt[] @relation("SupplierStockReceiptCreatedBy")
+  supplierStockReturnsCreated SupplierStockReturn[] @relation("SupplierStockReturnCreatedBy")
   fiscalSaleDocumentsCreated FiscalSaleDocument[] @relation("FiscalSaleDocumentCreatedBy")
   fiscalReturnDocumentsCreated FiscalReturnDocument[] @relation("FiscalReturnDocumentCreatedBy")
   fiscalCreditNotesCreated FiscalCreditNoteDocument[] @relation("FiscalCreditNoteDocumentCreatedBy")
@@ -382,6 +394,8 @@ enum InventoryLedgerReferenceType {
   SALE
   RETURN
   TRANSFER
+  SUPPLIER_RECEIPT
+  SUPPLIER_RETURN
 }
 
 enum InventoryPostingSurface {
@@ -400,6 +414,18 @@ enum PurchaseOrderStatus {
   SUBMITTED
   APPROVED
   CLOSED
+  CANCELLED
+}
+
+enum SupplierStockReceiptState {
+  DRAFT
+  POSTED
+  CANCELLED
+}
+
+enum SupplierStockReturnState {
+  DRAFT
+  POSTED
   CANCELLED
 }
 
@@ -665,6 +691,8 @@ model ProductPack {
   lotBatches   LotBatch[]
   inventoryLedgerEntries InventoryLedgerEntry[]
   inventoryLotBalances InventoryLotBalance[]
+  supplierStockReceiptLines SupplierStockReceiptLine[]
+  supplierStockReturnLines SupplierStockReturnLine[]
   fiscalSaleDocumentLines FiscalSaleDocumentLine[]
   fiscalReturnDocumentLines FiscalReturnDocumentLine[]
   fiscalCreditNoteDocumentLines FiscalCreditNoteDocumentLine[]
@@ -692,6 +720,8 @@ model LotBatch {
   productPack      ProductPack    @relation(fields: [productPackId], references: [id], onDelete: Restrict)
   inventoryLedgerEntries InventoryLedgerEntry[]
   inventoryLotBalances InventoryLotBalance[]
+  supplierStockReceiptLines SupplierStockReceiptLine[]
+  supplierStockReturnLines SupplierStockReturnLine[]
   fiscalSaleDocumentLines FiscalSaleDocumentLine[]
   fiscalReturnDocumentLines FiscalReturnDocumentLine[]
   fiscalCreditNoteDocumentLines FiscalCreditNoteDocumentLine[]
@@ -919,6 +949,8 @@ model InventoryLedgerEntry {
   productPack    ProductPack                  @relation(fields: [productPackId], references: [id], onDelete: Restrict)
   lotBatch       LotBatch                     @relation(fields: [lotBatchId], references: [id], onDelete: Restrict)
   user           User?                        @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  supplierStockReceiptLine SupplierStockReceiptLine?
+  supplierStockReturnLine  SupplierStockReturnLine?
 
   @@index([tenantId, branchId, occurredAt])
   @@index([tenantId, registerId, occurredAt])
@@ -1963,6 +1995,116 @@ model PurchaseReturnLine {
   @@index([tenantId, goodsReceiptLineId])
   @@index([tenantId, productId])
   @@map("purchase_return_lines")
+}
+
+model SupplierStockReceipt {
+  id            String                   @id @default(uuid())
+  tenantId      String                   @map("tenant_id")
+  legalEntityId String?                  @map("legal_entity_id")
+  branchId      String                   @map("branch_id")
+  supplierId    String                   @map("supplier_id")
+  receiptNumber String                   @map("receipt_number")
+  state         SupplierStockReceiptState @default(DRAFT)
+  notes         String?
+  receivedAt    DateTime                 @default(now()) @map("received_at")
+  createdAt     DateTime                 @default(now()) @map("created_at")
+  updatedAt     DateTime                 @updatedAt @map("updated_at")
+  createdBy     String?                  @map("created_by")
+  tenant        Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  legalEntity   LegalEntity?             @relation(fields: [legalEntityId], references: [id], onDelete: SetNull)
+  branch        Branch                   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  supplier      Supplier                 @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  creator       User?                    @relation("SupplierStockReceiptCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  lines         SupplierStockReceiptLine[]
+  returnAnchors SupplierStockReturn[]
+
+  @@unique([tenantId, receiptNumber])
+  @@index([tenantId, branchId, receivedAt])
+  @@index([tenantId, supplierId, state, receivedAt])
+  @@map("supplier_stock_receipts")
+}
+
+model SupplierStockReceiptLine {
+  id                     String                 @id @default(uuid())
+  receiptId              String                 @map("receipt_id")
+  tenantId               String                 @map("tenant_id")
+  lineNo                 Int                    @default(1) @map("line_no")
+  productPackId          String                 @map("product_pack_id")
+  lotBatchId             String                 @map("lot_batch_id")
+  quantityReceived       Int                    @map("quantity_received")
+  returnedQuantity       Int                    @default(0) @map("returned_quantity")
+  unitCost               Float?                 @map("unit_cost")
+  lineTotal              Float?                 @map("line_total")
+  inventoryLedgerEntryId String?                @unique @map("inventory_ledger_entry_id")
+  notes                  String?
+  createdAt              DateTime               @default(now()) @map("created_at")
+  receipt                SupplierStockReceipt   @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  tenant                 Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  productPack            ProductPack            @relation(fields: [productPackId], references: [id], onDelete: Restrict)
+  lotBatch               LotBatch               @relation(fields: [lotBatchId], references: [id], onDelete: Restrict)
+  inventoryLedgerEntry   InventoryLedgerEntry?  @relation(fields: [inventoryLedgerEntryId], references: [id], onDelete: SetNull)
+  supplierReturnLines    SupplierStockReturnLine[]
+
+  @@unique([receiptId, lineNo])
+  @@index([tenantId, receiptId])
+  @@index([tenantId, productPackId, lotBatchId])
+  @@map("supplier_stock_receipt_lines")
+}
+
+model SupplierStockReturn {
+  id              String                  @id @default(uuid())
+  tenantId        String                  @map("tenant_id")
+  legalEntityId   String?                 @map("legal_entity_id")
+  branchId        String                  @map("branch_id")
+  supplierId      String                  @map("supplier_id")
+  sourceReceiptId String?                 @map("source_receipt_id")
+  returnNumber    String                  @map("return_number")
+  state           SupplierStockReturnState @default(DRAFT)
+  reasonCode      String?                 @map("reason_code")
+  notes           String?
+  returnedAt      DateTime                @default(now()) @map("returned_at")
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+  createdBy       String?                 @map("created_by")
+  tenant          Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  legalEntity     LegalEntity?            @relation(fields: [legalEntityId], references: [id], onDelete: SetNull)
+  branch          Branch                  @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  supplier        Supplier                @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  sourceReceipt   SupplierStockReceipt?   @relation(fields: [sourceReceiptId], references: [id], onDelete: SetNull)
+  creator         User?                   @relation("SupplierStockReturnCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  lines           SupplierStockReturnLine[]
+
+  @@unique([tenantId, returnNumber])
+  @@index([tenantId, sourceReceiptId])
+  @@index([tenantId, supplierId, state, returnedAt])
+  @@map("supplier_stock_returns")
+}
+
+model SupplierStockReturnLine {
+  id                     String                 @id @default(uuid())
+  returnId               String                 @map("return_id")
+  tenantId               String                 @map("tenant_id")
+  sourceReceiptLineId    String?                @map("source_receipt_line_id")
+  lineNo                 Int                    @default(1) @map("line_no")
+  productPackId          String                 @map("product_pack_id")
+  lotBatchId             String                 @map("lot_batch_id")
+  quantityReturned       Int                    @map("quantity_returned")
+  reasonCode             String?                @map("reason_code")
+  inventoryLedgerEntryId String?                @unique @map("inventory_ledger_entry_id")
+  notes                  String?
+  createdAt              DateTime               @default(now()) @map("created_at")
+  supplierReturn         SupplierStockReturn    @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  tenant                 Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sourceReceiptLine      SupplierStockReceiptLine? @relation(fields: [sourceReceiptLineId], references: [id], onDelete: SetNull)
+  productPack            ProductPack            @relation(fields: [productPackId], references: [id], onDelete: Restrict)
+  lotBatch               LotBatch               @relation(fields: [lotBatchId], references: [id], onDelete: Restrict)
+  inventoryLedgerEntry   InventoryLedgerEntry?  @relation(fields: [inventoryLedgerEntryId], references: [id], onDelete: SetNull)
+
+  @@unique([returnId, lineNo])
+  @@index([tenantId, returnId])
+  @@index([tenantId, sourceReceiptLineId])
+  @@index([tenantId, productPackId, lotBatchId])
+  @@map("supplier_stock_return_lines")
 }
 
 model ProcurementAdjustment {
