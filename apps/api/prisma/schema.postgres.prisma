@@ -27,6 +27,12 @@ model Tenant {
   lotBatches         LotBatch[]
   inventoryLedgerEntries InventoryLedgerEntry[]
   inventoryLotBalances InventoryLotBalance[]
+  fiscalSaleDocuments FiscalSaleDocument[]
+  fiscalSaleDocumentLines FiscalSaleDocumentLine[]
+  fiscalReturnDocuments FiscalReturnDocument[]
+  fiscalReturnDocumentLines FiscalReturnDocumentLine[]
+  fiscalCreditNoteDocuments FiscalCreditNoteDocument[]
+  fiscalCreditNoteDocumentLines FiscalCreditNoteDocumentLine[]
   inventoryMovements InventoryMovement[]
   inventoryBalances  InventoryBalance[]
   inventoryValuationStates InventoryValuationState[]
@@ -140,6 +146,9 @@ model Branch {
   registers Register[]
   inventoryLedgerEntries InventoryLedgerEntry[]
   inventoryLotBalances InventoryLotBalance[]
+  fiscalSaleDocuments FiscalSaleDocument[]
+  fiscalReturnDocuments FiscalReturnDocument[]
+  fiscalCreditNoteDocuments FiscalCreditNoteDocument[]
   inventoryMovements InventoryMovement[]
   inventoryBalances  InventoryBalance[]
   inventoryValuationStates InventoryValuationState[]
@@ -174,6 +183,9 @@ model LegalEntity {
   branches           Branch[]
   registers          Register[]
   inventoryLedgerEntries InventoryLedgerEntry[]
+  fiscalSaleDocuments FiscalSaleDocument[]
+  fiscalReturnDocuments FiscalReturnDocument[]
+  fiscalCreditNoteDocuments FiscalCreditNoteDocument[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive, nameEn])
@@ -195,6 +207,9 @@ model Register {
   legalEntity   LegalEntity @relation(fields: [legalEntityId], references: [id], onDelete: Restrict)
   branch        Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
   inventoryLedgerEntries InventoryLedgerEntry[]
+  fiscalSaleDocuments FiscalSaleDocument[]
+  fiscalReturnDocuments FiscalReturnDocument[]
+  fiscalCreditNoteDocuments FiscalCreditNoteDocument[]
 
   @@unique([tenantId, branchId, code])
   @@index([tenantId, legalEntityId, isActive])
@@ -217,6 +232,9 @@ model User {
   auditLogs    AuditLog[]
   inventoryLedgerEntries InventoryLedgerEntry[]
   inventoryMovements InventoryMovement[]
+  fiscalSaleDocumentsCreated FiscalSaleDocument[] @relation("FiscalSaleDocumentCreatedBy")
+  fiscalReturnDocumentsCreated FiscalReturnDocument[] @relation("FiscalReturnDocumentCreatedBy")
+  fiscalCreditNotesCreated FiscalCreditNoteDocument[] @relation("FiscalCreditNoteDocumentCreatedBy")
   goodsReceiptsCreated GoodsReceipt[]
   purchaseReturnsCreated PurchaseReturn[]
   procurementAdjustmentsCreated ProcurementAdjustment[]
@@ -389,6 +407,21 @@ enum SalesInvoiceStatus {
   DRAFT
   POSTED
   VOID
+}
+
+enum FiscalDocumentState {
+  DRAFT
+  FINALIZED
+  QUEUED
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum FiscalSaleCreditState {
+  NONE
+  PARTIALLY_CREDITED
+  FULLY_CREDITED
 }
 
 enum PosDraftState {
@@ -632,6 +665,9 @@ model ProductPack {
   lotBatches   LotBatch[]
   inventoryLedgerEntries InventoryLedgerEntry[]
   inventoryLotBalances InventoryLotBalance[]
+  fiscalSaleDocumentLines FiscalSaleDocumentLine[]
+  fiscalReturnDocumentLines FiscalReturnDocumentLine[]
+  fiscalCreditNoteDocumentLines FiscalCreditNoteDocumentLine[]
 
   @@unique([tenantId, code])
   @@index([tenantId, productId, status])
@@ -656,6 +692,9 @@ model LotBatch {
   productPack      ProductPack    @relation(fields: [productPackId], references: [id], onDelete: Restrict)
   inventoryLedgerEntries InventoryLedgerEntry[]
   inventoryLotBalances InventoryLotBalance[]
+  fiscalSaleDocumentLines FiscalSaleDocumentLine[]
+  fiscalReturnDocumentLines FiscalReturnDocumentLine[]
+  fiscalCreditNoteDocumentLines FiscalCreditNoteDocumentLine[]
 
   @@unique([tenantId, productPackId, batchNo])
   @@index([tenantId, status, expiryDate])
@@ -954,6 +993,218 @@ model DocumentSequence {
 
   @@unique([tenantId, key])
   @@map("document_sequences")
+}
+
+model FiscalSaleDocument {
+  id                         String                 @id @default(uuid())
+  tenantId                   String                 @map("tenant_id")
+  legalEntityId              String?                @map("legal_entity_id")
+  branchId                   String                 @map("branch_id")
+  registerId                 String?                @map("register_id")
+  documentNo                 String                 @map("document_no")
+  state                      FiscalDocumentState    @default(DRAFT)
+  creditState                FiscalSaleCreditState  @default(NONE) @map("credit_state")
+  currency                   String                 @default("JOD")
+  subtotal                   Float                  @default(0)
+  discountTotal              Float                  @default(0) @map("discount_total")
+  taxTotal                   Float                  @default(0) @map("tax_total")
+  grandTotal                 Float                  @default(0) @map("grand_total")
+  finalizedAt                DateTime?              @map("finalized_at")
+  queuedAt                   DateTime?              @map("queued_at")
+  acceptedAt                 DateTime?              @map("accepted_at")
+  rejectedAt                 DateTime?              @map("rejected_at")
+  cancelledAt                DateTime?              @map("cancelled_at")
+  rejectionReason            String?                @map("rejection_reason")
+  cancellationReason         String?                @map("cancellation_reason")
+  inventoryAnchorReferenceId String?                @map("inventory_anchor_reference_id")
+  createdByUserId            String?                @map("created_by_user_id")
+  createdAt                  DateTime               @default(now()) @map("created_at")
+  updatedAt                  DateTime               @updatedAt @map("updated_at")
+  tenant                     Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  legalEntity                LegalEntity?           @relation(fields: [legalEntityId], references: [id], onDelete: SetNull)
+  branch                     Branch                 @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  register                   Register?              @relation(fields: [registerId], references: [id], onDelete: SetNull)
+  createdBy                  User?                  @relation("FiscalSaleDocumentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  lines                      FiscalSaleDocumentLine[]
+  returnDocuments            FiscalReturnDocument[] @relation("FiscalReturnSourceSale")
+  creditNoteDocuments        FiscalCreditNoteDocument[] @relation("FiscalCreditSourceSale")
+
+  @@unique([tenantId, documentNo])
+  @@index([tenantId, state, createdAt])
+  @@index([tenantId, branchId, registerId, createdAt])
+  @@index([tenantId, legalEntityId, createdAt])
+  @@map("fiscal_sale_documents")
+}
+
+model FiscalSaleDocumentLine {
+  id                 String                      @id @default(uuid())
+  saleDocumentId     String                      @map("sale_document_id")
+  tenantId           String                      @map("tenant_id")
+  lineNo             Int                         @default(1) @map("line_no")
+  productPackId      String                      @map("product_pack_id")
+  lotBatchId         String?                     @map("lot_batch_id")
+  quantity           Float
+  unitPrice          Float                       @map("unit_price")
+  discount           Float                       @default(0)
+  taxRate            Float?                      @map("tax_rate")
+  lineTotal          Float                       @default(0) @map("line_total")
+  referenceKey       String?                     @map("reference_key")
+  createdAt          DateTime                    @default(now()) @map("created_at")
+  saleDocument       FiscalSaleDocument          @relation(fields: [saleDocumentId], references: [id], onDelete: Cascade)
+  tenant             Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  productPack        ProductPack                 @relation(fields: [productPackId], references: [id], onDelete: Restrict)
+  lotBatch           LotBatch?                   @relation(fields: [lotBatchId], references: [id], onDelete: SetNull)
+  returnLines        FiscalReturnDocumentLine[]  @relation("FiscalReturnLineSourceSaleLine")
+  creditNoteLines    FiscalCreditNoteDocumentLine[] @relation("FiscalCreditLineSourceSaleLine")
+
+  @@unique([saleDocumentId, lineNo])
+  @@index([tenantId, saleDocumentId])
+  @@index([tenantId, productPackId, lotBatchId])
+  @@map("fiscal_sale_document_lines")
+}
+
+model FiscalReturnDocument {
+  id                         String                 @id @default(uuid())
+  tenantId                   String                 @map("tenant_id")
+  legalEntityId              String?                @map("legal_entity_id")
+  branchId                   String                 @map("branch_id")
+  registerId                 String?                @map("register_id")
+  sourceSaleDocumentId       String?                @map("source_sale_document_id")
+  documentNo                 String                 @map("document_no")
+  state                      FiscalDocumentState    @default(DRAFT)
+  currency                   String                 @default("JOD")
+  subtotal                   Float                  @default(0)
+  discountTotal              Float                  @default(0) @map("discount_total")
+  taxTotal                   Float                  @default(0) @map("tax_total")
+  grandTotal                 Float                  @default(0) @map("grand_total")
+  finalizedAt                DateTime?              @map("finalized_at")
+  queuedAt                   DateTime?              @map("queued_at")
+  acceptedAt                 DateTime?              @map("accepted_at")
+  rejectedAt                 DateTime?              @map("rejected_at")
+  cancelledAt                DateTime?              @map("cancelled_at")
+  rejectionReason            String?                @map("rejection_reason")
+  cancellationReason         String?                @map("cancellation_reason")
+  inventoryAnchorReferenceId String?                @map("inventory_anchor_reference_id")
+  createdByUserId            String?                @map("created_by_user_id")
+  createdAt                  DateTime               @default(now()) @map("created_at")
+  updatedAt                  DateTime               @updatedAt @map("updated_at")
+  tenant                     Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  legalEntity                LegalEntity?           @relation(fields: [legalEntityId], references: [id], onDelete: SetNull)
+  branch                     Branch                 @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  register                   Register?              @relation(fields: [registerId], references: [id], onDelete: SetNull)
+  sourceSale                 FiscalSaleDocument?    @relation("FiscalReturnSourceSale", fields: [sourceSaleDocumentId], references: [id], onDelete: SetNull)
+  createdBy                  User?                  @relation("FiscalReturnDocumentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  lines                      FiscalReturnDocumentLine[]
+  creditNoteDocuments        FiscalCreditNoteDocument[] @relation("FiscalCreditSourceReturn")
+
+  @@unique([tenantId, documentNo])
+  @@index([tenantId, state, createdAt])
+  @@index([tenantId, branchId, registerId, createdAt])
+  @@index([tenantId, sourceSaleDocumentId])
+  @@map("fiscal_return_documents")
+}
+
+model FiscalReturnDocumentLine {
+  id                 String                      @id @default(uuid())
+  returnDocumentId   String                      @map("return_document_id")
+  tenantId           String                      @map("tenant_id")
+  sourceSaleLineId   String?                     @map("source_sale_line_id")
+  lineNo             Int                         @default(1) @map("line_no")
+  productPackId      String                      @map("product_pack_id")
+  lotBatchId         String?                     @map("lot_batch_id")
+  quantity           Float
+  unitPrice          Float                       @map("unit_price")
+  discount           Float                       @default(0)
+  taxRate            Float?                      @map("tax_rate")
+  lineTotal          Float                       @default(0) @map("line_total")
+  reasonCode         String?                     @map("reason_code")
+  createdAt          DateTime                    @default(now()) @map("created_at")
+  returnDocument     FiscalReturnDocument        @relation(fields: [returnDocumentId], references: [id], onDelete: Cascade)
+  tenant             Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sourceSaleLine     FiscalSaleDocumentLine?     @relation("FiscalReturnLineSourceSaleLine", fields: [sourceSaleLineId], references: [id], onDelete: SetNull)
+  productPack        ProductPack                 @relation(fields: [productPackId], references: [id], onDelete: Restrict)
+  lotBatch           LotBatch?                   @relation(fields: [lotBatchId], references: [id], onDelete: SetNull)
+  creditNoteLines    FiscalCreditNoteDocumentLine[] @relation("FiscalCreditLineSourceReturnLine")
+
+  @@unique([returnDocumentId, lineNo])
+  @@index([tenantId, returnDocumentId])
+  @@index([tenantId, sourceSaleLineId])
+  @@index([tenantId, productPackId, lotBatchId])
+  @@map("fiscal_return_document_lines")
+}
+
+model FiscalCreditNoteDocument {
+  id                         String                 @id @default(uuid())
+  tenantId                   String                 @map("tenant_id")
+  legalEntityId              String?                @map("legal_entity_id")
+  branchId                   String                 @map("branch_id")
+  registerId                 String?                @map("register_id")
+  sourceSaleDocumentId       String?                @map("source_sale_document_id")
+  sourceReturnDocumentId     String?                @map("source_return_document_id")
+  documentNo                 String                 @map("document_no")
+  state                      FiscalDocumentState    @default(DRAFT)
+  currency                   String                 @default("JOD")
+  subtotal                   Float                  @default(0)
+  discountTotal              Float                  @default(0) @map("discount_total")
+  taxTotal                   Float                  @default(0) @map("tax_total")
+  grandTotal                 Float                  @default(0) @map("grand_total")
+  finalizedAt                DateTime?              @map("finalized_at")
+  queuedAt                   DateTime?              @map("queued_at")
+  acceptedAt                 DateTime?              @map("accepted_at")
+  rejectedAt                 DateTime?              @map("rejected_at")
+  cancelledAt                DateTime?              @map("cancelled_at")
+  rejectionReason            String?                @map("rejection_reason")
+  cancellationReason         String?                @map("cancellation_reason")
+  inventoryAnchorReferenceId String?                @map("inventory_anchor_reference_id")
+  createdByUserId            String?                @map("created_by_user_id")
+  createdAt                  DateTime               @default(now()) @map("created_at")
+  updatedAt                  DateTime               @updatedAt @map("updated_at")
+  tenant                     Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  legalEntity                LegalEntity?           @relation(fields: [legalEntityId], references: [id], onDelete: SetNull)
+  branch                     Branch                 @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  register                   Register?              @relation(fields: [registerId], references: [id], onDelete: SetNull)
+  sourceSale                 FiscalSaleDocument?    @relation("FiscalCreditSourceSale", fields: [sourceSaleDocumentId], references: [id], onDelete: SetNull)
+  sourceReturn               FiscalReturnDocument?  @relation("FiscalCreditSourceReturn", fields: [sourceReturnDocumentId], references: [id], onDelete: SetNull)
+  createdBy                  User?                  @relation("FiscalCreditNoteDocumentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  lines                      FiscalCreditNoteDocumentLine[]
+
+  @@unique([tenantId, documentNo])
+  @@index([tenantId, state, createdAt])
+  @@index([tenantId, branchId, registerId, createdAt])
+  @@index([tenantId, sourceSaleDocumentId])
+  @@index([tenantId, sourceReturnDocumentId])
+  @@map("fiscal_credit_note_documents")
+}
+
+model FiscalCreditNoteDocumentLine {
+  id                 String                     @id @default(uuid())
+  creditNoteDocumentId String                   @map("credit_note_document_id")
+  tenantId           String                     @map("tenant_id")
+  sourceSaleLineId   String?                    @map("source_sale_line_id")
+  sourceReturnLineId String?                    @map("source_return_line_id")
+  lineNo             Int                        @default(1) @map("line_no")
+  productPackId      String?                    @map("product_pack_id")
+  lotBatchId         String?                    @map("lot_batch_id")
+  quantity           Float
+  unitPrice          Float                      @map("unit_price")
+  discount           Float                      @default(0)
+  taxRate            Float?                     @map("tax_rate")
+  lineTotal          Float                      @default(0) @map("line_total")
+  reasonCode         String?                    @map("reason_code")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  creditNoteDocument FiscalCreditNoteDocument   @relation(fields: [creditNoteDocumentId], references: [id], onDelete: Cascade)
+  tenant             Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sourceSaleLine     FiscalSaleDocumentLine?    @relation("FiscalCreditLineSourceSaleLine", fields: [sourceSaleLineId], references: [id], onDelete: SetNull)
+  sourceReturnLine   FiscalReturnDocumentLine?  @relation("FiscalCreditLineSourceReturnLine", fields: [sourceReturnLineId], references: [id], onDelete: SetNull)
+  productPack        ProductPack?               @relation(fields: [productPackId], references: [id], onDelete: SetNull)
+  lotBatch           LotBatch?                  @relation(fields: [lotBatchId], references: [id], onDelete: SetNull)
+
+  @@unique([creditNoteDocumentId, lineNo])
+  @@index([tenantId, creditNoteDocumentId])
+  @@index([tenantId, sourceSaleLineId])
+  @@index([tenantId, sourceReturnLineId])
+  @@index([tenantId, productPackId, lotBatchId])
+  @@map("fiscal_credit_note_document_lines")
 }
 
 model SalesInvoice {

@@ -23,6 +23,7 @@ import { ArModule } from './ar/ar.module';
 import { ApModule } from './ap/ap.module';
 import { InventoryFiscalFoundationModule } from './foundation/inventory-fiscal-foundation.module';
 import { InventoryLedgerModule } from './inventory-ledger/inventory-ledger.module';
+import { FiscalDocumentsModule } from './fiscal-documents/fiscal-documents.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { InventoryLedgerModule } from './inventory-ledger/inventory-ledger.modul
     ProductsModule,
     InventoryModule,
     InventoryLedgerModule,
+    FiscalDocumentsModule,
     SuppliersModule,
     CustomersModule,
     PurchaseOrdersModule,
