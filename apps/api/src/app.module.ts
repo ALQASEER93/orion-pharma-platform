@@ -25,6 +25,7 @@ import { InventoryFiscalFoundationModule } from './foundation/inventory-fiscal-f
 import { InventoryLedgerModule } from './inventory-ledger/inventory-ledger.module';
 import { FiscalDocumentsModule } from './fiscal-documents/fiscal-documents.module';
 import { ProcurementReceivingModule } from './procurement-receiving/procurement-receiving.module';
+import { PosOperationalCoreModule } from './pos-operational-core/pos-operational-core.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ProcurementReceivingModule } from './procurement-receiving/procurement-
     InventoryLedgerModule,
     FiscalDocumentsModule,
     ProcurementReceivingModule,
+    PosOperationalCoreModule,
     SuppliersModule,
     CustomersModule,
     PurchaseOrdersModule,
