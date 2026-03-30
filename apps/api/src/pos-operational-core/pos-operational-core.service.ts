@@ -128,6 +128,167 @@ export class PosOperationalCoreService {
     });
   }
 
+  async getCartSession(tenantId: string, cartSessionId: string) {
+    const session = await this.prisma.posCartSession.findFirst({
+      where: { id: cartSessionId, tenantId },
+      include: {
+        lines: {
+          orderBy: { lineNo: 'asc' },
+        },
+        paymentFinalizations: {
+          orderBy: { createdAt: 'desc' },
+        },
+        fiscalSaleDocument: {
+          select: { id: true, documentNo: true, state: true, grandTotal: true },
+        },
+      },
+    });
+    if (!session) {
+      throw new NotFoundException('POS cart session not found in tenant.');
+    }
+    return session;
+  }
+
+  async updateCartLine(input: {
+    tenantId: string;
+    cartSessionId: string;
+    cartLineId: string;
+    quantity: number;
+    unitPrice: number;
+    discount?: number | null;
+    taxRate?: number | null;
+    notes?: string | null;
+  }) {
+    this.assertPositiveInt(input.quantity, 'quantity');
+    this.assertNonNegative(input.unitPrice, 'unitPrice');
+    this.assertNonNegative(input.discount ?? 0, 'discount');
+    this.assertNonNegative(input.taxRate ?? 0, 'taxRate');
+
+    return this.prisma.$transaction(async (tx) => {
+      const session = await tx.posCartSession.findFirst({
+        where: { id: input.cartSessionId, tenantId: input.tenantId },
+        select: { id: true, state: true },
+      });
+      if (!session) {
+        throw new NotFoundException('POS cart session not found in tenant.');
+      }
+      if (session.state !== 'OPEN' && session.state !== 'PAYMENT_PENDING') {
+        throw new ConflictException(
+          'POS cart session must be OPEN or PAYMENT_PENDING to edit lines.',
+        );
+      }
+
+      const line = await tx.posCartLine.findFirst({
+        where: {
+          id: input.cartLineId,
+          tenantId: input.tenantId,
+          cartSessionId: input.cartSessionId,
+        },
+        select: {
+          id: true,
+          productPackId: true,
+          lotBatchId: true,
+          notes: true,
+        },
+      });
+      if (!line) {
+        throw new NotFoundException('POS cart line not found in cart session.');
+      }
+
+      await this.assertPackLotForSale({
+        tx,
+        tenantId: input.tenantId,
+        productPackId: line.productPackId,
+        lotBatchId: line.lotBatchId,
+      });
+
+      const lineTotal = this.computeLineTotal(
+        input.quantity,
+        input.unitPrice,
+        input.discount ?? 0,
+        input.taxRate ?? 0,
+      );
+
+      await tx.posCartLine.update({
+        where: { id: line.id },
+        data: {
+          quantity: input.quantity,
+          unitPrice: input.unitPrice,
+          discount: input.discount ?? 0,
+          taxRate: input.taxRate ?? null,
+          lineTotal,
+          notes: input.notes === undefined ? line.notes : (input.notes ?? null),
+        },
+      });
+
+      await this.refreshCartTotals(tx, input.tenantId, input.cartSessionId);
+      const refreshed = await tx.posCartSession.findFirst({
+        where: { id: input.cartSessionId, tenantId: input.tenantId },
+        include: {
+          lines: { orderBy: { lineNo: 'asc' } },
+          paymentFinalizations: { orderBy: { createdAt: 'desc' } },
+          fiscalSaleDocument: {
+            select: { id: true, documentNo: true, state: true, grandTotal: true },
+          },
+        },
+      });
+      if (!refreshed) {
+        throw new NotFoundException('POS cart session not found in tenant.');
+      }
+      return refreshed;
+    });
+  }
+
+  async removeCartLine(input: {
+    tenantId: string;
+    cartSessionId: string;
+    cartLineId: string;
+  }) {
+    return this.prisma.$transaction(async (tx) => {
+      const session = await tx.posCartSession.findFirst({
+        where: { id: input.cartSessionId, tenantId: input.tenantId },
+        select: { id: true, state: true },
+      });
+      if (!session) {
+        throw new NotFoundException('POS cart session not found in tenant.');
+      }
+      if (session.state !== 'OPEN' && session.state !== 'PAYMENT_PENDING') {
+        throw new ConflictException(
+          'POS cart session must be OPEN or PAYMENT_PENDING to remove lines.',
+        );
+      }
+
+      const line = await tx.posCartLine.findFirst({
+        where: {
+          id: input.cartLineId,
+          tenantId: input.tenantId,
+          cartSessionId: input.cartSessionId,
+        },
+        select: { id: true },
+      });
+      if (!line) {
+        throw new NotFoundException('POS cart line not found in cart session.');
+      }
+
+      await tx.posCartLine.delete({ where: { id: line.id } });
+      await this.refreshCartTotals(tx, input.tenantId, input.cartSessionId);
+      const refreshed = await tx.posCartSession.findFirst({
+        where: { id: input.cartSessionId, tenantId: input.tenantId },
+        include: {
+          lines: { orderBy: { lineNo: 'asc' } },
+          paymentFinalizations: { orderBy: { createdAt: 'desc' } },
+          fiscalSaleDocument: {
+            select: { id: true, documentNo: true, state: true, grandTotal: true },
+          },
+        },
+      });
+      if (!refreshed) {
+        throw new NotFoundException('POS cart session not found in tenant.');
+      }
+      return refreshed;
+    });
+  }
+
   async finalizeCartPayment(input: FinalizePosCartPaymentInput) {
     return this.prisma.$transaction(async (tx) => {
       const session = await tx.posCartSession.findFirst({
@@ -487,6 +648,30 @@ export class PosOperationalCoreService {
       await this.refreshReturnTotals(tx, input.tenantId, input.returnSessionId);
       return created;
     });
+  }
+
+  async getReturnSession(tenantId: string, returnSessionId: string) {
+    const session = await this.prisma.posReturnSession.findFirst({
+      where: { id: returnSessionId, tenantId },
+      include: {
+        lines: {
+          orderBy: { lineNo: 'asc' },
+        },
+        paymentFinalizations: {
+          orderBy: { createdAt: 'desc' },
+        },
+        fiscalReturnDocument: {
+          select: { id: true, documentNo: true, state: true, grandTotal: true },
+        },
+        sourceSaleDocument: {
+          select: { id: true, documentNo: true, state: true },
+        },
+      },
+    });
+    if (!session) {
+      throw new NotFoundException('POS return session not found in tenant.');
+    }
+    return session;
   }
 
   async finalizeReturn(input: FinalizePosReturnInput) {
