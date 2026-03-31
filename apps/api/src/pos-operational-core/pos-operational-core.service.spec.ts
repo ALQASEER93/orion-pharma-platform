@@ -49,6 +49,41 @@ function createPrismaMock() {
 }
 
 describe('PosOperationalCoreService', () => {
+  it('returns cart session lines with operator-readable pack and lot labels', async () => {
+    const prisma = createPrismaMock();
+    prisma.posCartSession.findFirst.mockResolvedValue({
+      id: 'cart-1',
+      sessionNumber: 'PCS-2026-000021',
+      state: 'OPEN',
+      lines: [
+        {
+          id: 'line-1',
+          lineNo: 1,
+          productPackId: 'pack-1',
+          lotBatchId: 'lot-1',
+          quantity: 1,
+          unitPrice: 2,
+          discount: 0,
+          taxRate: 0,
+          productPack: {
+            code: 'PACK-POS829-01',
+            product: { nameEn: 'POS Demo Product 829', nameAr: 'منتج نقطة البيع 829' },
+          },
+          lotBatch: { batchNo: 'LOT-POS829-01' },
+        },
+      ],
+      paymentFinalizations: [],
+      fiscalSaleDocument: null,
+    });
+    const service = new PosOperationalCoreService(prisma as never);
+
+    const result = await service.getCartSession('tenant-1', 'cart-1');
+
+    expect(result.lines[0].productPack?.code).toBe('PACK-POS829-01');
+    expect(result.lines[0].productPack?.product.nameEn).toBe('POS Demo Product 829');
+    expect(result.lines[0].lotBatch?.batchNo).toBe('LOT-POS829-01');
+  });
+
   it('creates draft cart session successfully', async () => {
     const prisma = createPrismaMock();
     prisma.branch.findFirst.mockResolvedValue({ id: 'branch-1', legalEntityId: 'le-1' });

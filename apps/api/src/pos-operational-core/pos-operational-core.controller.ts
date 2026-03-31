@@ -328,9 +328,17 @@ export class PosOperationalCoreController {
         tenantId,
         state: { in: ['FINALIZED', 'ACCEPTED'] },
         ...(query.branchId ? { branchId: query.branchId } : {}),
+        ...(query.registerId ? { registerId: query.registerId } : {}),
         ...(search
           ? {
-              OR: [{ documentNo: { contains: search } }],
+              OR: [
+                { documentNo: { contains: search } },
+                {
+                  posCartSession: {
+                    sessionNumber: { contains: search },
+                  },
+                },
+              ],
             }
           : {}),
       },
@@ -344,6 +352,20 @@ export class PosOperationalCoreController {
         currency: true,
         finalizedAt: true,
         createdAt: true,
+        posCartSession: {
+          select: {
+            sessionNumber: true,
+          },
+        },
+        paymentFinalizations: {
+          orderBy: [{ finalizedAt: 'desc' }, { createdAt: 'desc' }],
+          take: 1,
+          select: {
+            paymentMethod: true,
+            finalizedAt: true,
+            referenceCode: true,
+          },
+        },
       },
       orderBy: [{ finalizedAt: 'desc' }, { createdAt: 'desc' }],
       take: 80,
@@ -372,6 +394,20 @@ export class PosOperationalCoreController {
         grandTotal: true,
         currency: true,
         finalizedAt: true,
+        posCartSession: {
+          select: {
+            sessionNumber: true,
+          },
+        },
+        paymentFinalizations: {
+          orderBy: [{ finalizedAt: 'desc' }, { createdAt: 'desc' }],
+          take: 1,
+          select: {
+            paymentMethod: true,
+            finalizedAt: true,
+            referenceCode: true,
+          },
+        },
         lines: {
           orderBy: { lineNo: 'asc' },
           select: {

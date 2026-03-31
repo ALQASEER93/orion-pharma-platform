@@ -31,6 +31,10 @@ export class PosOperationalFinalizedSalesQueryDto {
   branchId?: string;
 
   @IsOptional()
+  @IsUUID()
+  registerId?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(120)
   search?: string;

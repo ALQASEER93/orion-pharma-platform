@@ -134,6 +134,24 @@ export class PosOperationalCoreService {
       include: {
         lines: {
           orderBy: { lineNo: 'asc' },
+          include: {
+            productPack: {
+              select: {
+                code: true,
+                product: {
+                  select: {
+                    nameEn: true,
+                    nameAr: true,
+                  },
+                },
+              },
+            },
+            lotBatch: {
+              select: {
+                batchNo: true,
+              },
+            },
+          },
         },
         paymentFinalizations: {
           orderBy: { createdAt: 'desc' },

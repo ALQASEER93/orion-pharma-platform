@@ -43,7 +43,12 @@ type PosCartSession = {
   taxTotal: number;
   grandTotal: number;
   fiscalSaleDocumentId: string | null;
-  fiscalSaleDocument?: { documentNo: string } | null;
+  fiscalSaleDocument?: { documentNo: string; state: string; grandTotal: number; finalizedAt?: string | null } | null;
+  paymentFinalizations?: Array<{
+    paymentMethod: string;
+    finalizedAt?: string | null;
+    referenceCode?: string | null;
+  }>;
   lines: Array<{
     id: string;
     lineNo: number;
@@ -53,6 +58,11 @@ type PosCartSession = {
     unitPrice: number;
     discount: number;
     taxRate: number | null;
+    productPack?: {
+      code: string;
+      product: { nameEn: string; nameAr: string };
+    };
+    lotBatch?: { batchNo: string } | null;
   }>;
 };
 
@@ -62,6 +72,13 @@ type FinalizedSaleSummary = {
   state: string;
   grandTotal: number;
   currency: string;
+  finalizedAt?: string | null;
+  posCartSession?: { sessionNumber: string } | null;
+  paymentFinalizations?: Array<{
+    paymentMethod: string;
+    finalizedAt?: string | null;
+    referenceCode?: string | null;
+  }>;
 };
 
 type FinalizedSaleDetail = {
@@ -72,6 +89,13 @@ type FinalizedSaleDetail = {
   registerId: string | null;
   grandTotal: number;
   currency: string;
+  finalizedAt?: string | null;
+  posCartSession?: { sessionNumber: string } | null;
+  paymentFinalizations?: Array<{
+    paymentMethod: string;
+    finalizedAt?: string | null;
+    referenceCode?: string | null;
+  }>;
   lines: Array<{
     id: string;
     lineNo: number;
@@ -129,6 +153,20 @@ function parseApiError(payload: unknown, status: number) {
   return `Request failed (${status}).`;
 }
 
+function formatMoney(value: number, currency: string) {
+  return `${value.toFixed(2)} ${currency}`;
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
 export default function PosPage() {
   const baseUrl = useMemo(() => getApiBase(), []);
   const [tenantId, setTenantId] = useState(defaultTenant);
@@ -175,6 +213,8 @@ export default function PosPage() {
   const activeRegister = context?.registers.find((item) => item.id === registerId) ?? null;
   const isReturnMutable = !!returnSession && returnSession.state === 'OPEN';
   const disabledControlClass = 'disabled:cursor-not-allowed disabled:opacity-45 disabled:saturate-50';
+  const latestCartPayment = cartSession?.paymentFinalizations?.[0] ?? null;
+  const selectedSalePayment = selectedSaleDetail?.paymentFinalizations?.[0] ?? null;
 
   async function apiRequest<T>(path: string, init?: RequestInit, skipAuth = false): Promise<T> {
     const headers = new Headers(init?.headers ?? {});
@@ -250,7 +290,7 @@ export default function PosPage() {
       setOpenCarts(Array.isArray(carts) ? carts : []);
 
       const sales = await apiRequest<FinalizedSaleSummary[]>(
-        `/pos/operational/finalized-sales?branchId=${encodeURIComponent(branchId)}&search=${encodeURIComponent(salesSearch)}`,
+        `/pos/operational/finalized-sales?branchId=${encodeURIComponent(branchId)}&registerId=${encodeURIComponent(resolvedRegister)}&search=${encodeURIComponent(salesSearch)}`,
       );
       setFinalizedSales(Array.isArray(sales) ? sales : []);
 
@@ -275,7 +315,7 @@ export default function PosPage() {
           registerId,
           legalEntityId: legalEntityId || undefined,
           currency: 'JOD',
-          notes: 'Stage 8.29 thin POS UI flow',
+          notes: 'Stage 8.30 POS transaction lookup and return usability flow',
         }),
       });
       bindCart(created);
@@ -367,6 +407,7 @@ export default function PosPage() {
         body: JSON.stringify({ amountApplied, amountTendered }),
       });
       bindCart(await apiRequest<PosCartSession>(`/pos/operational/cart-sessions/${cartSession.id}`));
+      await refreshFinalizedSales();
       setStatusMessage('Cash sale finalized.');
     } catch (error) {
       setCartError((error as Error).message);
@@ -377,7 +418,7 @@ export default function PosPage() {
     try {
       setFinalizedSales(
         await apiRequest<FinalizedSaleSummary[]>(
-          `/pos/operational/finalized-sales?branchId=${encodeURIComponent(branchId)}&search=${encodeURIComponent(salesSearch)}`,
+          `/pos/operational/finalized-sales?branchId=${encodeURIComponent(branchId)}&registerId=${encodeURIComponent(registerId)}&search=${encodeURIComponent(salesSearch)}`,
         ),
       );
     } catch (error) {
@@ -388,6 +429,7 @@ export default function PosPage() {
   async function loadSaleDetail(saleId: string) {
     setReturnError(null);
     setSelectedSaleId(saleId);
+    setReturnSession(null);
     try {
       setSelectedSaleDetail(await apiRequest<FinalizedSaleDetail | null>(`/pos/operational/finalized-sales/${saleId}`));
       setReturnSourceLineId('');
@@ -405,6 +447,10 @@ export default function PosPage() {
     }
     if (!registerId) {
       setReturnError('Register is required.');
+      return;
+    }
+    if (!['FINALIZED', 'ACCEPTED'].includes(selectedSaleDetail.state)) {
+      setReturnError('Only finalized sales can start returns.');
       return;
     }
 
@@ -484,8 +530,8 @@ export default function PosPage() {
   return (
     <main className="min-h-screen bg-slate-950 p-6 text-slate-100">
       <section className="mx-auto max-w-7xl space-y-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
-        <h1 className="text-2xl font-semibold">POS Thin UI / واجهة نقطة البيع</h1>
-        <p className="text-sm text-slate-300">Stage 8.29 thin operator slice over real backend POS operational core.</p>
+        <h1 className="text-2xl font-semibold">POS Transaction Lookup / واجهة نقطة البيع</h1>
+        <p className="text-sm text-slate-300">Stage 8.30 operator usability slice over the accepted backend POS operational core.</p>
 
         <div className="grid gap-6 lg:grid-cols-2">
           <form className="space-y-3 rounded-xl border border-slate-800 bg-slate-950/60 p-4" onSubmit={login}>
@@ -530,15 +576,35 @@ export default function PosPage() {
           </div>
 
           {cartSession ? (
-            <div className="rounded border border-slate-700 bg-slate-900/60 p-3 text-sm">
-              <p>Session: <span className="font-semibold">{cartSession.sessionNumber}</span></p>
-              <p>State: <span className="font-semibold">{cartSession.state}</span></p>
-              <p>Branch/Register: {activeBranch?.name ?? cartSession.branchId} / {activeRegister ? `${activeRegister.code} (${activeRegister.nameEn})` : cartSession.registerId}</p>
-              <p>Fiscal sale reference: {cartSession.fiscalSaleDocument?.documentNo ?? cartSession.fiscalSaleDocumentId ?? '-'}</p>
+            <div className="grid gap-3 lg:grid-cols-[1.15fr,0.85fr]">
+              <div className="rounded border border-slate-700 bg-slate-900/60 p-3 text-sm">
+                <h3 className="text-sm font-semibold text-cyan-200">Current cart / الجلسة الحالية</h3>
+                <div className="mt-2 space-y-1">
+                  <p>Session reference: <span className="font-semibold">{cartSession.sessionNumber}</span></p>
+                  <p>State: <span className="font-semibold">{cartSession.state}</span></p>
+                  <p>Branch: <span className="font-semibold">{activeBranch?.name ?? cartSession.branchId}</span></p>
+                  <p>Register: <span className="font-semibold">{activeRegister ? `${activeRegister.code} - ${activeRegister.nameEn}` : cartSession.registerId}</span></p>
+                  <p>Fiscal sale reference: <span className="font-semibold">{cartSession.fiscalSaleDocument?.documentNo ?? '-'}</span></p>
+                </div>
+              </div>
+
+              <div className={`rounded border p-3 text-sm ${cartSession.state === 'FINALIZED' ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-slate-700 bg-slate-900/60'}`}>
+                <h3 className={`text-sm font-semibold ${cartSession.state === 'FINALIZED' ? 'text-emerald-200' : 'text-slate-200'}`}>
+                  {cartSession.state === 'FINALIZED' ? 'Finalized sale summary / ملخص البيع النهائي' : 'Open cart summary / ملخص السلة المفتوحة'}
+                </h3>
+                <div className="mt-2 space-y-1">
+                  <p>Fiscal reference: <span className="font-semibold">{cartSession.fiscalSaleDocument?.documentNo ?? '-'}</span></p>
+                  <p>Session reference: <span className="font-semibold">{cartSession.sessionNumber}</span></p>
+                  <p>Payment mode: <span className="font-semibold">{latestCartPayment?.paymentMethod ?? '-'}</span></p>
+                  <p>Payment reference: <span className="font-semibold">{latestCartPayment?.referenceCode ?? 'Cash finalization'}</span></p>
+                  <p>Finalized at: <span className="font-semibold">{formatDateTime(latestCartPayment?.finalizedAt)}</span></p>
+                  <p className="font-semibold">Grand total: {formatMoney(cartSession.grandTotal, cartSession.currency)}</p>
+                </div>
+              </div>
             </div>
           ) : null}
 
-          {cartSession && !isCartMutable ? <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-sm text-amber-200">Cart is locked because state is {cartSession.state}. Add/Update/Remove/Finalize controls are disabled.</p> : null}
+          {cartSession && !isCartMutable ? <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-sm text-amber-200">Cart is locked because state is {cartSession.state}. Add/Update/Remove/Finalize controls are disabled, and this sale is now read-only in the UI.</p> : null}
 
           <div className="grid gap-3 md:grid-cols-4">
             <select className="rounded border border-slate-700 bg-slate-950 p-2 text-sm md:col-span-2" value={selectedCatalogKey} onChange={(e) => setSelectedCatalogKey(e.target.value)} disabled={!cartSession || !isCartMutable}>
@@ -556,7 +622,10 @@ export default function PosPage() {
               const edit = lineEdits[line.id] ?? { quantity: line.quantity, unitPrice: line.unitPrice, discount: line.discount, taxRate: line.taxRate ?? 0 };
               return (
                 <div key={line.id} className="grid gap-2 rounded border border-slate-700 p-3 md:grid-cols-8">
-                  <div className="text-xs text-slate-300 md:col-span-2">L#{line.lineNo} Pack:{line.productPackId.slice(0, 8)} Lot:{line.lotBatchId.slice(0, 8)}</div>
+                  <div className="text-xs text-slate-300 md:col-span-2">
+                    <p className="font-semibold text-slate-100">L#{line.lineNo} {line.productPack?.product.nameEn ?? 'Product pack'}</p>
+                    <p>Pack {line.productPack?.code ?? line.productPackId.slice(0, 8)} | Batch {line.lotBatch?.batchNo ?? line.lotBatchId.slice(0, 8)}</p>
+                  </div>
                   <input className="rounded border border-slate-700 bg-slate-950 p-2" type="number" min={1} step={1} value={edit.quantity} disabled={!isCartMutable} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, quantity: Number(e.target.value) || 1 } }))} />
                   <input className="rounded border border-slate-700 bg-slate-950 p-2" type="number" min={0} step={0.01} value={edit.unitPrice} disabled={!isCartMutable} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, unitPrice: Number(e.target.value) || 0 } }))} />
                   <input className="rounded border border-slate-700 bg-slate-950 p-2" type="number" min={0} step={0.01} value={edit.discount} disabled={!isCartMutable} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, discount: Number(e.target.value) || 0 } }))} />
@@ -580,41 +649,99 @@ export default function PosPage() {
         </section>
 
         <section className="space-y-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-          <h2 className="text-lg font-semibold">Return Flow / المرتجعات</h2>
-          <div className="grid gap-3 md:grid-cols-3">
-            <input className="rounded border border-slate-700 bg-slate-950 p-2" placeholder="Search finalized sale no" value={salesSearch} onChange={(e) => setSalesSearch(e.target.value)} />
-            <button className="rounded bg-indigo-700 px-3 py-2 text-sm" type="button" onClick={refreshFinalizedSales}>Refresh Finalized Sales</button>
-            <select className="rounded border border-slate-700 bg-slate-950 p-2" value={selectedSaleId} onChange={(e) => e.target.value && void loadSaleDetail(e.target.value)}>
-              <option value="">Select finalized sale</option>
-              {safeFinalizedSales.map((sale) => <option key={sale.id} value={sale.id}>{sale.documentNo} | {sale.grandTotal.toFixed(2)} {sale.currency}</option>)}
-            </select>
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold">Return Flow / المرتجعات</h2>
+            <p className="text-sm text-slate-300">Find a finalized sale by fiscal or session reference, review eligible lines, and create a bounded return against that sale only.</p>
           </div>
 
-          {selectedSaleDetail ? <div className="rounded border border-slate-700 bg-slate-900/60 p-3 text-sm"><p>Sale: <span className="font-semibold">{selectedSaleDetail.documentNo}</span> ({selectedSaleDetail.state})</p><p>Branch/Register: {activeBranch?.name ?? selectedSaleDetail.branchId} / {activeRegister ? `${activeRegister.code} (${activeRegister.nameEn})` : selectedSaleDetail.registerId ?? '-'}</p><p>Total: {selectedSaleDetail.grandTotal.toFixed(2)} {selectedSaleDetail.currency}</p></div> : null}
+          <div className="grid gap-4 lg:grid-cols-[0.95fr,1.05fr]">
+            <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+              <h3 className="text-sm font-semibold text-cyan-200">Finalized sale lookup / بحث المبيعات النهائية</h3>
+              <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+                <input className="rounded border border-slate-700 bg-slate-950 p-2" placeholder="Search by fiscal or session reference" value={salesSearch} onChange={(e) => setSalesSearch(e.target.value)} />
+                <button className="rounded bg-indigo-700 px-3 py-2 text-sm" type="button" onClick={refreshFinalizedSales}>Refresh Recent Sales</button>
+              </div>
+              <p className="text-xs text-slate-400">Scoped to branch <span className="font-semibold text-slate-200">{activeBranch?.name ?? branchId}</span> and register <span className="font-semibold text-slate-200">{activeRegister ? `${activeRegister.code} - ${activeRegister.nameEn}` : registerId || 'Not selected'}</span>.</p>
 
-          <button className={`rounded bg-cyan-700 px-3 py-2 text-sm ${disabledControlClass}`} type="button" onClick={createReturnSession} disabled={!selectedSaleDetail}>Create Return Session Against Selected Sale</button>
+              {safeFinalizedSales.length ? (
+                <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                  {safeFinalizedSales.map((sale) => {
+                    const payment = sale.paymentFinalizations?.[0] ?? null;
+                    const isSelected = sale.id === selectedSaleId;
+                    return (
+                      <button
+                        key={sale.id}
+                        type="button"
+                        onClick={() => void loadSaleDetail(sale.id)}
+                        className={`w-full rounded-lg border p-3 text-left transition ${isSelected ? 'border-cyan-400 bg-cyan-500/10' : 'border-slate-700 bg-slate-900/60 hover:border-slate-500'}`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-slate-100">{sale.documentNo}</p>
+                            <p className="text-xs text-slate-300">Session reference: {sale.posCartSession?.sessionNumber ?? '-'}</p>
+                          </div>
+                          <span className="text-sm font-semibold text-emerald-200">{formatMoney(sale.grandTotal, sale.currency)}</span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-300">
+                          <span>State: {sale.state}</span>
+                          <span>Payment: {payment?.paymentMethod ?? '-'}</span>
+                          <span>Finalized: {formatDateTime(payment?.finalizedAt ?? sale.finalizedAt)}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded border border-dashed border-slate-700 bg-slate-900/40 p-3 text-sm text-slate-400">
+                  No finalized sales found for the current search and register scope.
+                </div>
+              )}
+            </div>
 
-          {returnSession ? <div className="rounded border border-slate-700 bg-slate-900/60 p-3 text-sm"><p>Return session: <span className="font-semibold">{returnSession.returnNumber}</span></p><p>State: {returnSession.state}</p><p>Return fiscal reference: {returnSession.fiscalReturnDocument?.documentNo ?? returnSession.fiscalReturnDocumentId ?? '-'}</p></div> : null}
+            <div className="space-y-3">
+              {selectedSaleDetail ? (
+                <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 text-sm">
+                  <h3 className="text-sm font-semibold text-cyan-200">Return source sale / مرجع الإرجاع</h3>
+                  <div className="mt-2 grid gap-2 md:grid-cols-2">
+                    <p>Fiscal reference: <span className="font-semibold">{selectedSaleDetail.documentNo}</span></p>
+                    <p>Session reference: <span className="font-semibold">{selectedSaleDetail.posCartSession?.sessionNumber ?? '-'}</span></p>
+                    <p>State: <span className="font-semibold">{selectedSaleDetail.state}</span></p>
+                    <p>Payment mode: <span className="font-semibold">{selectedSalePayment?.paymentMethod ?? '-'}</span></p>
+                    <p>Finalized at: <span className="font-semibold">{formatDateTime(selectedSalePayment?.finalizedAt ?? selectedSaleDetail.finalizedAt)}</span></p>
+                    <p className="font-semibold">Total: {formatMoney(selectedSaleDetail.grandTotal, selectedSaleDetail.currency)}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-700 bg-slate-900/40 p-3 text-sm text-slate-400">
+                  Select a finalized sale from the lookup list to inspect returnable lines and start a return.
+                </div>
+              )}
 
-          {returnSession && !isReturnMutable ? <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-sm text-amber-200">Return session is locked because state is {returnSession.state}. Add line/finalize controls are disabled.</p> : null}
+              <button className={`rounded bg-cyan-700 px-3 py-2 text-sm ${disabledControlClass}`} type="button" onClick={createReturnSession} disabled={!selectedSaleDetail}>Create Return Session Against Selected Sale</button>
 
-          <div className="grid gap-3 md:grid-cols-4">
-            <select className="rounded border border-slate-700 bg-slate-950 p-2 text-sm md:col-span-2" value={returnSourceLineId} onChange={(e) => { setReturnSourceLineId(e.target.value); const line = safeSelectedSaleLines.find((item) => item.id === e.target.value); setReturnUnitPrice(line?.unitPrice ?? 0); }} disabled={!isReturnMutable}>
-              <option value="">Select source sale line</option>
-              {safeSelectedSaleLines.map((line) => <option key={line.id} value={line.id}>#{line.lineNo} {line.productPack.product.nameEn} Batch {line.lotBatch?.batchNo ?? '-'} Remaining {line.remainingQty}</option>)}
-            </select>
-            <input className="rounded border border-slate-700 bg-slate-950 p-2" type="number" min={1} step={1} value={returnQuantity} disabled={!isReturnMutable} onChange={(e) => setReturnQuantity(Number(e.target.value) || 1)} />
-            <input className="rounded border border-slate-700 bg-slate-950 p-2" type="number" min={0} step={0.01} value={returnUnitPrice} disabled={!isReturnMutable} onChange={(e) => setReturnUnitPrice(Number(e.target.value) || 0)} />
+              {returnSession ? <div className="rounded border border-slate-700 bg-slate-900/60 p-3 text-sm"><p>Return session: <span className="font-semibold">{returnSession.returnNumber}</span></p><p>State: {returnSession.state}</p><p>Return fiscal reference: {returnSession.fiscalReturnDocument?.documentNo ?? returnSession.fiscalReturnDocumentId ?? '-'}</p><p className="font-semibold">Refund total: {formatMoney(returnSession.grandTotal, returnSession.currency)}</p></div> : null}
+
+              {returnSession && !isReturnMutable ? <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-sm text-amber-200">Return session is locked because state is {returnSession.state}. Add line/finalize controls are disabled.</p> : null}
+
+              <div className="grid gap-3 md:grid-cols-4">
+                <select className="rounded border border-slate-700 bg-slate-950 p-2 text-sm md:col-span-2" value={returnSourceLineId} onChange={(e) => { setReturnSourceLineId(e.target.value); const line = safeSelectedSaleLines.find((item) => item.id === e.target.value); setReturnUnitPrice(line?.unitPrice ?? 0); }} disabled={!isReturnMutable}>
+                  <option value="">Select source sale line</option>
+                  {safeSelectedSaleLines.map((line) => <option key={line.id} value={line.id}>#{line.lineNo} {line.productPack.product.nameEn} Batch {line.lotBatch?.batchNo ?? '-'} Remaining {line.remainingQty}</option>)}
+                </select>
+                <input className="rounded border border-slate-700 bg-slate-950 p-2" type="number" min={1} step={1} value={returnQuantity} disabled={!isReturnMutable} onChange={(e) => setReturnQuantity(Number(e.target.value) || 1)} />
+                <input className="rounded border border-slate-700 bg-slate-950 p-2" type="number" min={0} step={0.01} value={returnUnitPrice} disabled={!isReturnMutable} onChange={(e) => setReturnUnitPrice(Number(e.target.value) || 0)} />
+              </div>
+
+              <div className="grid gap-2 md:grid-cols-2">
+                <button className={`rounded bg-indigo-700 px-3 py-2 text-sm ${disabledControlClass}`} type="button" onClick={addReturnLine} disabled={!isReturnMutable}>Add Return Line</button>
+                <button className={`rounded bg-emerald-700 px-3 py-2 text-sm ${disabledControlClass}`} type="button" onClick={finalizeReturn} disabled={!isReturnMutable}>Finalize Return (Cash Refund)</button>
+              </div>
+
+              {returnSession ? <div className="rounded border border-slate-700 bg-slate-900/60 p-3 text-sm"><p>Subtotal: {returnSession.subtotal.toFixed(2)}</p><p>Discount: {returnSession.discountTotal.toFixed(2)}</p><p>Tax: {returnSession.taxTotal.toFixed(2)}</p><p className="font-semibold">Grand: {formatMoney(returnSession.grandTotal, returnSession.currency)}</p></div> : null}
+
+              {selectedSaleDetail ? <div className="overflow-x-auto rounded border border-slate-700"><table className="min-w-full text-sm"><thead className="bg-slate-900 text-left text-slate-300"><tr><th className="p-2">Line</th><th className="p-2">Pack/Lot</th><th className="p-2">Sold Qty</th><th className="p-2">Already Returned</th><th className="p-2">Remaining</th></tr></thead><tbody>{safeSelectedSaleLines.map((line) => <tr key={line.id} className="border-t border-slate-800"><td className="p-2">{line.lineNo}</td><td className="p-2">{line.productPack.product.nameEn} / {line.lotBatch?.batchNo ?? '-'}</td><td className="p-2">{line.quantity}</td><td className="p-2">{line.alreadyReturnedQty}</td><td className="p-2 font-semibold">{line.remainingQty}</td></tr>)}</tbody></table></div> : null}
+            </div>
           </div>
-
-          <div className="grid gap-2 md:grid-cols-2">
-            <button className={`rounded bg-indigo-700 px-3 py-2 text-sm ${disabledControlClass}`} type="button" onClick={addReturnLine} disabled={!isReturnMutable}>Add Return Line</button>
-            <button className={`rounded bg-emerald-700 px-3 py-2 text-sm ${disabledControlClass}`} type="button" onClick={finalizeReturn} disabled={!isReturnMutable}>Finalize Return (Cash Refund)</button>
-          </div>
-
-          {returnSession ? <div className="rounded border border-slate-700 bg-slate-900/60 p-3 text-sm"><p>Subtotal: {returnSession.subtotal.toFixed(2)}</p><p>Discount: {returnSession.discountTotal.toFixed(2)}</p><p>Tax: {returnSession.taxTotal.toFixed(2)}</p><p className="font-semibold">Grand: {returnSession.grandTotal.toFixed(2)} {returnSession.currency}</p></div> : null}
-
-          {selectedSaleDetail ? <div className="overflow-x-auto rounded border border-slate-700"><table className="min-w-full text-sm"><thead className="bg-slate-900 text-left text-slate-300"><tr><th className="p-2">Line</th><th className="p-2">Pack/Lot</th><th className="p-2">Sold Qty</th><th className="p-2">Already Returned</th><th className="p-2">Remaining</th></tr></thead><tbody>{safeSelectedSaleLines.map((line) => <tr key={line.id} className="border-t border-slate-800"><td className="p-2">{line.lineNo}</td><td className="p-2">{line.productPack.product.nameEn} / {line.lotBatch?.batchNo ?? '-'}</td><td className="p-2">{line.quantity}</td><td className="p-2">{line.alreadyReturnedQty}</td><td className="p-2 font-semibold">{line.remainingQty}</td></tr>)}</tbody></table></div> : null}
 
           {returnError ? <p className="text-sm text-rose-300">{returnError}</p> : null}
         </section>
@@ -622,4 +749,7 @@ export default function PosPage() {
     </main>
   );
 }
+
+
+
 
