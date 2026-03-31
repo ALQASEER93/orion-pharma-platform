@@ -137,8 +137,8 @@ type StatusTone = 'emerald' | 'amber' | 'rose' | 'slate' | 'sky';
 
 const defaultTenant = '11111111-1111-4111-8111-111111111111';
 const defaultBranch = '22222222-2222-4222-8222-222222222222';
-const surfaceClass = 'rounded-[24px] border border-slate-200/80 bg-white/92 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur';
-const mutedSurfaceClass = 'rounded-[22px] border border-slate-200 bg-slate-50/90';
+const surfaceClass = 'rounded-[24px] border border-slate-200/80 bg-white/92 shadow-[0_18px_48px_rgba(15,23,42,0.07)] backdrop-blur';
+const mutedSurfaceClass = 'rounded-[20px] border border-slate-200/90 bg-slate-50/88';
 const inputClass =
   'h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400';
 const textareaClass =
@@ -440,7 +440,7 @@ export default function PosPage() {
           registerId,
           legalEntityId: legalEntityId || undefined,
           currency: 'JOD',
-          notes: 'Stage 8.30A commercial POS UI rescue flow',
+          notes: 'Stage 8.30B operator UI polish flow',
         }),
       });
       bindCart(created);
@@ -660,101 +660,84 @@ export default function PosPage() {
       className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(6,182,212,0.14),_transparent_25%),linear-gradient(180deg,_#f8fafc_0%,_#eff6ff_52%,_#ecfeff_100%)] text-slate-950"
       style={{ fontFamily: '"Segoe UI", "Noto Sans Arabic", Tahoma, sans-serif' }}
     >
-      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 lg:px-8 lg:py-8">
-        <header className={cn(surfaceClass, 'overflow-hidden p-6 lg:p-8')}>
-          <div className="grid gap-6 lg:grid-cols-[1.45fr_0.95fr] lg:items-start">
-            <div className="space-y-5">
-              <div className="space-y-3">
+      <div className="mx-auto max-w-7xl space-y-4 px-4 py-4 lg:px-6 lg:py-6">
+        <header className={cn(surfaceClass, 'overflow-hidden p-4 lg:p-5')}>
+          <div className="grid gap-4 xl:grid-cols-[1.25fr_0.95fr] xl:items-start">
+            <div className="space-y-4">
+              <div className="space-y-2.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <ToneBadge tone="emerald">Stage 8.30A</ToneBadge>
-                  <ToneBadge tone="slate">POS UI rescue</ToneBadge>
+                  <ToneBadge tone="emerald">Stage 8.30B</ToneBadge>
+                  <ToneBadge tone="slate">POS UI polish</ToneBadge>
                   <ToneBadge tone={workspaceReady ? 'emerald' : 'amber'}>{workspaceReady ? 'Workspace ready' : 'Setup required'}</ToneBadge>
                 </div>
-                <div className="space-y-3">
-                  <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-slate-950 lg:text-[2.55rem]">
-                    POS workspace for live selling, clear transaction lookup, and calm return handling.
-                  </h1>
-                  <p className="max-w-3xl text-sm leading-7 text-slate-600 lg:text-base">
-                    This rescue pass keeps the accepted backend flow intact and reshapes the page around what an operator needs to do next:
-                    start a sale, finalize it cleanly, find it later, and process a bounded return without reading through debug noise.
-                  </p>
-                </div>
+                <h1 className="max-w-3xl text-2xl font-semibold tracking-tight text-slate-950 lg:text-[2.2rem]">
+                  Pharmacy POS for calm selling, fast lookup, and clearer returns.
+                </h1>
+                <p className="max-w-3xl text-sm leading-6 text-slate-600 lg:text-[15px]">
+                  This polish pass keeps the accepted POS flow intact and tightens the screen around the operator&apos;s real scan path: open a sale,
+                  finish it cleanly, find it later, and process a bounded return without wading through setup chrome.
+                </p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className={cn(mutedSurfaceClass, 'px-4 py-4')}>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Step 1</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">Authenticate operator</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">Use the seeded operator credentials, then keep technical auth details collapsed.</p>
-                </div>
-                <div className={cn(mutedSurfaceClass, 'px-4 py-4')}>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Step 2</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">Load branch + register context</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">Bring catalog, open sales, and recent finalized transactions into the same operator workspace.</p>
-                </div>
-                <div className={cn(mutedSurfaceClass, 'px-4 py-4')}>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Step 3</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">Sell, lookup, return</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">Keep sale, summary, lookup, and return zones visually distinct so each action reads clearly.</p>
+              <div className={cn(mutedSurfaceClass, 'px-4 py-3')}>
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Operator flow</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700">1. Authenticate</span>
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700">2. Start or resume sale</span>
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700">3. Finalize, lookup, return</span>
+                    </div>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[290px]">
+                    <button className={primaryButtonClass} type="button" onClick={() => void performLogin()}>
+                      Authenticate operator
+                    </button>
+                    <button className={secondaryButtonClass} type="button" onClick={loadContextAndCatalog} disabled={!token}>
+                      Load workspace
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <aside className="rounded-[26px] bg-slate-950 px-5 py-5 text-slate-50 shadow-[0_30px_80px_rgba(15,23,42,0.28)]">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-300">Workspace utility</p>
-                  <h2 className="text-xl font-semibold">Operator context</h2>
-                  <p className="text-sm leading-6 text-slate-300">
-                    Technical setup still exists, but it stays below the fold so the selling flow remains the dominant surface.
-                  </p>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <aside className={cn(mutedSurfaceClass, 'p-4')}>
+              <div className="flex flex-col gap-4 lg:flex-row xl:flex-col">
+                <div className="grid flex-1 gap-3 sm:grid-cols-2 xl:grid-cols-2">
+                  <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
                     <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Branch</p>
-                    <p className="mt-2 text-base font-semibold text-white">{activeBranch?.name ?? 'Load workspace'}</p>
+                    <p className="mt-2 text-sm font-semibold text-slate-900">{activeBranch?.name ?? 'Load workspace'}</p>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
                     <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Register</p>
-                    <p className="mt-2 text-base font-semibold text-white">{activeRegister ? `${activeRegister.code} · ${activeRegister.nameEn}` : 'Load workspace'}</p>
+                    <p className="mt-2 text-sm font-semibold text-slate-900">{activeRegister ? `${activeRegister.code} · ${activeRegister.nameEn}` : 'Load workspace'}</p>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Data source</p>
-                    <p className="mt-2 text-base font-semibold text-white">{context?.contextSource === 'DEMO_SEED_OR_REAL_DB' ? 'Demo-ready runtime' : context ? 'Runtime database' : 'Not loaded'}</p>
+                  <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Runtime</p>
+                    <p className="mt-2 text-sm font-semibold text-slate-900">{context?.contextSource === 'DEMO_SEED_OR_REAL_DB' ? 'Demo-ready runtime' : context ? 'Runtime database' : 'Not loaded'}</p>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
                     <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Session</p>
-                    <p className="mt-2 text-base font-semibold text-white">{token ? 'Authenticated' : 'Needs sign-in'}</p>
+                    <p className="mt-2 text-sm font-semibold text-slate-900">{token ? 'Authenticated' : 'Needs sign-in'}</p>
                   </div>
                 </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <button className={primaryButtonClass} type="button" onClick={() => void performLogin()}>
-                    Authenticate operator
-                  </button>
-                  <button className={cn(secondaryButtonClass, 'border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white')} type="button" onClick={loadContextAndCatalog} disabled={!token}>
-                    Load workspace
-                  </button>
+                <div className="flex-1 space-y-3">
+                  {contextError ? <Notice title="Setup blocked" body={contextError} tone="error" /> : null}
+                  {statusMessage ? <Notice title="Latest operation" body={statusMessage} tone="success" /> : null}
                 </div>
               </div>
             </aside>
           </div>
 
-          <div className="mt-6 grid gap-3">
-            {contextError ? <Notice title="Setup blocked" body={contextError} tone="error" /> : null}
-            {statusMessage ? <Notice title="Latest operation" body={statusMessage} tone="success" /> : null}
-          </div>
-
-          <details className="mt-6 rounded-[22px] border border-slate-200 bg-slate-50/90 p-4 text-sm text-slate-700 shadow-sm">
-            <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900">
-              Technical setup and diagnostics / إعداد تقني وتشخيصي
+          <details className="mt-4 rounded-[18px] border border-slate-200/80 bg-white/75 px-4 py-3 text-sm text-slate-600 shadow-sm">
+            <summary className="cursor-pointer list-none text-sm font-semibold text-slate-700">
+              Utility setup and diagnostics / إعداد تقني وتشخيصي
             </summary>
-            <div className="mt-4 grid gap-4 lg:grid-cols-2">
-              <form className="space-y-3 rounded-[20px] border border-slate-200 bg-white p-4" onSubmit={login}>
+            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+              <form className="space-y-3 rounded-[18px] border border-slate-200 bg-white p-4" onSubmit={login}>
                 <div className="space-y-1">
-                  <h3 className="text-base font-semibold text-slate-950">Operator sign-in defaults</h3>
-                  <p className="text-sm text-slate-500">These remain available for demo/runtime verification, but they are no longer the dominant visual element.</p>
+                  <h3 className="text-sm font-semibold text-slate-950">Operator sign-in defaults</h3>
+                  <p className="text-sm text-slate-500">Keep seeded credentials available without letting them compete with the selling flow.</p>
                 </div>
                 <input className={inputClass} placeholder="Tenant ID" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
                 <input className={inputClass} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -762,23 +745,23 @@ export default function PosPage() {
                 <button className={primaryButtonClass} type="submit">Sign in</button>
               </form>
 
-              <div className="space-y-3 rounded-[20px] border border-slate-200 bg-white p-4">
+              <div className="space-y-3 rounded-[18px] border border-slate-200 bg-white p-4">
                 <div className="space-y-1">
-                  <h3 className="text-base font-semibold text-slate-950">Advanced context overrides</h3>
-                  <p className="text-sm text-slate-500">Use these only when troubleshooting branch/register context or pasting a temporary token.</p>
+                  <h3 className="text-sm font-semibold text-slate-950">Advanced overrides</h3>
+                  <p className="text-sm text-slate-500">Only for branch/register troubleshooting or temporary token override.</p>
                 </div>
                 <input className={inputClass} placeholder="Branch ID" value={branchId} onChange={(e) => setBranchId(e.target.value)} />
                 <input className={inputClass} placeholder="Register ID" value={registerId} onChange={(e) => setRegisterId(e.target.value)} />
-                <textarea className={textareaClass} rows={5} placeholder="Technical bearer token (advanced only)" value={token} onChange={(e) => setToken(e.target.value)} />
-                <p className="text-xs leading-5 text-slate-500">Raw technical values remain available here for diagnostics, but they are intentionally demoted from the primary POS workflow.</p>
+                <textarea className={textareaClass} rows={4} placeholder="Technical bearer token (advanced only)" value={token} onChange={(e) => setToken(e.target.value)} />
+                <p className="text-xs leading-5 text-slate-500">Raw technical values remain available here for diagnostics, but they stay collapsed and secondary by default.</p>
               </div>
             </div>
           </details>
         </header>
 
-        <div className="grid gap-6 xl:grid-cols-[1.45fr_0.95fr]">
-          <section className={cn(surfaceClass, 'p-5 lg:p-6')}>
-            <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="grid gap-4 xl:grid-cols-[1.45fr_0.95fr]">
+          <section className={cn(surfaceClass, 'p-4 lg:p-5')}>
+            <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">Sale workspace</p>
                 <h2 className="text-2xl font-semibold text-slate-950">Start and manage the active sale</h2>
@@ -796,7 +779,7 @@ export default function PosPage() {
               </div>
             </div>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="mt-4 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
               <div className={cn(mutedSurfaceClass, 'p-4')}>
                 <div className="flex flex-wrap items-center gap-2">
                   <ToneBadge tone={workspaceReady ? 'emerald' : 'amber'}>{workspaceReady ? 'Ready to sell' : 'Authenticate and load context'}</ToneBadge>
@@ -826,7 +809,7 @@ export default function PosPage() {
               </div>
             </div>
 
-            <div className="mt-5 space-y-4">
+            <div className="mt-4 space-y-4">
               {!cartSession ? (
                 <EmptyPanel
                   title="No active sale yet"
@@ -919,18 +902,30 @@ export default function PosPage() {
                                   </div>
                                 </div>
                                 {isCartMutable ? (
-                                  <div className="grid gap-3 md:grid-cols-4 xl:min-w-[520px]">
-                                    <input className={inputClass} type="number" min={1} step={1} value={edit.quantity} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, quantity: Number(e.target.value) || 1 } }))} />
-                                    <input className={inputClass} type="number" min={0} step={0.01} value={edit.unitPrice} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, unitPrice: Number(e.target.value) || 0 } }))} />
-                                    <input className={inputClass} type="number" min={0} step={0.01} value={edit.discount} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, discount: Number(e.target.value) || 0 } }))} />
-                                    <input className={inputClass} type="number" min={0} step={0.01} value={edit.taxRate} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, taxRate: Number(e.target.value) || 0 } }))} />
+                                  <div className="grid gap-3 md:grid-cols-2 xl:min-w-[520px] xl:grid-cols-4">
+                                    <label className="rounded-[18px] border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Qty</p>
+                                      <input className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" type="number" min={1} step={1} value={edit.quantity} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, quantity: Number(e.target.value) || 1 } }))} />
+                                    </label>
+                                    <label className="rounded-[18px] border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Unit</p>
+                                      <input className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" type="number" min={0} step={0.01} value={edit.unitPrice} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, unitPrice: Number(e.target.value) || 0 } }))} />
+                                    </label>
+                                    <label className="rounded-[18px] border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Discount</p>
+                                      <input className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" type="number" min={0} step={0.01} value={edit.discount} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, discount: Number(e.target.value) || 0 } }))} />
+                                    </label>
+                                    <label className="rounded-[18px] border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tax %</p>
+                                      <input className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" type="number" min={0} step={0.01} value={edit.taxRate} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, taxRate: Number(e.target.value) || 0 } }))} />
+                                    </label>
                                   </div>
                                 ) : (
-                                  <div className="grid gap-3 md:grid-cols-4 xl:min-w-[520px]">
-                                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">Qty <span className="ml-2 font-semibold text-slate-950">{line.quantity}</span></div>
-                                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">Unit <span className="ml-2 font-semibold text-slate-950">{formatMoney(line.unitPrice, cartSession.currency)}</span></div>
-                                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">Discount <span className="ml-2 font-semibold text-slate-950">{formatMoney(line.discount, cartSession.currency)}</span></div>
-                                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">Tax <span className="ml-2 font-semibold text-slate-950">{line.taxRate ?? 0}%</span></div>
+                                  <div className="grid gap-3 md:grid-cols-2 xl:min-w-[520px] xl:grid-cols-4">
+                                    <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3 shadow-sm"><p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Qty</p><p className="mt-2 text-base font-semibold text-slate-950">{line.quantity}</p></div>
+                                    <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3 shadow-sm"><p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Unit</p><p className="mt-2 text-base font-semibold text-slate-950">{formatMoney(line.unitPrice, cartSession.currency)}</p></div>
+                                    <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3 shadow-sm"><p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Discount</p><p className="mt-2 text-base font-semibold text-slate-950">{formatMoney(line.discount, cartSession.currency)}</p></div>
+                                    <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3 shadow-sm"><p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tax</p><p className="mt-2 text-base font-semibold text-slate-950">{line.taxRate ?? 0}%</p></div>
                                   </div>
                                 )}
                               </div>
@@ -986,8 +981,8 @@ export default function PosPage() {
             {cartError ? <div className="mt-4"><Notice title="Sale action blocked" body={cartError} tone="error" /></div> : null}
           </section>
 
-          <aside className="space-y-6">
-            <section className={cn(surfaceClass, 'p-5 lg:p-6')}>
+          <aside className="space-y-4">
+            <section className={cn(surfaceClass, 'p-4 lg:p-5')}>
               <div className="space-y-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">Finalized sale summary</p>
                 <h2 className="text-2xl font-semibold text-slate-950">Calm post-sale confirmation</h2>
@@ -995,7 +990,7 @@ export default function PosPage() {
               </div>
 
               {cartSession ? (
-                <div className={cn('mt-5 rounded-[26px] p-5', cartSession.state === 'FINALIZED' ? 'border border-emerald-200 bg-emerald-50/90' : 'border border-slate-200 bg-slate-50/90')}>
+                <div className={cn('mt-4 rounded-[26px] p-5', cartSession.state === 'FINALIZED' ? 'border border-emerald-200 bg-emerald-50/90' : 'border border-slate-200 bg-slate-50/90')}>
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Sale state</p>
@@ -1009,7 +1004,7 @@ export default function PosPage() {
                       <p className="mt-2 text-2xl font-semibold text-slate-950">{formatMoney(cartSession.grandTotal, cartSession.currency)}</p>
                     </div>
                   </div>
-                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     <KeyValue label="Fiscal reference" value={cartSession.fiscalSaleDocument?.documentNo ?? 'Pending'} />
                     <KeyValue label="Session reference" value={cartSession.sessionNumber} />
                     <KeyValue label="Payment mode" value={latestCartPayment?.paymentMethod ?? 'Cash'} />
@@ -1017,42 +1012,45 @@ export default function PosPage() {
                     <KeyValue label="Finalized at" value={formatDateTime(latestCartPayment?.finalizedAt ?? cartSession.fiscalSaleDocument?.finalizedAt)} />
                     <KeyValue label="Workspace" value={activeRegister ? `${activeBranch?.name ?? 'Branch'} · ${activeRegister.code}` : activeBranch?.name ?? 'Current branch'} />
                   </div>
-                  <div className="mt-5 rounded-[20px] bg-white px-4 py-4 text-sm text-slate-600 shadow-sm">
+                  <div className="mt-4 rounded-[20px] bg-white px-4 py-4 text-sm text-slate-600 shadow-sm">
                     {cartSession.state === 'FINALIZED'
                       ? 'This summary is now the primary reference for lookup and returns. Internal IDs are intentionally kept out of the main operator flow.'
                       : 'The sale is still open. Finalization details will settle here once the cash sale is completed.'}
                   </div>
                 </div>
               ) : (
-                <div className="mt-5">
+                <div className="mt-4">
                   <EmptyPanel title="No sale summary yet" body="Complete a sale and the compact post-sale summary will appear here with fiscal, payment, and session references." />
                 </div>
               )}
             </section>
-            <section className={cn(surfaceClass, 'p-5 lg:p-6')}>
-              <div className="space-y-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">Workspace status</p>
-                <h2 className="text-lg font-semibold text-slate-950">Operator-ready context</h2>
+            <section className={cn(mutedSurfaceClass, 'p-4')}>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Context snapshot</p>
+                  <h2 className="mt-2 text-base font-semibold text-slate-900">Secondary workspace context</h2>
+                </div>
+                <ToneBadge tone="slate">Utility only</ToneBadge>
               </div>
-              <div className="mt-4 grid gap-3">
-                <div className="rounded-[20px] bg-slate-50 px-4 py-4">
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
                   <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Branch and register</p>
                   <p className="mt-2 text-sm font-semibold text-slate-900">{activeBranch?.name ?? 'Branch not loaded'}</p>
                   <p className="mt-1 text-sm text-slate-500">{activeRegister ? `${activeRegister.code} · ${activeRegister.nameEn}` : 'Register not loaded'}</p>
                 </div>
-                <div className="rounded-[20px] bg-slate-50 px-4 py-4">
+                <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
                   <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Runtime source</p>
                   <p className="mt-2 text-sm font-semibold text-slate-900">{context?.contextSource === 'DEMO_SEED_OR_REAL_DB' ? 'Demo-ready runtime data' : context ? 'Runtime DB data' : 'Not loaded'}</p>
-                  <p className="mt-1 text-sm text-slate-500">{context?.registers.length ? `${context.registers.length} register(s) available in scope` : 'Load workspace to verify context.'}</p>
+                  <p className="mt-1 text-sm text-slate-500">{context?.registers.length ? `${context.registers.length} register(s) in scope` : 'Load workspace to verify context.'}</p>
                 </div>
               </div>
             </section>
           </aside>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
-          <section className={cn(surfaceClass, 'p-5 lg:p-6')}>
-            <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="grid gap-4 xl:grid-cols-[0.92fr_1.08fr]">
+          <section className={cn(surfaceClass, 'p-4 lg:p-5')}>
+            <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">Transaction lookup</p>
                 <h2 className="text-2xl font-semibold text-slate-950">Find finalized sales quickly</h2>
@@ -1063,7 +1061,7 @@ export default function PosPage() {
               <button className={secondaryButtonClass} type="button" onClick={refreshFinalizedSales} disabled={!workspaceReady}>Refresh recent sales</button>
             </div>
 
-            <div className="mt-5 space-y-4">
+            <div className="mt-4 space-y-4">
               <div className={cn(mutedSurfaceClass, 'p-4')}>
                 <div className="grid gap-3 md:grid-cols-[1fr_auto]">
                   <input className={inputClass} placeholder="Search by fiscal reference, session reference, or payment mode" value={salesSearch} onChange={(e) => setSalesSearch(e.target.value)} />
@@ -1114,8 +1112,8 @@ export default function PosPage() {
             </div>
           </section>
 
-          <section className={cn(surfaceClass, 'p-5 lg:p-6')}>
-            <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
+          <section className={cn(surfaceClass, 'p-4 lg:p-5')}>
+            <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">Return workspace</p>
                 <h2 className="text-2xl font-semibold text-slate-950">Create a bounded return against the selected sale</h2>
@@ -1126,7 +1124,7 @@ export default function PosPage() {
               <button className={primaryButtonClass} type="button" onClick={createReturnSession} disabled={!selectedSaleDetail}>Create return draft</button>
             </div>
 
-            <div className="mt-5 space-y-4">
+            <div className="mt-4 space-y-4">
               {selectedSaleDetail ? (
                 <div className={cn(mutedSurfaceClass, 'p-4')}>
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -1265,4 +1263,5 @@ export default function PosPage() {
     </main>
   );
 }
+
 
