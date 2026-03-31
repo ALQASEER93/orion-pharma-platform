@@ -1,6 +1,6 @@
-
 'use client';
 
+import type { ReactNode } from 'react';
 import { FormEvent, useMemo, useState } from 'react';
 import { getApiBase } from '../../lib/api-base';
 
@@ -133,9 +133,26 @@ type OpenCartSession = {
 };
 
 type LineEditState = { quantity: number; unitPrice: number; discount: number; taxRate: number };
+type StatusTone = 'emerald' | 'amber' | 'rose' | 'slate' | 'sky';
 
 const defaultTenant = '11111111-1111-4111-8111-111111111111';
 const defaultBranch = '22222222-2222-4222-8222-222222222222';
+const surfaceClass = 'rounded-[24px] border border-slate-200/80 bg-white/92 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur';
+const mutedSurfaceClass = 'rounded-[22px] border border-slate-200 bg-slate-50/90';
+const inputClass =
+  'h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400';
+const textareaClass =
+  'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100';
+const primaryButtonClass =
+  'inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(5,150,105,0.28)] transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none';
+const secondaryButtonClass =
+  'inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400';
+const accentButtonClass =
+  'inline-flex items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(15,23,42,0.18)] transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none';
+
+function cn(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(' ');
+}
 
 function parseApiError(payload: unknown, status: number) {
   if (!payload || typeof payload !== 'object') return `Request failed (${status}).`;
@@ -154,7 +171,16 @@ function parseApiError(payload: unknown, status: number) {
 }
 
 function formatMoney(value: number, currency: string) {
-  return `${value.toFixed(2)} ${currency}`;
+  try {
+    return new Intl.NumberFormat('en-JO', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    return `${value.toFixed(2)} ${currency}`;
+  }
 }
 
 function formatDateTime(value?: string | null) {
@@ -165,6 +191,71 @@ function formatDateTime(value?: string | null) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date);
+}
+
+function stateTone(state?: string | null): StatusTone {
+  switch (state) {
+    case 'FINALIZED':
+    case 'ACCEPTED':
+      return 'emerald';
+    case 'OPEN':
+    case 'PAYMENT_PENDING':
+      return 'sky';
+    case 'CANCELLED':
+    case 'REJECTED':
+      return 'rose';
+    default:
+      return 'slate';
+  }
+}
+
+function ToneBadge({ children, tone }: { children: ReactNode; tone: StatusTone }) {
+  const toneClass =
+    tone === 'emerald'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : tone === 'amber'
+        ? 'border-amber-200 bg-amber-50 text-amber-700'
+        : tone === 'rose'
+          ? 'border-rose-200 bg-rose-50 text-rose-700'
+          : tone === 'sky'
+            ? 'border-sky-200 bg-sky-50 text-sky-700'
+            : 'border-slate-200 bg-slate-100 text-slate-700';
+
+  return <span className={cn('inline-flex rounded-full border px-3 py-1 text-xs font-semibold tracking-wide', toneClass)}>{children}</span>;
+}
+
+function KeyValue({ label, value, emphasis = false }: { label: string; value: ReactNode; emphasis?: boolean }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
+      <p className={cn('text-sm text-slate-700', emphasis && 'text-base font-semibold text-slate-950')}>{value}</p>
+    </div>
+  );
+}
+
+function Notice({ title, body, tone }: { title: string; body: string; tone: 'success' | 'error' | 'info' }) {
+  const toneClass =
+    tone === 'success'
+      ? 'border-emerald-200 bg-emerald-50/90 text-emerald-900'
+      : tone === 'error'
+        ? 'border-rose-200 bg-rose-50/90 text-rose-900'
+        : 'border-sky-200 bg-sky-50/90 text-sky-900';
+
+  return (
+    <div className={cn('rounded-2xl border px-4 py-3 shadow-sm', toneClass)}>
+      <p className="text-sm font-semibold">{title}</p>
+      <p className="mt-1 text-sm opacity-90">{body}</p>
+    </div>
+  );
+}
+
+function EmptyPanel({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-[22px] border border-dashed border-slate-300 bg-slate-50/80 px-5 py-8 text-center text-sm text-slate-500">
+      <p className="text-base font-semibold text-slate-700">{title}</p>
+      <p className="mt-2 leading-6">{body}</p>
+    </div>
+  );
 }
 
 export default function PosPage() {
@@ -204,17 +295,46 @@ export default function PosPage() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const isCartMutable = !!cartSession && (cartSession.state === 'OPEN' || cartSession.state === 'PAYMENT_PENDING');
-  const safeCatalog = Array.isArray(catalog) ? catalog : [];
   const safeOpenCarts = Array.isArray(openCarts) ? openCarts : [];
-  const safeFinalizedSales = Array.isArray(finalizedSales) ? finalizedSales : [];
   const safeCartLines = Array.isArray(cartSession?.lines) ? cartSession.lines : [];
   const safeSelectedSaleLines = Array.isArray(selectedSaleDetail?.lines) ? selectedSaleDetail.lines : [];
   const activeBranch = context?.branches.find((item) => item.id === branchId) ?? null;
   const activeRegister = context?.registers.find((item) => item.id === registerId) ?? null;
   const isReturnMutable = !!returnSession && returnSession.state === 'OPEN';
-  const disabledControlClass = 'disabled:cursor-not-allowed disabled:opacity-45 disabled:saturate-50';
   const latestCartPayment = cartSession?.paymentFinalizations?.[0] ?? null;
   const selectedSalePayment = selectedSaleDetail?.paymentFinalizations?.[0] ?? null;
+  const selectedReturnSourceLine = safeSelectedSaleLines.find((line) => line.id === returnSourceLineId) ?? null;
+  const workspaceReady = Boolean(token && context && registerId);
+
+  const visibleCatalogOptions = useMemo(() => {
+    const packs = Array.isArray(catalog) ? catalog : [];
+    return packs.flatMap((pack) =>
+      (Array.isArray(pack.lots) ? pack.lots : [])
+        .filter((lot) => {
+          const search = catalogSearch.trim().toLowerCase();
+          if (!search) return true;
+          return [pack.product.nameEn, pack.product.nameAr, pack.packCode, lot.batchNo].some((value) =>
+            value.toLowerCase().includes(search),
+          );
+        })
+        .map((lot) => ({
+          key: `${pack.packId}::${lot.lotBatchId}`,
+          label: `${pack.product.nameEn} | ${pack.packCode} | Batch ${lot.batchNo}`,
+          subtitle: `${lot.sellableQuantity} sellable`,
+        })),
+    );
+  }, [catalogSearch, catalog]);
+
+  const visibleFinalizedSales = useMemo(() => {
+    const sales = Array.isArray(finalizedSales) ? finalizedSales : [];
+    const search = salesSearch.trim().toLowerCase();
+    if (!search) return sales;
+    return sales.filter((sale) => {
+      const sessionNumber = sale.posCartSession?.sessionNumber ?? '';
+      const paymentMethod = sale.paymentFinalizations?.[0]?.paymentMethod ?? '';
+      return [sale.documentNo, sessionNumber, paymentMethod, sale.state].some((value) => value.toLowerCase().includes(search));
+    });
+  }, [salesSearch, finalizedSales]);
 
   async function apiRequest<T>(path: string, init?: RequestInit, skipAuth = false): Promise<T> {
     const headers = new Headers(init?.headers ?? {});
@@ -245,8 +365,8 @@ export default function PosPage() {
     }
     setLineEdits(edits);
   }
-  async function login(event: FormEvent) {
-    event.preventDefault();
+
+  async function performLogin() {
     setContextError(null);
     try {
       const payload = await apiRequest<{ access_token: string }>(
@@ -258,10 +378,15 @@ export default function PosPage() {
         true,
       );
       setToken(payload.access_token);
-      setStatusMessage('Authenticated successfully.');
+      setStatusMessage('Operator session authenticated successfully.');
     } catch (error) {
       setContextError((error as Error).message);
     }
+  }
+
+  async function login(event: FormEvent) {
+    event.preventDefault();
+    await performLogin();
   }
 
   async function loadContextAndCatalog() {
@@ -294,7 +419,7 @@ export default function PosPage() {
       );
       setFinalizedSales(Array.isArray(sales) ? sales : []);
 
-      setStatusMessage('Operational context loaded from backend.');
+      setStatusMessage('Workspace loaded from the accepted backend runtime.');
     } catch (error) {
       setContextError((error as Error).message);
     }
@@ -315,11 +440,11 @@ export default function PosPage() {
           registerId,
           legalEntityId: legalEntityId || undefined,
           currency: 'JOD',
-          notes: 'Stage 8.30 POS transaction lookup and return usability flow',
+          notes: 'Stage 8.30A commercial POS UI rescue flow',
         }),
       });
       bindCart(created);
-      setStatusMessage(`Cart created: ${created.sessionNumber}`);
+      setStatusMessage(`New sale started: ${created.sessionNumber}`);
     } catch (error) {
       setCartError((error as Error).message);
     }
@@ -337,11 +462,11 @@ export default function PosPage() {
   async function addCartLine() {
     setCartError(null);
     if (!cartSession) {
-      setCartError('Open/create cart first.');
+      setCartError('Start or open a sale first.');
       return;
     }
     if (!isCartMutable) {
-      setCartError('Finalized cart is immutable.');
+      setCartError('Finalized sale is immutable.');
       return;
     }
 
@@ -357,7 +482,7 @@ export default function PosPage() {
         body: JSON.stringify({ productPackId: packId, lotBatchId, quantity: newLineQty, unitPrice: newLinePrice, discount: 0, taxRate: 0 }),
       });
       await openCartSession(cartSession.id);
-      setStatusMessage('Cart line added.');
+      setStatusMessage('Sale line added.');
     } catch (error) {
       setCartError((error as Error).message);
     }
@@ -375,7 +500,7 @@ export default function PosPage() {
           body: JSON.stringify(edit),
         }),
       );
-      setStatusMessage('Cart line updated.');
+      setStatusMessage('Sale line updated.');
     } catch (error) {
       setCartError((error as Error).message);
     }
@@ -390,7 +515,7 @@ export default function PosPage() {
           method: 'DELETE',
         }),
       );
-      setStatusMessage('Cart line removed.');
+      setStatusMessage('Sale line removed.');
     } catch (error) {
       setCartError((error as Error).message);
     }
@@ -413,6 +538,7 @@ export default function PosPage() {
       setCartError((error as Error).message);
     }
   }
+
   async function refreshFinalizedSales() {
     setReturnError(null);
     try {
@@ -469,6 +595,7 @@ export default function PosPage() {
           }),
         }),
       );
+      setStatusMessage('Return draft created against the selected sale.');
     } catch (error) {
       setReturnError((error as Error).message);
     }
@@ -476,7 +603,7 @@ export default function PosPage() {
 
   async function addReturnLine() {
     if (!selectedSaleDetail || !returnSession) {
-      setReturnError('Create return session and pick a source line first.');
+      setReturnError('Create a return draft and select a source line first.');
       return;
     }
     if (returnSession.state !== 'OPEN') {
@@ -486,7 +613,7 @@ export default function PosPage() {
 
     const source = safeSelectedSaleLines.find((line) => line.id === returnSourceLineId);
     if (!source || !source.lotBatchId) {
-      setReturnError('Select valid source sale line.');
+      setReturnError('Select a valid source sale line.');
       return;
     }
 
@@ -506,6 +633,7 @@ export default function PosPage() {
         }),
       });
       setReturnSession(await apiRequest<PosReturnSession>(`/pos/operational/return-sessions/${returnSession.id}`));
+      setStatusMessage('Return line added.');
     } catch (error) {
       setReturnError((error as Error).message);
     }
@@ -528,144 +656,425 @@ export default function PosPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 p-6 text-slate-100">
-      <section className="mx-auto max-w-7xl space-y-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
-        <h1 className="text-2xl font-semibold">POS Transaction Lookup / واجهة نقطة البيع</h1>
-        <p className="text-sm text-slate-300">Stage 8.30 operator usability slice over the accepted backend POS operational core.</p>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          <form className="space-y-3 rounded-xl border border-slate-800 bg-slate-950/60 p-4" onSubmit={login}>
-            <h2 className="text-lg font-semibold">Authentication</h2>
-            <input className="w-full rounded border border-slate-700 bg-slate-950 p-2" placeholder="Tenant ID" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
-            <input className="w-full rounded border border-slate-700 bg-slate-950 p-2" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <input className="w-full rounded border border-slate-700 bg-slate-950 p-2" placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-            <button className="w-full rounded bg-cyan-700 px-3 py-2 text-sm font-medium" type="submit">Login / تسجيل الدخول</button>
-            <textarea className="h-14 w-full rounded border border-slate-700 bg-slate-950 p-2 text-[10px] text-slate-400" placeholder="Technical bearer token (advanced)" value={token} onChange={(e) => setToken(e.target.value)} />
-            <p className="text-[11px] text-slate-400">Technical auth token for diagnostics only.</p>
-          </form>
-
-          <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-            <h2 className="text-lg font-semibold">Operational Context</h2>
-            <input className="w-full rounded border border-slate-700 bg-slate-950 p-2" placeholder="Branch ID" value={branchId} onChange={(e) => setBranchId(e.target.value)} />
-            <input className="w-full rounded border border-slate-700 bg-slate-950 p-2" placeholder="Register ID" value={registerId} onChange={(e) => setRegisterId(e.target.value)} />
-            <button className="w-full rounded bg-emerald-700 px-3 py-2 text-sm font-medium" type="button" onClick={loadContextAndCatalog}>Load Context + Catalog</button>
-            {context ? (
-              <div className="rounded border border-slate-700 bg-slate-900/60 p-3 text-sm">
-                <p>Context source: <span className="font-semibold text-emerald-300">{context.contextSource}</span></p>
-                <p>Branches loaded: {context.branches.length}</p>
-                <p>Registers loaded: {context.registers.length}</p>
-                <p>Active branch: <span className="font-semibold text-cyan-300">{activeBranch?.name ?? branchId}</span></p>
-                <p>Active register: <span className="font-semibold text-cyan-300">{activeRegister ? `${activeRegister.code} - ${activeRegister.nameEn}` : registerId || 'Not selected'}</span></p>
-                <p>{context.contextSource === 'DEMO_SEED_OR_REAL_DB' ? 'Demo tenant identifier (real DB data, not mock).' : 'Runtime tenant context from real DB.'}</p>
-              </div>
-            ) : null}
-          </div>
-        </div>
-        {contextError ? <p className="text-sm text-rose-300">{contextError}</p> : null}
-        {statusMessage ? <p className="text-sm text-emerald-300">{statusMessage}</p> : null}
-
-        <section className="space-y-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-          <h2 className="text-lg font-semibold">Cart / السلة</h2>
-          <div className="grid gap-3 md:grid-cols-3">
-            <button className="rounded bg-indigo-700 px-3 py-2 text-sm" type="button" onClick={createCartSession}>Create New Cart Session</button>
-            <select className="rounded border border-slate-700 bg-slate-950 p-2 text-sm" value="" onChange={(e) => e.target.value && void openCartSession(e.target.value)}>
-              <option value="">Open existing OPEN cart...</option>
-              {safeOpenCarts.map((item) => <option key={item.id} value={item.id}>{item.sessionNumber} ({item.state})</option>)}
-            </select>
-            <input className="rounded border border-slate-700 bg-slate-950 p-2" placeholder="Catalog search" value={catalogSearch} onChange={(e) => setCatalogSearch(e.target.value)} />
-          </div>
-
-          {cartSession ? (
-            <div className="grid gap-3 lg:grid-cols-[1.15fr,0.85fr]">
-              <div className="rounded border border-slate-700 bg-slate-900/60 p-3 text-sm">
-                <h3 className="text-sm font-semibold text-cyan-200">Current cart / الجلسة الحالية</h3>
-                <div className="mt-2 space-y-1">
-                  <p>Session reference: <span className="font-semibold">{cartSession.sessionNumber}</span></p>
-                  <p>State: <span className="font-semibold">{cartSession.state}</span></p>
-                  <p>Branch: <span className="font-semibold">{activeBranch?.name ?? cartSession.branchId}</span></p>
-                  <p>Register: <span className="font-semibold">{activeRegister ? `${activeRegister.code} - ${activeRegister.nameEn}` : cartSession.registerId}</span></p>
-                  <p>Fiscal sale reference: <span className="font-semibold">{cartSession.fiscalSaleDocument?.documentNo ?? '-'}</span></p>
+    <main
+      className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(6,182,212,0.14),_transparent_25%),linear-gradient(180deg,_#f8fafc_0%,_#eff6ff_52%,_#ecfeff_100%)] text-slate-950"
+      style={{ fontFamily: '"Segoe UI", "Noto Sans Arabic", Tahoma, sans-serif' }}
+    >
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 lg:px-8 lg:py-8">
+        <header className={cn(surfaceClass, 'overflow-hidden p-6 lg:p-8')}>
+          <div className="grid gap-6 lg:grid-cols-[1.45fr_0.95fr] lg:items-start">
+            <div className="space-y-5">
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <ToneBadge tone="emerald">Stage 8.30A</ToneBadge>
+                  <ToneBadge tone="slate">POS UI rescue</ToneBadge>
+                  <ToneBadge tone={workspaceReady ? 'emerald' : 'amber'}>{workspaceReady ? 'Workspace ready' : 'Setup required'}</ToneBadge>
+                </div>
+                <div className="space-y-3">
+                  <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-slate-950 lg:text-[2.55rem]">
+                    POS workspace for live selling, clear transaction lookup, and calm return handling.
+                  </h1>
+                  <p className="max-w-3xl text-sm leading-7 text-slate-600 lg:text-base">
+                    This rescue pass keeps the accepted backend flow intact and reshapes the page around what an operator needs to do next:
+                    start a sale, finalize it cleanly, find it later, and process a bounded return without reading through debug noise.
+                  </p>
                 </div>
               </div>
 
-              <div className={`rounded border p-3 text-sm ${cartSession.state === 'FINALIZED' ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-slate-700 bg-slate-900/60'}`}>
-                <h3 className={`text-sm font-semibold ${cartSession.state === 'FINALIZED' ? 'text-emerald-200' : 'text-slate-200'}`}>
-                  {cartSession.state === 'FINALIZED' ? 'Finalized sale summary / ملخص البيع النهائي' : 'Open cart summary / ملخص السلة المفتوحة'}
-                </h3>
-                <div className="mt-2 space-y-1">
-                  <p>Fiscal reference: <span className="font-semibold">{cartSession.fiscalSaleDocument?.documentNo ?? '-'}</span></p>
-                  <p>Session reference: <span className="font-semibold">{cartSession.sessionNumber}</span></p>
-                  <p>Payment mode: <span className="font-semibold">{latestCartPayment?.paymentMethod ?? '-'}</span></p>
-                  <p>Payment reference: <span className="font-semibold">{latestCartPayment?.referenceCode ?? 'Cash finalization'}</span></p>
-                  <p>Finalized at: <span className="font-semibold">{formatDateTime(latestCartPayment?.finalizedAt)}</span></p>
-                  <p className="font-semibold">Grand total: {formatMoney(cartSession.grandTotal, cartSession.currency)}</p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className={cn(mutedSurfaceClass, 'px-4 py-4')}>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Step 1</p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">Authenticate operator</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">Use the seeded operator credentials, then keep technical auth details collapsed.</p>
+                </div>
+                <div className={cn(mutedSurfaceClass, 'px-4 py-4')}>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Step 2</p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">Load branch + register context</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">Bring catalog, open sales, and recent finalized transactions into the same operator workspace.</p>
+                </div>
+                <div className={cn(mutedSurfaceClass, 'px-4 py-4')}>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Step 3</p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">Sell, lookup, return</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">Keep sale, summary, lookup, and return zones visually distinct so each action reads clearly.</p>
                 </div>
               </div>
             </div>
-          ) : null}
 
-          {cartSession && !isCartMutable ? <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-sm text-amber-200">Cart is locked because state is {cartSession.state}. Add/Update/Remove/Finalize controls are disabled, and this sale is now read-only in the UI.</p> : null}
-
-          <div className="grid gap-3 md:grid-cols-4">
-            <select className="rounded border border-slate-700 bg-slate-950 p-2 text-sm md:col-span-2" value={selectedCatalogKey} onChange={(e) => setSelectedCatalogKey(e.target.value)} disabled={!cartSession || !isCartMutable}>
-              <option value="">Select ProductPack/Lot</option>
-              {safeCatalog.flatMap((pack) => (Array.isArray(pack.lots) ? pack.lots : []).map((lot) => <option key={`${pack.packId}::${lot.lotBatchId}`} value={`${pack.packId}::${lot.lotBatchId}`}>{pack.product.nameEn} | {pack.packCode} | Batch {lot.batchNo} | Sellable {lot.sellableQuantity}</option>))}
-            </select>
-            <input className="rounded border border-slate-700 bg-slate-950 p-2" min={1} step={1} type="number" value={newLineQty} onChange={(e) => setNewLineQty(Number(e.target.value) || 1)} disabled={!cartSession || !isCartMutable} />
-            <input className="rounded border border-slate-700 bg-slate-950 p-2" min={0} step={0.01} type="number" value={newLinePrice} onChange={(e) => setNewLinePrice(Number(e.target.value) || 0)} disabled={!cartSession || !isCartMutable} />
-          </div>
-
-          <button className={`rounded bg-cyan-700 px-3 py-2 text-sm ${disabledControlClass}`} type="button" onClick={addCartLine} disabled={!cartSession || !isCartMutable}>Add Line</button>
-
-          <div className="space-y-2">
-            {safeCartLines.map((line) => {
-              const edit = lineEdits[line.id] ?? { quantity: line.quantity, unitPrice: line.unitPrice, discount: line.discount, taxRate: line.taxRate ?? 0 };
-              return (
-                <div key={line.id} className="grid gap-2 rounded border border-slate-700 p-3 md:grid-cols-8">
-                  <div className="text-xs text-slate-300 md:col-span-2">
-                    <p className="font-semibold text-slate-100">L#{line.lineNo} {line.productPack?.product.nameEn ?? 'Product pack'}</p>
-                    <p>Pack {line.productPack?.code ?? line.productPackId.slice(0, 8)} | Batch {line.lotBatch?.batchNo ?? line.lotBatchId.slice(0, 8)}</p>
-                  </div>
-                  <input className="rounded border border-slate-700 bg-slate-950 p-2" type="number" min={1} step={1} value={edit.quantity} disabled={!isCartMutable} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, quantity: Number(e.target.value) || 1 } }))} />
-                  <input className="rounded border border-slate-700 bg-slate-950 p-2" type="number" min={0} step={0.01} value={edit.unitPrice} disabled={!isCartMutable} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, unitPrice: Number(e.target.value) || 0 } }))} />
-                  <input className="rounded border border-slate-700 bg-slate-950 p-2" type="number" min={0} step={0.01} value={edit.discount} disabled={!isCartMutable} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, discount: Number(e.target.value) || 0 } }))} />
-                  <input className="rounded border border-slate-700 bg-slate-950 p-2" type="number" min={0} step={0.01} value={edit.taxRate} disabled={!isCartMutable} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, taxRate: Number(e.target.value) || 0 } }))} />
-                  <button className={`rounded bg-emerald-700 px-2 py-1 text-xs ${disabledControlClass}`} type="button" onClick={() => updateCartLine(line.id)} disabled={!isCartMutable}>Update</button>
-                  <button className={`rounded bg-rose-700 px-2 py-1 text-xs ${disabledControlClass}`} type="button" onClick={() => removeCartLine(line.id)} disabled={!isCartMutable}>Remove</button>
+            <aside className="rounded-[26px] bg-slate-950 px-5 py-5 text-slate-50 shadow-[0_30px_80px_rgba(15,23,42,0.28)]">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-300">Workspace utility</p>
+                  <h2 className="text-xl font-semibold">Operator context</h2>
+                  <p className="text-sm leading-6 text-slate-300">
+                    Technical setup still exists, but it stays below the fold so the selling flow remains the dominant surface.
+                  </p>
                 </div>
-              );
-            })}
-          </div>
 
-          {cartSession ? <div className="grid gap-2 rounded border border-slate-700 bg-slate-900/60 p-3 md:grid-cols-4"><p>Subtotal: {cartSession.subtotal.toFixed(2)}</p><p>Discount: {cartSession.discountTotal.toFixed(2)}</p><p>Tax: {cartSession.taxTotal.toFixed(2)}</p><p className="font-semibold">Grand: {cartSession.grandTotal.toFixed(2)} {cartSession.currency}</p></div> : null}
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Branch</p>
+                    <p className="mt-2 text-base font-semibold text-white">{activeBranch?.name ?? 'Load workspace'}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Register</p>
+                    <p className="mt-2 text-base font-semibold text-white">{activeRegister ? `${activeRegister.code} · ${activeRegister.nameEn}` : 'Load workspace'}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Data source</p>
+                    <p className="mt-2 text-base font-semibold text-white">{context?.contextSource === 'DEMO_SEED_OR_REAL_DB' ? 'Demo-ready runtime' : context ? 'Runtime database' : 'Not loaded'}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Session</p>
+                    <p className="mt-2 text-base font-semibold text-white">{token ? 'Authenticated' : 'Needs sign-in'}</p>
+                  </div>
+                </div>
 
-          <div className="grid gap-2 md:grid-cols-3">
-            <input className="rounded border border-slate-700 bg-slate-950 p-2" placeholder="Cash tendered (optional)" value={cashTendered} onChange={(e) => setCashTendered(e.target.value)} disabled={!cartSession || !isCartMutable} />
-            <button className={`rounded bg-emerald-700 px-3 py-2 text-sm font-medium ${disabledControlClass}`} type="button" onClick={finalizeCashSale} disabled={!cartSession || !isCartMutable}>Finalize Cash Sale</button>
-            <button className="rounded border border-slate-600 px-3 py-2 text-sm" type="button" onClick={() => cartSession && void openCartSession(cartSession.id)} disabled={!cartSession}>Refresh Cart State</button>
-          </div>
-
-          {cartError ? <p className="text-sm text-rose-300">{cartError}</p> : null}
-        </section>
-
-        <section className="space-y-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold">Return Flow / المرتجعات</h2>
-            <p className="text-sm text-slate-300">Find a finalized sale by fiscal or session reference, review eligible lines, and create a bounded return against that sale only.</p>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-[0.95fr,1.05fr]">
-            <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
-              <h3 className="text-sm font-semibold text-cyan-200">Finalized sale lookup / بحث المبيعات النهائية</h3>
-              <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-                <input className="rounded border border-slate-700 bg-slate-950 p-2" placeholder="Search by fiscal or session reference" value={salesSearch} onChange={(e) => setSalesSearch(e.target.value)} />
-                <button className="rounded bg-indigo-700 px-3 py-2 text-sm" type="button" onClick={refreshFinalizedSales}>Refresh Recent Sales</button>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button className={primaryButtonClass} type="button" onClick={() => void performLogin()}>
+                    Authenticate operator
+                  </button>
+                  <button className={cn(secondaryButtonClass, 'border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white')} type="button" onClick={loadContextAndCatalog} disabled={!token}>
+                    Load workspace
+                  </button>
+                </div>
               </div>
-              <p className="text-xs text-slate-400">Scoped to branch <span className="font-semibold text-slate-200">{activeBranch?.name ?? branchId}</span> and register <span className="font-semibold text-slate-200">{activeRegister ? `${activeRegister.code} - ${activeRegister.nameEn}` : registerId || 'Not selected'}</span>.</p>
+            </aside>
+          </div>
 
-              {safeFinalizedSales.length ? (
-                <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
-                  {safeFinalizedSales.map((sale) => {
+          <div className="mt-6 grid gap-3">
+            {contextError ? <Notice title="Setup blocked" body={contextError} tone="error" /> : null}
+            {statusMessage ? <Notice title="Latest operation" body={statusMessage} tone="success" /> : null}
+          </div>
+
+          <details className="mt-6 rounded-[22px] border border-slate-200 bg-slate-50/90 p-4 text-sm text-slate-700 shadow-sm">
+            <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900">
+              Technical setup and diagnostics / إعداد تقني وتشخيصي
+            </summary>
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <form className="space-y-3 rounded-[20px] border border-slate-200 bg-white p-4" onSubmit={login}>
+                <div className="space-y-1">
+                  <h3 className="text-base font-semibold text-slate-950">Operator sign-in defaults</h3>
+                  <p className="text-sm text-slate-500">These remain available for demo/runtime verification, but they are no longer the dominant visual element.</p>
+                </div>
+                <input className={inputClass} placeholder="Tenant ID" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
+                <input className={inputClass} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <input className={inputClass} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <button className={primaryButtonClass} type="submit">Sign in</button>
+              </form>
+
+              <div className="space-y-3 rounded-[20px] border border-slate-200 bg-white p-4">
+                <div className="space-y-1">
+                  <h3 className="text-base font-semibold text-slate-950">Advanced context overrides</h3>
+                  <p className="text-sm text-slate-500">Use these only when troubleshooting branch/register context or pasting a temporary token.</p>
+                </div>
+                <input className={inputClass} placeholder="Branch ID" value={branchId} onChange={(e) => setBranchId(e.target.value)} />
+                <input className={inputClass} placeholder="Register ID" value={registerId} onChange={(e) => setRegisterId(e.target.value)} />
+                <textarea className={textareaClass} rows={5} placeholder="Technical bearer token (advanced only)" value={token} onChange={(e) => setToken(e.target.value)} />
+                <p className="text-xs leading-5 text-slate-500">Raw technical values remain available here for diagnostics, but they are intentionally demoted from the primary POS workflow.</p>
+              </div>
+            </div>
+          </details>
+        </header>
+
+        <div className="grid gap-6 xl:grid-cols-[1.45fr_0.95fr]">
+          <section className={cn(surfaceClass, 'p-5 lg:p-6')}>
+            <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">Sale workspace</p>
+                <h2 className="text-2xl font-semibold text-slate-950">Start and manage the active sale</h2>
+                <p className="max-w-2xl text-sm leading-6 text-slate-600">
+                  The sale workspace is the primary action surface. It keeps new-sale creation, product entry, cart review, totals, and cash finalization in one calm flow.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[360px]">
+                <button className={primaryButtonClass} type="button" onClick={createCartSession} disabled={!workspaceReady}>
+                  Start new sale
+                </button>
+                <button className={secondaryButtonClass} type="button" onClick={loadContextAndCatalog} disabled={!workspaceReady}>
+                  Refresh workspace data
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+              <div className={cn(mutedSurfaceClass, 'p-4')}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <ToneBadge tone={workspaceReady ? 'emerald' : 'amber'}>{workspaceReady ? 'Ready to sell' : 'Authenticate and load context'}</ToneBadge>
+                  {cartSession ? <ToneBadge tone={stateTone(cartSession.state)}>{cartSession.state}</ToneBadge> : null}
+                </div>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  <KeyValue label="Branch" value={activeBranch?.name ?? 'Not loaded'} emphasis />
+                  <KeyValue label="Register" value={activeRegister ? `${activeRegister.code} · ${activeRegister.nameEn}` : 'Not loaded'} emphasis />
+                  <KeyValue label="Current sale" value={cartSession?.sessionNumber ?? 'No active sale'} emphasis />
+                  <KeyValue label="Open carts" value={safeOpenCarts.length} emphasis />
+                </div>
+              </div>
+
+              <div className={cn(mutedSurfaceClass, 'p-4')}>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Resume sale</p>
+                    <p className="mt-2 text-sm text-slate-600">Pick an open sale already scoped to the active branch and register.</p>
+                  </div>
+                  <select className={inputClass} value="" onChange={(e) => e.target.value && void openCartSession(e.target.value)} disabled={!workspaceReady || !safeOpenCarts.length}>
+                    <option value="">Select an open sale</option>
+                    {safeOpenCarts.map((item) => (
+                      <option key={item.id} value={item.id}>{`${item.sessionNumber} · ${formatMoney(item.grandTotal, 'JOD')}`}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              {!cartSession ? (
+                <EmptyPanel
+                  title="No active sale yet"
+                  body="Authenticate the operator, load the workspace, then start a new sale or resume an existing open sale. The sale composer will appear here once a cart session is active."
+                />
+              ) : (
+                <>
+                  <div className="grid gap-4 lg:grid-cols-[1.12fr_0.88fr]">
+                    <div className={cn(mutedSurfaceClass, 'p-4')}>
+                      <div className="space-y-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Product entry</p>
+                        <h3 className="text-lg font-semibold text-slate-950">Add product pack and lot</h3>
+                        <p className="text-sm leading-6 text-slate-600">
+                          Search stockable product packs by product name, pack code, or batch. Once the sale is finalized, the composer switches to a calm read-only state.
+                        </p>
+                      </div>
+
+                      {isCartMutable ? (
+                        <div className="mt-4 space-y-4">
+                          <div className="grid gap-3 md:grid-cols-[1.3fr_0.7fr]">
+                            <input className={inputClass} placeholder="Search product, pack, or batch" value={catalogSearch} onChange={(e) => setCatalogSearch(e.target.value)} />
+                            <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">{visibleCatalogOptions.length} available sellable options</p>
+                          </div>
+                          <select className={inputClass} value={selectedCatalogKey} onChange={(e) => setSelectedCatalogKey(e.target.value)}>
+                            <option value="">Select product pack and lot</option>
+                            {visibleCatalogOptions.map((option) => (
+                              <option key={option.key} value={option.key}>{`${option.label} · ${option.subtitle}`}</option>
+                            ))}
+                          </select>
+                          <div className="grid gap-3 md:grid-cols-[0.45fr_0.45fr_auto]">
+                            <input className={inputClass} min={1} step={1} type="number" value={newLineQty} onChange={(e) => setNewLineQty(Number(e.target.value) || 1)} />
+                            <input className={inputClass} min={0} step={0.01} type="number" value={newLinePrice} onChange={(e) => setNewLinePrice(Number(e.target.value) || 0)} />
+                            <button className={primaryButtonClass} type="button" onClick={addCartLine}>Add line</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-4 rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
+                          This sale is finalized and locked. Product entry controls are intentionally hidden from the active workflow so the page no longer reads like an editable debug form after completion.
+                        </div>
+                      )}
+                    </div>
+
+                    <div className={cn(mutedSurfaceClass, 'p-4')}>
+                      <div className="space-y-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Current sale snapshot</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-lg font-semibold text-slate-950">{cartSession.sessionNumber}</h3>
+                          <ToneBadge tone={stateTone(cartSession.state)}>{cartSession.state}</ToneBadge>
+                        </div>
+                      </div>
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        <KeyValue label="Branch" value={activeBranch?.name ?? cartSession.branchId} />
+                        <KeyValue label="Register" value={activeRegister ? `${activeRegister.code} · ${activeRegister.nameEn}` : cartSession.registerId} />
+                        <KeyValue label="Fiscal reference" value={cartSession.fiscalSaleDocument?.documentNo ?? 'Pending finalization'} />
+                        <KeyValue label="Payment mode" value={latestCartPayment?.paymentMethod ?? 'Cash sale'} />
+                      </div>
+                      <div className="mt-4 rounded-[20px] bg-slate-950 px-4 py-4 text-white">
+                        <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-300">Grand total</p>
+                        <p className="mt-2 text-3xl font-semibold">{formatMoney(cartSession.grandTotal, cartSession.currency)}</p>
+                        <p className="mt-2 text-sm text-slate-300">{cartSession.state === 'FINALIZED' ? 'This sale is now locked and ready for lookup/return scenarios.' : 'Finalize when the customer sale is complete.'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={cn(mutedSurfaceClass, 'overflow-hidden')}>
+                    <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Cart lines</p>
+                        <h3 className="mt-1 text-lg font-semibold text-slate-950">{isCartMutable ? 'Edit the active sale before finalization' : 'Finalized sale lines'}</h3>
+                      </div>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{safeCartLines.length} line{safeCartLines.length === 1 ? '' : 's'}</span>
+                    </div>
+
+                    {safeCartLines.length ? (
+                      <div className="space-y-3 px-4 py-4">
+                        {safeCartLines.map((line) => {
+                          const edit = lineEdits[line.id] ?? { quantity: line.quantity, unitPrice: line.unitPrice, discount: line.discount, taxRate: line.taxRate ?? 0 };
+                          return (
+                            <div key={line.id} className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm">
+                              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                                <div className="space-y-2">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <ToneBadge tone="slate">Line {line.lineNo}</ToneBadge>
+                                    <ToneBadge tone="sky">Pack {line.productPack?.code ?? line.productPackId.slice(0, 8)}</ToneBadge>
+                                    <ToneBadge tone="amber">Batch {line.lotBatch?.batchNo ?? line.lotBatchId.slice(0, 8)}</ToneBadge>
+                                  </div>
+                                  <div>
+                                    <p className="text-base font-semibold text-slate-950">{line.productPack?.product.nameEn ?? 'Product pack'}</p>
+                                    <p className="text-sm text-slate-500">{line.productPack?.product.nameAr ?? 'منتج'} · Lot-controlled inventory line</p>
+                                  </div>
+                                </div>
+                                {isCartMutable ? (
+                                  <div className="grid gap-3 md:grid-cols-4 xl:min-w-[520px]">
+                                    <input className={inputClass} type="number" min={1} step={1} value={edit.quantity} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, quantity: Number(e.target.value) || 1 } }))} />
+                                    <input className={inputClass} type="number" min={0} step={0.01} value={edit.unitPrice} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, unitPrice: Number(e.target.value) || 0 } }))} />
+                                    <input className={inputClass} type="number" min={0} step={0.01} value={edit.discount} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, discount: Number(e.target.value) || 0 } }))} />
+                                    <input className={inputClass} type="number" min={0} step={0.01} value={edit.taxRate} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, taxRate: Number(e.target.value) || 0 } }))} />
+                                  </div>
+                                ) : (
+                                  <div className="grid gap-3 md:grid-cols-4 xl:min-w-[520px]">
+                                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">Qty <span className="ml-2 font-semibold text-slate-950">{line.quantity}</span></div>
+                                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">Unit <span className="ml-2 font-semibold text-slate-950">{formatMoney(line.unitPrice, cartSession.currency)}</span></div>
+                                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">Discount <span className="ml-2 font-semibold text-slate-950">{formatMoney(line.discount, cartSession.currency)}</span></div>
+                                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">Tax <span className="ml-2 font-semibold text-slate-950">{line.taxRate ?? 0}%</span></div>
+                                  </div>
+                                )}
+                              </div>
+                              {isCartMutable ? (
+                                <div className="mt-4 flex flex-wrap gap-3">
+                                  <button className={secondaryButtonClass} type="button" onClick={() => updateCartLine(line.id)}>Update line</button>
+                                  <button className="inline-flex items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100" type="button" onClick={() => removeCartLine(line.id)}>Remove line</button>
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="px-4 py-6">
+                        <EmptyPanel title="No sale lines yet" body="Add the first product pack and lot to start building this sale." />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-[0.95fr_0.55fr]">
+                    <div className={cn(mutedSurfaceClass, 'p-4')}>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Totals</p>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="rounded-[18px] bg-white px-4 py-4 shadow-sm"><p className="text-xs text-slate-500">Subtotal</p><p className="mt-2 text-lg font-semibold text-slate-950">{formatMoney(cartSession.subtotal, cartSession.currency)}</p></div>
+                        <div className="rounded-[18px] bg-white px-4 py-4 shadow-sm"><p className="text-xs text-slate-500">Discount</p><p className="mt-2 text-lg font-semibold text-slate-950">{formatMoney(cartSession.discountTotal, cartSession.currency)}</p></div>
+                        <div className="rounded-[18px] bg-white px-4 py-4 shadow-sm"><p className="text-xs text-slate-500">Tax</p><p className="mt-2 text-lg font-semibold text-slate-950">{formatMoney(cartSession.taxTotal, cartSession.currency)}</p></div>
+                        <div className="rounded-[18px] bg-slate-950 px-4 py-4 text-white shadow-sm"><p className="text-xs text-slate-400">Grand total</p><p className="mt-2 text-lg font-semibold">{formatMoney(cartSession.grandTotal, cartSession.currency)}</p></div>
+                      </div>
+                    </div>
+
+                    <div className={cn(mutedSurfaceClass, 'p-4')}>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Cash finalization</p>
+                      <div className="mt-4 space-y-3">
+                        {isCartMutable ? (
+                          <>
+                            <input className={inputClass} placeholder="Cash tendered (optional)" value={cashTendered} onChange={(e) => setCashTendered(e.target.value)} />
+                            <button className={accentButtonClass} type="button" onClick={finalizeCashSale}>Finalize cash sale</button>
+                          </>
+                        ) : (
+                          <div className="rounded-[20px] border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm leading-6 text-emerald-900">
+                            Finalized sales are visually locked here. Finalize controls no longer compete with the read-only summary once the transaction is complete.
+                          </div>
+                        )}
+                        <button className={secondaryButtonClass} type="button" onClick={() => cartSession && void openCartSession(cartSession.id)} disabled={!cartSession}>Refresh sale state</button>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {cartError ? <div className="mt-4"><Notice title="Sale action blocked" body={cartError} tone="error" /></div> : null}
+          </section>
+
+          <aside className="space-y-6">
+            <section className={cn(surfaceClass, 'p-5 lg:p-6')}>
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">Finalized sale summary</p>
+                <h2 className="text-2xl font-semibold text-slate-950">Calm post-sale confirmation</h2>
+                <p className="text-sm leading-6 text-slate-600">After finalization, the operator sees a compact summary card instead of an editable form wall.</p>
+              </div>
+
+              {cartSession ? (
+                <div className={cn('mt-5 rounded-[26px] p-5', cartSession.state === 'FINALIZED' ? 'border border-emerald-200 bg-emerald-50/90' : 'border border-slate-200 bg-slate-50/90')}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Sale state</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <h3 className="text-xl font-semibold text-slate-950">{cartSession.fiscalSaleDocument?.documentNo ?? cartSession.sessionNumber}</h3>
+                        <ToneBadge tone={stateTone(cartSession.state)}>{cartSession.state}</ToneBadge>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Amount</p>
+                      <p className="mt-2 text-2xl font-semibold text-slate-950">{formatMoney(cartSession.grandTotal, cartSession.currency)}</p>
+                    </div>
+                  </div>
+                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                    <KeyValue label="Fiscal reference" value={cartSession.fiscalSaleDocument?.documentNo ?? 'Pending'} />
+                    <KeyValue label="Session reference" value={cartSession.sessionNumber} />
+                    <KeyValue label="Payment mode" value={latestCartPayment?.paymentMethod ?? 'Cash'} />
+                    <KeyValue label="Payment reference" value={latestCartPayment?.referenceCode ?? 'Cash finalization'} />
+                    <KeyValue label="Finalized at" value={formatDateTime(latestCartPayment?.finalizedAt ?? cartSession.fiscalSaleDocument?.finalizedAt)} />
+                    <KeyValue label="Workspace" value={activeRegister ? `${activeBranch?.name ?? 'Branch'} · ${activeRegister.code}` : activeBranch?.name ?? 'Current branch'} />
+                  </div>
+                  <div className="mt-5 rounded-[20px] bg-white px-4 py-4 text-sm text-slate-600 shadow-sm">
+                    {cartSession.state === 'FINALIZED'
+                      ? 'This summary is now the primary reference for lookup and returns. Internal IDs are intentionally kept out of the main operator flow.'
+                      : 'The sale is still open. Finalization details will settle here once the cash sale is completed.'}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-5">
+                  <EmptyPanel title="No sale summary yet" body="Complete a sale and the compact post-sale summary will appear here with fiscal, payment, and session references." />
+                </div>
+              )}
+            </section>
+            <section className={cn(surfaceClass, 'p-5 lg:p-6')}>
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">Workspace status</p>
+                <h2 className="text-lg font-semibold text-slate-950">Operator-ready context</h2>
+              </div>
+              <div className="mt-4 grid gap-3">
+                <div className="rounded-[20px] bg-slate-50 px-4 py-4">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Branch and register</p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">{activeBranch?.name ?? 'Branch not loaded'}</p>
+                  <p className="mt-1 text-sm text-slate-500">{activeRegister ? `${activeRegister.code} · ${activeRegister.nameEn}` : 'Register not loaded'}</p>
+                </div>
+                <div className="rounded-[20px] bg-slate-50 px-4 py-4">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Runtime source</p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">{context?.contextSource === 'DEMO_SEED_OR_REAL_DB' ? 'Demo-ready runtime data' : context ? 'Runtime DB data' : 'Not loaded'}</p>
+                  <p className="mt-1 text-sm text-slate-500">{context?.registers.length ? `${context.registers.length} register(s) available in scope` : 'Load workspace to verify context.'}</p>
+                </div>
+              </div>
+            </section>
+          </aside>
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
+          <section className={cn(surfaceClass, 'p-5 lg:p-6')}>
+            <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">Transaction lookup</p>
+                <h2 className="text-2xl font-semibold text-slate-950">Find finalized sales quickly</h2>
+                <p className="max-w-2xl text-sm leading-6 text-slate-600">
+                  Search recent finalized sales using operator-facing references first. Fiscal document number and session reference stay prominent; raw internal identifiers stay out of the primary scan path.
+                </p>
+              </div>
+              <button className={secondaryButtonClass} type="button" onClick={refreshFinalizedSales} disabled={!workspaceReady}>Refresh recent sales</button>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div className={cn(mutedSurfaceClass, 'p-4')}>
+                <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+                  <input className={inputClass} placeholder="Search by fiscal reference, session reference, or payment mode" value={salesSearch} onChange={(e) => setSalesSearch(e.target.value)} />
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">{visibleFinalizedSales.length} transaction{visibleFinalizedSales.length === 1 ? '' : 's'} in scope</div>
+                </div>
+                <p className="mt-3 text-sm text-slate-500">Scoped to <span className="font-semibold text-slate-700">{activeBranch?.name ?? 'current branch'}</span> and <span className="font-semibold text-slate-700">{activeRegister ? `${activeRegister.code} · ${activeRegister.nameEn}` : 'current register'}</span>.</p>
+              </div>
+
+              {visibleFinalizedSales.length ? (
+                <div className="space-y-3">
+                  {visibleFinalizedSales.map((sale) => {
                     const payment = sale.paymentFinalizations?.[0] ?? null;
                     const isSelected = sale.id === selectedSaleId;
                     return (
@@ -673,83 +1082,187 @@ export default function PosPage() {
                         key={sale.id}
                         type="button"
                         onClick={() => void loadSaleDetail(sale.id)}
-                        className={`w-full rounded-lg border p-3 text-left transition ${isSelected ? 'border-cyan-400 bg-cyan-500/10' : 'border-slate-700 bg-slate-900/60 hover:border-slate-500'}`}
+                        className={cn(
+                          'w-full rounded-[24px] border p-4 text-left shadow-sm transition',
+                          isSelected ? 'border-emerald-300 bg-emerald-50 shadow-[0_18px_32px_rgba(16,185,129,0.12)]' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50',
+                        )}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-semibold text-slate-100">{sale.documentNo}</p>
-                            <p className="text-xs text-slate-300">Session reference: {sale.posCartSession?.sessionNumber ?? '-'}</p>
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                          <div className="space-y-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <ToneBadge tone={stateTone(sale.state)}>{sale.state}</ToneBadge>
+                              {isSelected ? <ToneBadge tone="emerald">Selected for return</ToneBadge> : null}
+                            </div>
+                            <div>
+                              <p className="text-lg font-semibold text-slate-950">{sale.documentNo}</p>
+                              <p className="mt-1 text-sm text-slate-500">Session {sale.posCartSession?.sessionNumber ?? '-'}</p>
+                            </div>
                           </div>
-                          <span className="text-sm font-semibold text-emerald-200">{formatMoney(sale.grandTotal, sale.currency)}</span>
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-300">
-                          <span>State: {sale.state}</span>
-                          <span>Payment: {payment?.paymentMethod ?? '-'}</span>
-                          <span>Finalized: {formatDateTime(payment?.finalizedAt ?? sale.finalizedAt)}</span>
+                          <div className="space-y-1 text-left lg:text-right">
+                            <p className="text-sm font-semibold text-slate-950">{formatMoney(sale.grandTotal, sale.currency)}</p>
+                            <p className="text-sm text-slate-500">{formatDateTime(payment?.finalizedAt ?? sale.finalizedAt)}</p>
+                            <p className="text-sm text-slate-500">{payment?.paymentMethod ?? 'Cash'}</p>
+                          </div>
                         </div>
                       </button>
                     );
                   })}
                 </div>
               ) : (
-                <div className="rounded border border-dashed border-slate-700 bg-slate-900/40 p-3 text-sm text-slate-400">
-                  No finalized sales found for the current search and register scope.
-                </div>
+                <EmptyPanel title="No finalized sales found" body="Refresh recent sales or adjust the search term for the current branch/register scope." />
               )}
             </div>
+          </section>
 
-            <div className="space-y-3">
+          <section className={cn(surfaceClass, 'p-5 lg:p-6')}>
+            <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">Return workspace</p>
+                <h2 className="text-2xl font-semibold text-slate-950">Create a bounded return against the selected sale</h2>
+                <p className="max-w-2xl text-sm leading-6 text-slate-600">
+                  Select a finalized source sale, inspect the returnable lines, and create a controlled cash refund without blurring the lookup results and return actions together.
+                </p>
+              </div>
+              <button className={primaryButtonClass} type="button" onClick={createReturnSession} disabled={!selectedSaleDetail}>Create return draft</button>
+            </div>
+
+            <div className="mt-5 space-y-4">
               {selectedSaleDetail ? (
-                <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 text-sm">
-                  <h3 className="text-sm font-semibold text-cyan-200">Return source sale / مرجع الإرجاع</h3>
-                  <div className="mt-2 grid gap-2 md:grid-cols-2">
-                    <p>Fiscal reference: <span className="font-semibold">{selectedSaleDetail.documentNo}</span></p>
-                    <p>Session reference: <span className="font-semibold">{selectedSaleDetail.posCartSession?.sessionNumber ?? '-'}</span></p>
-                    <p>State: <span className="font-semibold">{selectedSaleDetail.state}</span></p>
-                    <p>Payment mode: <span className="font-semibold">{selectedSalePayment?.paymentMethod ?? '-'}</span></p>
-                    <p>Finalized at: <span className="font-semibold">{formatDateTime(selectedSalePayment?.finalizedAt ?? selectedSaleDetail.finalizedAt)}</span></p>
-                    <p className="font-semibold">Total: {formatMoney(selectedSaleDetail.grandTotal, selectedSaleDetail.currency)}</p>
+                <div className={cn(mutedSurfaceClass, 'p-4')}>
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <ToneBadge tone={stateTone(selectedSaleDetail.state)}>{selectedSaleDetail.state}</ToneBadge>
+                        <ToneBadge tone="sky">Return source selected</ToneBadge>
+                      </div>
+                      <h3 className="mt-3 text-xl font-semibold text-slate-950">{selectedSaleDetail.documentNo}</h3>
+                      <p className="mt-1 text-sm text-slate-500">Session {selectedSaleDetail.posCartSession?.sessionNumber ?? '-'}</p>
+                    </div>
+                    <div className="text-left lg:text-right">
+                      <p className="text-sm font-semibold text-slate-950">{formatMoney(selectedSaleDetail.grandTotal, selectedSaleDetail.currency)}</p>
+                      <p className="mt-1 text-sm text-slate-500">{selectedSalePayment?.paymentMethod ?? 'Cash'} · {formatDateTime(selectedSalePayment?.finalizedAt ?? selectedSaleDetail.finalizedAt)}</p>
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="rounded-xl border border-dashed border-slate-700 bg-slate-900/40 p-3 text-sm text-slate-400">
-                  Select a finalized sale from the lookup list to inspect returnable lines and start a return.
-                </div>
+                <EmptyPanel title="No return source selected" body="Choose a finalized sale from the transaction lookup column and it will appear here as the return source." />
               )}
 
-              <button className={`rounded bg-cyan-700 px-3 py-2 text-sm ${disabledControlClass}`} type="button" onClick={createReturnSession} disabled={!selectedSaleDetail}>Create Return Session Against Selected Sale</button>
+              {returnSession ? (
+                <div className={cn('rounded-[24px] border p-4', returnSession.state === 'FINALIZED' ? 'border-emerald-200 bg-emerald-50/90' : 'border-slate-200 bg-slate-50/90')}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <ToneBadge tone={stateTone(returnSession.state)}>{returnSession.state}</ToneBadge>
+                        <h3 className="text-lg font-semibold text-slate-950">{returnSession.returnNumber}</h3>
+                      </div>
+                      <p className="mt-2 text-sm text-slate-500">Return fiscal reference {returnSession.fiscalReturnDocument?.documentNo ?? returnSession.fiscalReturnDocumentId ?? 'Pending'}</p>
+                    </div>
+                    <div className="text-left lg:text-right">
+                      <p className="text-sm text-slate-500">Refund total</p>
+                      <p className="text-xl font-semibold text-slate-950">{formatMoney(returnSession.grandTotal, returnSession.currency)}</p>
+                    </div>
+                  </div>
+                  {!isReturnMutable ? (
+                    <div className="mt-4 rounded-[18px] border border-emerald-200 bg-white px-4 py-3 text-sm leading-6 text-emerald-900">
+                      Return draft is finalized and locked. Return-entry controls are intentionally reduced so the final state reads clearly.
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+              {selectedSaleDetail ? (
+                <div className={cn(mutedSurfaceClass, 'p-4')}>
+                  <div className="flex flex-col gap-2 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Returnable lines</p>
+                      <h3 className="mt-1 text-lg font-semibold text-slate-950">Choose the source line to return</h3>
+                    </div>
+                    <p className="text-sm text-slate-500">Remaining eligible quantity is surfaced directly on each line.</p>
+                  </div>
+                  <div className="mt-4 grid gap-3">
+                    {safeSelectedSaleLines.map((line) => {
+                      const isSelected = line.id === returnSourceLineId;
+                      return (
+                        <button
+                          key={line.id}
+                          type="button"
+                          disabled={!isReturnMutable}
+                          onClick={() => {
+                            setReturnSourceLineId(line.id);
+                            setReturnUnitPrice(line.unitPrice);
+                          }}
+                          className={cn(
+                            'rounded-[22px] border p-4 text-left transition',
+                            isSelected ? 'border-emerald-300 bg-emerald-50 shadow-[0_16px_30px_rgba(16,185,129,0.12)]' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50',
+                            !isReturnMutable && 'cursor-not-allowed opacity-60',
+                          )}
+                        >
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <ToneBadge tone="slate">Line {line.lineNo}</ToneBadge>
+                                <ToneBadge tone="amber">Batch {line.lotBatch?.batchNo ?? '-'}</ToneBadge>
+                              </div>
+                              <p className="mt-3 text-base font-semibold text-slate-950">{line.productPack.product.nameEn}</p>
+                              <p className="mt-1 text-sm text-slate-500">{line.productPack.product.nameAr} · Returnable sale line</p>
+                            </div>
+                            <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[320px]">
+                              <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">Sold <span className="ml-2 font-semibold text-slate-950">{line.quantity}</span></div>
+                              <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">Returned <span className="ml-2 font-semibold text-slate-950">{line.alreadyReturnedQty}</span></div>
+                              <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">Remaining <span className="ml-2 font-semibold">{line.remainingQty}</span></div>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
 
-              {returnSession ? <div className="rounded border border-slate-700 bg-slate-900/60 p-3 text-sm"><p>Return session: <span className="font-semibold">{returnSession.returnNumber}</span></p><p>State: {returnSession.state}</p><p>Return fiscal reference: {returnSession.fiscalReturnDocument?.documentNo ?? returnSession.fiscalReturnDocumentId ?? '-'}</p><p className="font-semibold">Refund total: {formatMoney(returnSession.grandTotal, returnSession.currency)}</p></div> : null}
+              <div className={cn(mutedSurfaceClass, 'p-4')}>
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Return entry</p>
+                  <h3 className="text-lg font-semibold text-slate-950">Prepare the refund line</h3>
+                  <p className="text-sm text-slate-600">The selected source line stays visible above; this area only handles allowed quantity and refund value.</p>
+                </div>
 
-              {returnSession && !isReturnMutable ? <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-sm text-amber-200">Return session is locked because state is {returnSession.state}. Add line/finalize controls are disabled.</p> : null}
+                <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+                  <input className={inputClass} type="number" min={1} step={1} value={returnQuantity} disabled={!isReturnMutable} onChange={(e) => setReturnQuantity(Number(e.target.value) || 1)} />
+                  <input className={inputClass} type="number" min={0} step={0.01} value={returnUnitPrice} disabled={!isReturnMutable} onChange={(e) => setReturnUnitPrice(Number(e.target.value) || 0)} />
+                  <button className={secondaryButtonClass} type="button" onClick={addReturnLine} disabled={!isReturnMutable}>Add return line</button>
+                </div>
 
-              <div className="grid gap-3 md:grid-cols-4">
-                <select className="rounded border border-slate-700 bg-slate-950 p-2 text-sm md:col-span-2" value={returnSourceLineId} onChange={(e) => { setReturnSourceLineId(e.target.value); const line = safeSelectedSaleLines.find((item) => item.id === e.target.value); setReturnUnitPrice(line?.unitPrice ?? 0); }} disabled={!isReturnMutable}>
-                  <option value="">Select source sale line</option>
-                  {safeSelectedSaleLines.map((line) => <option key={line.id} value={line.id}>#{line.lineNo} {line.productPack.product.nameEn} Batch {line.lotBatch?.batchNo ?? '-'} Remaining {line.remainingQty}</option>)}
-                </select>
-                <input className="rounded border border-slate-700 bg-slate-950 p-2" type="number" min={1} step={1} value={returnQuantity} disabled={!isReturnMutable} onChange={(e) => setReturnQuantity(Number(e.target.value) || 1)} />
-                <input className="rounded border border-slate-700 bg-slate-950 p-2" type="number" min={0} step={0.01} value={returnUnitPrice} disabled={!isReturnMutable} onChange={(e) => setReturnUnitPrice(Number(e.target.value) || 0)} />
+                {selectedReturnSourceLine ? (
+                  <div className="mt-4 rounded-[20px] border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600 shadow-sm">
+                    <p className="font-semibold text-slate-950">Selected source line</p>
+                    <p className="mt-2">{selectedReturnSourceLine.productPack.product.nameEn} · Batch {selectedReturnSourceLine.lotBatch?.batchNo ?? '-'}</p>
+                    <p className="mt-1">Remaining eligible quantity: <span className="font-semibold text-emerald-700">{selectedReturnSourceLine.remainingQty}</span></p>
+                  </div>
+                ) : null}
+
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button className={accentButtonClass} type="button" onClick={finalizeReturn} disabled={!isReturnMutable}>Finalize return</button>
+                </div>
               </div>
 
-              <div className="grid gap-2 md:grid-cols-2">
-                <button className={`rounded bg-indigo-700 px-3 py-2 text-sm ${disabledControlClass}`} type="button" onClick={addReturnLine} disabled={!isReturnMutable}>Add Return Line</button>
-                <button className={`rounded bg-emerald-700 px-3 py-2 text-sm ${disabledControlClass}`} type="button" onClick={finalizeReturn} disabled={!isReturnMutable}>Finalize Return (Cash Refund)</button>
-              </div>
+              {returnSession ? (
+                <div className={cn(mutedSurfaceClass, 'p-4')}>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Return totals</p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-[18px] bg-white px-4 py-4 shadow-sm"><p className="text-xs text-slate-500">Subtotal</p><p className="mt-2 text-lg font-semibold text-slate-950">{formatMoney(returnSession.subtotal, returnSession.currency)}</p></div>
+                    <div className="rounded-[18px] bg-white px-4 py-4 shadow-sm"><p className="text-xs text-slate-500">Discount</p><p className="mt-2 text-lg font-semibold text-slate-950">{formatMoney(returnSession.discountTotal, returnSession.currency)}</p></div>
+                    <div className="rounded-[18px] bg-white px-4 py-4 shadow-sm"><p className="text-xs text-slate-500">Tax</p><p className="mt-2 text-lg font-semibold text-slate-950">{formatMoney(returnSession.taxTotal, returnSession.currency)}</p></div>
+                    <div className="rounded-[18px] bg-slate-950 px-4 py-4 text-white shadow-sm"><p className="text-xs text-slate-400">Refund total</p><p className="mt-2 text-lg font-semibold">{formatMoney(returnSession.grandTotal, returnSession.currency)}</p></div>
+                  </div>
+                </div>
+              ) : null}
 
-              {returnSession ? <div className="rounded border border-slate-700 bg-slate-900/60 p-3 text-sm"><p>Subtotal: {returnSession.subtotal.toFixed(2)}</p><p>Discount: {returnSession.discountTotal.toFixed(2)}</p><p>Tax: {returnSession.taxTotal.toFixed(2)}</p><p className="font-semibold">Grand: {formatMoney(returnSession.grandTotal, returnSession.currency)}</p></div> : null}
-
-              {selectedSaleDetail ? <div className="overflow-x-auto rounded border border-slate-700"><table className="min-w-full text-sm"><thead className="bg-slate-900 text-left text-slate-300"><tr><th className="p-2">Line</th><th className="p-2">Pack/Lot</th><th className="p-2">Sold Qty</th><th className="p-2">Already Returned</th><th className="p-2">Remaining</th></tr></thead><tbody>{safeSelectedSaleLines.map((line) => <tr key={line.id} className="border-t border-slate-800"><td className="p-2">{line.lineNo}</td><td className="p-2">{line.productPack.product.nameEn} / {line.lotBatch?.batchNo ?? '-'}</td><td className="p-2">{line.quantity}</td><td className="p-2">{line.alreadyReturnedQty}</td><td className="p-2 font-semibold">{line.remainingQty}</td></tr>)}</tbody></table></div> : null}
+              {returnError ? <Notice title="Return action blocked" body={returnError} tone="error" /> : null}
             </div>
-          </div>
-
-          {returnError ? <p className="text-sm text-rose-300">{returnError}</p> : null}
-        </section>
-      </section>
+          </section>
+        </div>
+      </div>
     </main>
   );
 }
-
-
-
 
