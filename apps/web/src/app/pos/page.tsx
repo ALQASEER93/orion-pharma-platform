@@ -125,6 +125,16 @@ type PosReturnSession = {
   grandTotal: number;
 };
 
+type FinalizedReturnSummary = {
+  returnReference: string;
+  returnSessionNumber: string;
+  sourceSaleReference: string;
+  sourceSessionReference: string | null;
+  amount: number;
+  currency: string;
+  finalizedAt: string;
+};
+
 type OpenCartSession = {
   id: string;
   sessionNumber: string;
@@ -134,6 +144,7 @@ type OpenCartSession = {
 
 type LineEditState = { quantity: number; unitPrice: number; discount: number; taxRate: number };
 type StatusTone = 'emerald' | 'amber' | 'rose' | 'slate' | 'sky';
+type OperatorActionState = 'setup' | 'load-workspace' | 'start-sale' | 'resume-sale' | 'return-mode';
 
 const defaultTenant = '11111111-1111-4111-8111-111111111111';
 const defaultBranch = '22222222-2222-4222-8222-222222222222';
@@ -149,6 +160,7 @@ const secondaryButtonClass =
   'inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400';
 const accentButtonClass =
   'inline-flex items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(15,23,42,0.18)] transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none';
+const metricCardClass = 'rounded-[18px] border border-slate-200 bg-white px-3 py-2.5 shadow-sm';
 
 function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(' ');
@@ -233,6 +245,57 @@ function KeyValue({ label, value, emphasis = false }: { label: string; value: Re
   );
 }
 
+function CompactInfoCard({
+  label,
+  value,
+  supporting,
+  tone = 'slate',
+}: {
+  label: string;
+  value: ReactNode;
+  supporting?: ReactNode;
+  tone?: StatusTone;
+}) {
+  const toneClass =
+    tone === 'emerald'
+      ? 'border-emerald-200 bg-emerald-50/90'
+      : tone === 'amber'
+        ? 'border-amber-200 bg-amber-50/90'
+        : tone === 'rose'
+          ? 'border-rose-200 bg-rose-50/90'
+          : tone === 'sky'
+            ? 'border-sky-200 bg-sky-50/90'
+            : 'border-slate-200 bg-white';
+
+  return (
+    <div className={cn('rounded-[18px] border px-3.5 py-3 shadow-sm', toneClass)}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
+      <p className="mt-1.5 text-sm font-semibold text-slate-950">{value}</p>
+      {supporting ? <p className="mt-1 text-xs leading-5 text-slate-500">{supporting}</p> : null}
+    </div>
+  );
+}
+
+function MetricPill({ label, value, tone = 'slate' }: { label: string; value: ReactNode; tone?: StatusTone }) {
+  const toneClass =
+    tone === 'emerald'
+      ? 'bg-emerald-50 text-emerald-900'
+      : tone === 'amber'
+        ? 'bg-amber-50 text-amber-900'
+        : tone === 'rose'
+          ? 'bg-rose-50 text-rose-900'
+          : tone === 'sky'
+            ? 'bg-sky-50 text-sky-900'
+            : 'bg-slate-100 text-slate-800';
+
+  return (
+    <div className={cn('rounded-2xl px-3 py-2 text-sm', toneClass)}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] opacity-65">{label}</p>
+      <p className="mt-1 font-semibold">{value}</p>
+    </div>
+  );
+}
+
 function Notice({ title, body, tone }: { title: string; body: string; tone: 'success' | 'error' | 'info' }) {
   const toneClass =
     tone === 'success'
@@ -288,6 +351,8 @@ export default function PosPage() {
   const [returnSourceLineId, setReturnSourceLineId] = useState('');
   const [returnQuantity, setReturnQuantity] = useState(1);
   const [returnUnitPrice, setReturnUnitPrice] = useState(0);
+  const [, setReturnFinalizedAt] = useState<string | null>(null);
+  const [finalizedReturnSummary, setFinalizedReturnSummary] = useState<FinalizedReturnSummary | null>(null);
 
   const [contextError, setContextError] = useState<string | null>(null);
   const [cartError, setCartError] = useState<string | null>(null);
@@ -305,6 +370,21 @@ export default function PosPage() {
   const selectedSalePayment = selectedSaleDetail?.paymentFinalizations?.[0] ?? null;
   const selectedReturnSourceLine = safeSelectedSaleLines.find((line) => line.id === returnSourceLineId) ?? null;
   const workspaceReady = Boolean(token && context && registerId);
+  const operatorAuthenticated = Boolean(token);
+  const saleFinalized = cartSession?.state === 'FINALIZED';
+  const returnFinalized = returnSession?.state === 'FINALIZED';
+  const returnFocusMode = Boolean(selectedSaleDetail || returnSession || saleFinalized);
+  const workspaceLabel = activeRegister ? `${activeBranch?.name ?? 'Branch'} · ${activeRegister.code} · ${activeRegister.nameEn}` : activeBranch?.name ?? 'Workspace not loaded';
+  const runtimeLabel = context?.contextSource === 'DEMO_SEED_OR_REAL_DB' ? 'Demo-ready runtime' : context ? 'Runtime database' : 'Not loaded';
+  const operatorActionState: OperatorActionState = !operatorAuthenticated
+    ? 'setup'
+    : !workspaceReady
+      ? 'load-workspace'
+      : cartSession && isCartMutable
+        ? 'resume-sale'
+        : returnFocusMode
+          ? 'return-mode'
+          : 'start-sale';
 
   const visibleCatalogOptions = useMemo(() => {
     const packs = Array.isArray(catalog) ? catalog : [];
@@ -365,6 +445,67 @@ export default function PosPage() {
     }
     setLineEdits(edits);
   }
+
+  function resetReturnWorkspace() {
+    setSelectedSaleId('');
+    setSelectedSaleDetail(null);
+    setReturnSession(null);
+    setReturnSourceLineId('');
+    setReturnQuantity(1);
+    setReturnUnitPrice(0);
+    setReturnFinalizedAt(null);
+    setFinalizedReturnSummary(null);
+    setReturnError(null);
+  }
+
+  function scrollToSection(sectionId: string) {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function handleHeaderPrimaryAction() {
+    if (operatorActionState === 'setup') {
+      void performLogin();
+      return;
+    }
+    if (operatorActionState === 'load-workspace') {
+      void loadContextAndCatalog();
+      return;
+    }
+    if (operatorActionState === 'resume-sale') {
+      scrollToSection('sale-workspace');
+      return;
+    }
+    if (operatorActionState === 'return-mode') {
+      scrollToSection('return-workspace');
+      return;
+    }
+    void createCartSession();
+  }
+
+  function handleHeaderSecondaryAction() {
+    if (!workspaceReady) {
+      scrollToSection('utility-diagnostics');
+      return;
+    }
+    if (returnFocusMode) {
+      scrollToSection('lookup-workspace');
+      return;
+    }
+    void refreshFinalizedSales();
+  }
+
+  const headerPrimaryLabel =
+    operatorActionState === 'setup'
+      ? 'Authenticate operator'
+      : operatorActionState === 'load-workspace'
+        ? 'Load workspace'
+        : operatorActionState === 'resume-sale'
+          ? 'Resume current sale'
+          : operatorActionState === 'return-mode'
+            ? 'Continue return work'
+            : 'Start new sale';
+
+  const headerSecondaryLabel = !workspaceReady ? 'Open setup tools' : returnFocusMode ? 'Jump to lookup' : 'Refresh recent sales';
 
   async function performLogin() {
     setContextError(null);
@@ -440,7 +581,7 @@ export default function PosPage() {
           registerId,
           legalEntityId: legalEntityId || undefined,
           currency: 'JOD',
-          notes: 'Stage 8.30B operator UI polish flow',
+          notes: 'Stage 8.30C-R1 operator UI recovery flow',
         }),
       });
       bindCart(created);
@@ -556,6 +697,8 @@ export default function PosPage() {
     setReturnError(null);
     setSelectedSaleId(saleId);
     setReturnSession(null);
+    setReturnFinalizedAt(null);
+    setFinalizedReturnSummary(null);
     try {
       setSelectedSaleDetail(await apiRequest<FinalizedSaleDetail | null>(`/pos/operational/finalized-sales/${saleId}`));
       setReturnSourceLineId('');
@@ -581,6 +724,8 @@ export default function PosPage() {
     }
 
     setReturnError(null);
+    setReturnFinalizedAt(null);
+    setFinalizedReturnSummary(null);
     try {
       setReturnSession(
         await apiRequest<PosReturnSession>('/pos/operational/return-sessions', {
@@ -643,12 +788,31 @@ export default function PosPage() {
     if (!returnSession) return;
     setReturnError(null);
     try {
-      await apiRequest(`/pos/operational/return-sessions/${returnSession.id}/finalize`, {
-        method: 'POST',
-        body: JSON.stringify({ refundAmount: Number(returnSession.grandTotal.toFixed(2)) }),
+      const activeSaleDetail = selectedSaleDetail;
+      await apiRequest(
+        `/pos/operational/return-sessions/${returnSession.id}/finalize`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ refundAmount: Number(returnSession.grandTotal.toFixed(2)) }),
+        },
+      );
+      const finalizedSession = await apiRequest<PosReturnSession>(`/pos/operational/return-sessions/${returnSession.id}`);
+      const finalizedAt = new Date().toISOString();
+      setReturnSession(finalizedSession);
+      setReturnFinalizedAt(finalizedAt);
+      setFinalizedReturnSummary({
+        returnReference: finalizedSession.fiscalReturnDocument?.documentNo ?? finalizedSession.returnNumber,
+        returnSessionNumber: finalizedSession.returnNumber,
+        sourceSaleReference: activeSaleDetail?.documentNo ?? selectedSaleId,
+        sourceSessionReference: activeSaleDetail?.posCartSession?.sessionNumber ?? null,
+        amount: finalizedSession.grandTotal,
+        currency: finalizedSession.currency,
+        finalizedAt,
       });
-      setReturnSession(await apiRequest<PosReturnSession>(`/pos/operational/return-sessions/${returnSession.id}`));
-      if (selectedSaleDetail) await loadSaleDetail(selectedSaleDetail.id);
+      if (activeSaleDetail) {
+        setSelectedSaleDetail(await apiRequest<FinalizedSaleDetail | null>(`/pos/operational/finalized-sales/${activeSaleDetail.id}`));
+      }
+      await refreshFinalizedSales();
       setStatusMessage('Return finalized.');
     } catch (error) {
       setReturnError((error as Error).message);
@@ -660,84 +824,84 @@ export default function PosPage() {
       className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(6,182,212,0.14),_transparent_25%),linear-gradient(180deg,_#f8fafc_0%,_#eff6ff_52%,_#ecfeff_100%)] text-slate-950"
       style={{ fontFamily: '"Segoe UI", "Noto Sans Arabic", Tahoma, sans-serif' }}
     >
-      <div className="mx-auto max-w-7xl space-y-4 px-4 py-4 lg:px-6 lg:py-6">
-        <header className={cn(surfaceClass, 'overflow-hidden p-4 lg:p-5')}>
-          <div className="grid gap-4 xl:grid-cols-[1.25fr_0.95fr] xl:items-start">
-            <div className="space-y-4">
-              <div className="space-y-2.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <ToneBadge tone="emerald">Stage 8.30B</ToneBadge>
-                  <ToneBadge tone="slate">POS UI polish</ToneBadge>
-                  <ToneBadge tone={workspaceReady ? 'emerald' : 'amber'}>{workspaceReady ? 'Workspace ready' : 'Setup required'}</ToneBadge>
-                </div>
-                <h1 className="max-w-3xl text-2xl font-semibold tracking-tight text-slate-950 lg:text-[2.2rem]">
-                  Pharmacy POS for calm selling, fast lookup, and clearer returns.
-                </h1>
-                <p className="max-w-3xl text-sm leading-6 text-slate-600 lg:text-[15px]">
-                  This polish pass keeps the accepted POS flow intact and tightens the screen around the operator&apos;s real scan path: open a sale,
-                  finish it cleanly, find it later, and process a bounded return without wading through setup chrome.
-                </p>
+      <div className="mx-auto max-w-7xl space-y-4 px-4 py-4 lg:px-6 lg:py-5">
+        <header className={cn(surfaceClass, 'overflow-hidden p-4')}>
+          <div className="flex flex-col gap-2.5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <ToneBadge tone="emerald">Stage 8.30C-R1</ToneBadge>
+                <ToneBadge tone="slate">POS recovery + safe surgery</ToneBadge>
+                <ToneBadge tone={workspaceReady ? 'emerald' : operatorAuthenticated ? 'amber' : 'rose'}>
+                  {workspaceReady ? 'Workspace ready' : operatorAuthenticated ? 'Load workspace next' : 'Authentication required'}
+                </ToneBadge>
+                {returnFocusMode ? <ToneBadge tone="sky">Return flow active</ToneBadge> : null}
               </div>
-
-              <div className={cn(mutedSurfaceClass, 'px-4 py-3')}>
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Operator flow</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
-                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700">1. Authenticate</span>
-                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700">2. Start or resume sale</span>
-                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700">3. Finalize, lookup, return</span>
-                    </div>
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[290px]">
-                    <button className={primaryButtonClass} type="button" onClick={() => void performLogin()}>
-                      Authenticate operator
-                    </button>
-                    <button className={secondaryButtonClass} type="button" onClick={loadContextAndCatalog} disabled={!token}>
-                      Load workspace
-                    </button>
-                  </div>
-                </div>
+              <div className="space-y-1">
+                <h1 className="text-lg font-semibold tracking-tight text-slate-950 lg:text-[1.45rem]">Operator POS for selling, lookup, and bounded returns.</h1>
+                <p className="max-w-3xl text-sm leading-6 text-slate-600">Workflow state leads. Setup stays secondary. Return completion rises when a finalized sale is in play.</p>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                <CompactInfoCard label="Workspace" value={workspaceLabel} supporting={runtimeLabel} tone={workspaceReady ? 'emerald' : 'amber'} />
+                <CompactInfoCard
+                  label="Authentication"
+                  value={operatorAuthenticated ? 'Operator authenticated' : 'Needs sign-in'}
+                  supporting={operatorAuthenticated ? 'Token is loaded and setup actions are demoted.' : 'Open utility tools only if the current session must be restored.'}
+                  tone={operatorAuthenticated ? 'emerald' : 'rose'}
+                />
+                <CompactInfoCard
+                  label="Current sale"
+                  value={cartSession?.sessionNumber ?? 'No active sale'}
+                  supporting={cartSession ? cartSession.state : 'Start a new sale or resume one in scope.'}
+                  tone={cartSession ? stateTone(cartSession.state) : 'slate'}
+                />
+                <CompactInfoCard
+                  label="Return flow"
+                  value={selectedSaleDetail?.documentNo ?? returnSession?.returnNumber ?? 'Inactive'}
+                  supporting={returnFocusMode ? 'Lookup and return work now takes priority on the page.' : 'Becomes prominent only after sale completion.'}
+                  tone={returnFocusMode ? 'sky' : 'slate'}
+                />
               </div>
             </div>
 
-            <aside className={cn(mutedSurfaceClass, 'p-4')}>
-              <div className="flex flex-col gap-4 lg:flex-row xl:flex-col">
-                <div className="grid flex-1 gap-3 sm:grid-cols-2 xl:grid-cols-2">
-                  <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Branch</p>
-                    <p className="mt-2 text-sm font-semibold text-slate-900">{activeBranch?.name ?? 'Load workspace'}</p>
-                  </div>
-                  <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Register</p>
-                    <p className="mt-2 text-sm font-semibold text-slate-900">{activeRegister ? `${activeRegister.code} · ${activeRegister.nameEn}` : 'Load workspace'}</p>
-                  </div>
-                  <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Runtime</p>
-                    <p className="mt-2 text-sm font-semibold text-slate-900">{context?.contextSource === 'DEMO_SEED_OR_REAL_DB' ? 'Demo-ready runtime' : context ? 'Runtime database' : 'Not loaded'}</p>
-                  </div>
-                  <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Session</p>
-                    <p className="mt-2 text-sm font-semibold text-slate-900">{token ? 'Authenticated' : 'Needs sign-in'}</p>
-                  </div>
-                </div>
-                <div className="flex-1 space-y-3">
-                  {contextError ? <Notice title="Setup blocked" body={contextError} tone="error" /> : null}
-                  {statusMessage ? <Notice title="Latest operation" body={statusMessage} tone="success" /> : null}
+            <div className="xl:w-[300px] xl:min-w-[300px]">
+              <div className="rounded-[22px] border border-slate-200 bg-slate-50/90 p-3 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Next operator action</p>
+                <p className="mt-1 text-base font-semibold text-slate-950">{headerPrimaryLabel}</p>
+                <p className="mt-1 text-sm leading-5 text-slate-500">
+                  {operatorActionState === 'setup'
+                    ? 'Use seeded sign-in only if the current token is missing.'
+                    : operatorActionState === 'load-workspace'
+                      ? 'Load the active branch/register context before operating the POS flow.'
+                      : operatorActionState === 'resume-sale'
+                        ? 'Continue the mutable sale already in progress.'
+                        : operatorActionState === 'return-mode'
+                          ? 'Jump directly into lookup and bounded return completion.'
+                          : 'Open a new sale in the current register.'}
+                </p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                  <button className={primaryButtonClass} type="button" onClick={handleHeaderPrimaryAction} disabled={operatorActionState === 'start-sale' && !workspaceReady}>
+                    {headerPrimaryLabel}
+                  </button>
+                  <button className={secondaryButtonClass} type="button" onClick={handleHeaderSecondaryAction}>
+                    {headerSecondaryLabel}
+                  </button>
                 </div>
               </div>
-            </aside>
+
+              <div className="mt-3 space-y-3">
+                {contextError ? <Notice title="Setup blocked" body={contextError} tone="error" /> : null}
+                {statusMessage ? <Notice title="Latest operation" body={statusMessage} tone="success" /> : null}
+              </div>
+            </div>
           </div>
 
-          <details className="mt-4 rounded-[18px] border border-slate-200/80 bg-white/75 px-4 py-3 text-sm text-slate-600 shadow-sm">
-            <summary className="cursor-pointer list-none text-sm font-semibold text-slate-700">
-              Utility setup and diagnostics / إعداد تقني وتشخيصي
-            </summary>
+          <details id="utility-diagnostics" className="mt-2 inline-block max-w-full rounded-[14px] border border-slate-200/70 bg-white/70 px-3 py-2 text-sm text-slate-600 shadow-sm">
+            <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Utility setup and diagnostics</summary>
             <div className="mt-3 grid gap-3 lg:grid-cols-2">
               <form className="space-y-3 rounded-[18px] border border-slate-200 bg-white p-4" onSubmit={login}>
                 <div className="space-y-1">
                   <h3 className="text-sm font-semibold text-slate-950">Operator sign-in defaults</h3>
-                  <p className="text-sm text-slate-500">Keep seeded credentials available without letting them compete with the selling flow.</p>
+                  <p className="text-sm text-slate-500">Visible only on demand so credentials never compete with the selling flow.</p>
                 </div>
                 <input className={inputClass} placeholder="Tenant ID" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
                 <input className={inputClass} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -748,21 +912,21 @@ export default function PosPage() {
               <div className="space-y-3 rounded-[18px] border border-slate-200 bg-white p-4">
                 <div className="space-y-1">
                   <h3 className="text-sm font-semibold text-slate-950">Advanced overrides</h3>
-                  <p className="text-sm text-slate-500">Only for branch/register troubleshooting or temporary token override.</p>
+                  <p className="text-sm text-slate-500">Only for branch, register, or token troubleshooting.</p>
                 </div>
                 <input className={inputClass} placeholder="Branch ID" value={branchId} onChange={(e) => setBranchId(e.target.value)} />
                 <input className={inputClass} placeholder="Register ID" value={registerId} onChange={(e) => setRegisterId(e.target.value)} />
                 <textarea className={textareaClass} rows={4} placeholder="Technical bearer token (advanced only)" value={token} onChange={(e) => setToken(e.target.value)} />
-                <p className="text-xs leading-5 text-slate-500">Raw technical values remain available here for diagnostics, but they stay collapsed and secondary by default.</p>
+                <p className="text-xs leading-5 text-slate-500">Raw technical values remain available here for diagnostics, but stay collapsed and secondary by default.</p>
               </div>
             </div>
           </details>
         </header>
 
-        <div className="grid gap-4 xl:grid-cols-[1.45fr_0.95fr]">
-          <section className={cn(surfaceClass, 'p-4 lg:p-5')}>
+        <div className="grid gap-4 xl:grid-cols-[1.4fr_0.88fr]">
+          <section id="sale-workspace" className={cn(surfaceClass, 'p-4 lg:p-5')}>
             <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">Sale workspace</p>
                 <h2 className="text-2xl font-semibold text-slate-950">Start and manage the active sale</h2>
                 <p className="max-w-2xl text-sm leading-6 text-slate-600">
@@ -819,7 +983,7 @@ export default function PosPage() {
                 <>
                   <div className="grid gap-4 lg:grid-cols-[1.12fr_0.88fr]">
                     <div className={cn(mutedSurfaceClass, 'p-4')}>
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Product entry</p>
                         <h3 className="text-lg font-semibold text-slate-950">Add product pack and lot</h3>
                         <p className="text-sm leading-6 text-slate-600">
@@ -853,23 +1017,23 @@ export default function PosPage() {
                     </div>
 
                     <div className={cn(mutedSurfaceClass, 'p-4')}>
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Current sale snapshot</p>
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-lg font-semibold text-slate-950">{cartSession.sessionNumber}</h3>
                           <ToneBadge tone={stateTone(cartSession.state)}>{cartSession.state}</ToneBadge>
                         </div>
                       </div>
-                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                        <KeyValue label="Branch" value={activeBranch?.name ?? cartSession.branchId} />
-                        <KeyValue label="Register" value={activeRegister ? `${activeRegister.code} · ${activeRegister.nameEn}` : cartSession.registerId} />
-                        <KeyValue label="Fiscal reference" value={cartSession.fiscalSaleDocument?.documentNo ?? 'Pending finalization'} />
-                        <KeyValue label="Payment mode" value={latestCartPayment?.paymentMethod ?? 'Cash sale'} />
+                      <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+                        <CompactInfoCard label="Sale state" value={cartSession.state} supporting={saleFinalized ? 'Editing is locked and the return path should take priority next.' : 'Keep the cart mutable until cash finalization is confirmed.'} tone={stateTone(cartSession.state)} />
+                        <CompactInfoCard label="Fiscal reference" value={cartSession.fiscalSaleDocument?.documentNo ?? 'Pending finalization'} supporting={cartSession.sessionNumber} tone={saleFinalized ? 'emerald' : 'slate'} />
+                        <CompactInfoCard label="Payment mode" value={latestCartPayment?.paymentMethod ?? 'Cash sale'} supporting={latestCartPayment?.referenceCode ?? 'Reference appears after finalization'} />
+                        <CompactInfoCard label="Grand total" value={formatMoney(cartSession.grandTotal, cartSession.currency)} supporting={formatDateTime(latestCartPayment?.finalizedAt ?? cartSession.fiscalSaleDocument?.finalizedAt)} tone="emerald" />
                       </div>
-                      <div className="mt-4 rounded-[20px] bg-slate-950 px-4 py-4 text-white">
-                        <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-300">Grand total</p>
-                        <p className="mt-2 text-3xl font-semibold">{formatMoney(cartSession.grandTotal, cartSession.currency)}</p>
-                        <p className="mt-2 text-sm text-slate-300">{cartSession.state === 'FINALIZED' ? 'This sale is now locked and ready for lookup/return scenarios.' : 'Finalize when the customer sale is complete.'}</p>
+                      <div className="mt-3 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-600 shadow-sm">
+                        {cartSession.state === 'FINALIZED'
+                          ? 'Sale complete. Use the summary, lookup, and return tools as the primary workflow now.'
+                          : 'Keep working in the sale workspace until the customer-facing totals and tender are ready.'}
                       </div>
                     </div>
                   </div>
@@ -888,49 +1052,50 @@ export default function PosPage() {
                         {safeCartLines.map((line) => {
                           const edit = lineEdits[line.id] ?? { quantity: line.quantity, unitPrice: line.unitPrice, discount: line.discount, taxRate: line.taxRate ?? 0 };
                           return (
-                            <div key={line.id} className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm">
-                              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                                <div className="space-y-2">
+                            <div key={line.id} className="rounded-[20px] border border-slate-200 bg-white p-3 shadow-sm">
+                              <div className="flex flex-col gap-2.5 xl:flex-row xl:items-start xl:justify-between">
+                                <div className="space-y-1.5">
                                   <div className="flex flex-wrap items-center gap-2">
                                     <ToneBadge tone="slate">Line {line.lineNo}</ToneBadge>
-                                    <ToneBadge tone="sky">Pack {line.productPack?.code ?? line.productPackId.slice(0, 8)}</ToneBadge>
-                                    <ToneBadge tone="amber">Batch {line.lotBatch?.batchNo ?? line.lotBatchId.slice(0, 8)}</ToneBadge>
+                                    <ToneBadge tone="sky">{line.productPack?.code ?? 'Pack pending'}</ToneBadge>
+                                    <ToneBadge tone="amber">Batch {line.lotBatch?.batchNo ?? '-'}</ToneBadge>
                                   </div>
                                   <div>
-                                    <p className="text-base font-semibold text-slate-950">{line.productPack?.product.nameEn ?? 'Product pack'}</p>
-                                    <p className="text-sm text-slate-500">{line.productPack?.product.nameAr ?? 'منتج'} · Lot-controlled inventory line</p>
+                                    <p className="text-sm font-semibold text-slate-950">{line.productPack?.product.nameEn ?? 'Product pack'}</p>
+                                    <p className="text-xs text-slate-500">{line.productPack?.product.nameAr ?? 'منتج'} · Lot-controlled inventory line</p>
                                   </div>
+                                  {!isCartMutable ? (
+                                    <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
+                                      <MetricPill label="Qty" value={line.quantity} />
+                                      <MetricPill label="Unit" value={formatMoney(line.unitPrice, cartSession.currency)} />
+                                      <MetricPill label="Discount" value={formatMoney(line.discount, cartSession.currency)} />
+                                      <MetricPill label="Tax" value={`${line.taxRate ?? 0}%`} />
+                                    </div>
+                                  ) : null}
                                 </div>
                                 {isCartMutable ? (
-                                  <div className="grid gap-3 md:grid-cols-2 xl:min-w-[520px] xl:grid-cols-4">
-                                    <label className="rounded-[18px] border border-slate-200 bg-white px-3 py-3 shadow-sm">
-                                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Qty</p>
-                                      <input className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" type="number" min={1} step={1} value={edit.quantity} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, quantity: Number(e.target.value) || 1 } }))} />
+                                  <div className="grid gap-2 md:grid-cols-2 xl:min-w-[420px] xl:grid-cols-4">
+                                    <label className={metricCardClass}>
+                                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Qty</p>
+                                      <input className="mt-1.5 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" type="number" min={1} step={1} value={edit.quantity} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, quantity: Number(e.target.value) || 1 } }))} />
                                     </label>
-                                    <label className="rounded-[18px] border border-slate-200 bg-white px-3 py-3 shadow-sm">
-                                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Unit</p>
-                                      <input className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" type="number" min={0} step={0.01} value={edit.unitPrice} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, unitPrice: Number(e.target.value) || 0 } }))} />
+                                    <label className={metricCardClass}>
+                                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Unit</p>
+                                      <input className="mt-1.5 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" type="number" min={0} step={0.01} value={edit.unitPrice} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, unitPrice: Number(e.target.value) || 0 } }))} />
                                     </label>
-                                    <label className="rounded-[18px] border border-slate-200 bg-white px-3 py-3 shadow-sm">
-                                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Discount</p>
-                                      <input className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" type="number" min={0} step={0.01} value={edit.discount} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, discount: Number(e.target.value) || 0 } }))} />
+                                    <label className={metricCardClass}>
+                                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Discount</p>
+                                      <input className="mt-1.5 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" type="number" min={0} step={0.01} value={edit.discount} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, discount: Number(e.target.value) || 0 } }))} />
                                     </label>
-                                    <label className="rounded-[18px] border border-slate-200 bg-white px-3 py-3 shadow-sm">
-                                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tax %</p>
-                                      <input className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" type="number" min={0} step={0.01} value={edit.taxRate} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, taxRate: Number(e.target.value) || 0 } }))} />
+                                    <label className={metricCardClass}>
+                                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tax %</p>
+                                      <input className="mt-1.5 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" type="number" min={0} step={0.01} value={edit.taxRate} onChange={(e) => setLineEdits((cur) => ({ ...cur, [line.id]: { ...edit, taxRate: Number(e.target.value) || 0 } }))} />
                                     </label>
                                   </div>
-                                ) : (
-                                  <div className="grid gap-3 md:grid-cols-2 xl:min-w-[520px] xl:grid-cols-4">
-                                    <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3 shadow-sm"><p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Qty</p><p className="mt-2 text-base font-semibold text-slate-950">{line.quantity}</p></div>
-                                    <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3 shadow-sm"><p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Unit</p><p className="mt-2 text-base font-semibold text-slate-950">{formatMoney(line.unitPrice, cartSession.currency)}</p></div>
-                                    <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3 shadow-sm"><p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Discount</p><p className="mt-2 text-base font-semibold text-slate-950">{formatMoney(line.discount, cartSession.currency)}</p></div>
-                                    <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3 shadow-sm"><p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tax</p><p className="mt-2 text-base font-semibold text-slate-950">{line.taxRate ?? 0}%</p></div>
-                                  </div>
-                                )}
+                                ) : null}
                               </div>
                               {isCartMutable ? (
-                                <div className="mt-4 flex flex-wrap gap-3">
+                                <div className="mt-2.5 flex flex-wrap gap-2">
                                   <button className={secondaryButtonClass} type="button" onClick={() => updateCartLine(line.id)}>Update line</button>
                                   <button className="inline-flex items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100" type="button" onClick={() => removeCartLine(line.id)}>Remove line</button>
                                 </div>
@@ -1024,34 +1189,13 @@ export default function PosPage() {
                 </div>
               )}
             </section>
-            <section className={cn(mutedSurfaceClass, 'p-4')}>
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Context snapshot</p>
-                  <h2 className="mt-2 text-base font-semibold text-slate-900">Secondary workspace context</h2>
-                </div>
-                <ToneBadge tone="slate">Utility only</ToneBadge>
-              </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Branch and register</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">{activeBranch?.name ?? 'Branch not loaded'}</p>
-                  <p className="mt-1 text-sm text-slate-500">{activeRegister ? `${activeRegister.code} · ${activeRegister.nameEn}` : 'Register not loaded'}</p>
-                </div>
-                <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Runtime source</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">{context?.contextSource === 'DEMO_SEED_OR_REAL_DB' ? 'Demo-ready runtime data' : context ? 'Runtime DB data' : 'Not loaded'}</p>
-                  <p className="mt-1 text-sm text-slate-500">{context?.registers.length ? `${context.registers.length} register(s) in scope` : 'Load workspace to verify context.'}</p>
-                </div>
-              </div>
-            </section>
-          </aside>
+            </aside>
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[0.92fr_1.08fr]">
-          <section className={cn(surfaceClass, 'p-4 lg:p-5')}>
+        <div className={cn('grid gap-4', returnFocusMode ? 'xl:grid-cols-[1.08fr_0.92fr]' : 'xl:grid-cols-[0.92fr_1.08fr]')}>
+          <section id="lookup-workspace" className={cn(surfaceClass, 'p-4 lg:p-5', returnFocusMode && 'xl:order-2')}>
             <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">Transaction lookup</p>
                 <h2 className="text-2xl font-semibold text-slate-950">Find finalized sales quickly</h2>
                 <p className="max-w-2xl text-sm leading-6 text-slate-600">
@@ -1086,7 +1230,7 @@ export default function PosPage() {
                         )}
                       >
                         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                          <div className="space-y-2">
+                          <div className="space-y-1.5">
                             <div className="flex flex-wrap items-center gap-2">
                               <ToneBadge tone={stateTone(sale.state)}>{sale.state}</ToneBadge>
                               {isSelected ? <ToneBadge tone="emerald">Selected for return</ToneBadge> : null}
@@ -1112,72 +1256,87 @@ export default function PosPage() {
             </div>
           </section>
 
-          <section className={cn(surfaceClass, 'p-4 lg:p-5')}>
+                    <section id="return-workspace" className={cn(surfaceClass, 'p-4 lg:p-5', returnFocusMode && 'border-emerald-200 shadow-[0_24px_60px_rgba(16,185,129,0.12)] xl:order-1')}>
             <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">Return workspace</p>
-                <h2 className="text-2xl font-semibold text-slate-950">Create a bounded return against the selected sale</h2>
+                <h2 className="text-2xl font-semibold text-slate-950">Complete a bounded return with unmistakable proof</h2>
                 <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                  Select a finalized source sale, inspect the returnable lines, and create a controlled cash refund without blurring the lookup results and return actions together.
+                  The selected finalized sale stays visible, the returnable relationship is explicit, and finalized return proof gets its own completion surface instead of hiding inside a draft panel.
                 </p>
               </div>
-              <button className={primaryButtonClass} type="button" onClick={createReturnSession} disabled={!selectedSaleDetail}>Create return draft</button>
+              <div className="flex flex-wrap gap-2">
+                <button className={primaryButtonClass} type="button" onClick={createReturnSession} disabled={!selectedSaleDetail || !!returnSession}>
+                  {finalizedReturnSummary ? 'Return finalized' : returnSession ? 'Return draft open' : 'Create return draft'}
+                </button>
+                <button className={secondaryButtonClass} type="button" onClick={resetReturnWorkspace} disabled={!selectedSaleDetail && !returnSession}>
+                  Reset return flow
+                </button>
+              </div>
             </div>
 
             <div className="mt-4 space-y-4">
+              {finalizedReturnSummary ? (
+                <div className="rounded-[24px] border border-emerald-200 bg-emerald-50/95 p-4 shadow-[0_20px_40px_rgba(16,185,129,0.12)]">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <ToneBadge tone="emerald">FINALIZED</ToneBadge>
+                        <ToneBadge tone="emerald">Return completed</ToneBadge>
+                      </div>
+                      <h3 className="text-xl font-semibold text-emerald-950">{finalizedReturnSummary.returnReference}</h3>
+                      <p className="text-sm text-emerald-900">Source sale {finalizedReturnSummary.sourceSaleReference} · Return session {finalizedReturnSummary.returnSessionNumber}</p>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[340px]">
+                      <CompactInfoCard label="Refund total" value={formatMoney(finalizedReturnSummary.amount, finalizedReturnSummary.currency)} tone="emerald" />
+                      <CompactInfoCard label="Finalized at" value={formatDateTime(finalizedReturnSummary.finalizedAt)} tone="emerald" />
+                      <CompactInfoCard label="Source sale" value={finalizedReturnSummary.sourceSaleReference} supporting={finalizedReturnSummary.sourceSessionReference ?? 'Session unavailable'} />
+                      <CompactInfoCard label="Next safe action" value="Lookup another sale" supporting="This finalized return is locked and read only." />
+                    </div>
+                  </div>
+                  <div className="mt-2.5 rounded-[18px] border border-emerald-200 bg-white/85 px-4 py-3 text-sm leading-6 text-emerald-950">
+                    Return finalized and locked. This completion surface remains visible even after refresh so the operator can prove the refund reference, source sale relationship, and next safe action at a glance.
+                  </div>
+                  <div className="mt-2.5 flex flex-wrap gap-2">
+                    <button className={secondaryButtonClass} type="button" onClick={resetReturnWorkspace}>Create another return</button>
+                    <button className={secondaryButtonClass} type="button" onClick={refreshFinalizedSales}>Refresh lookup list</button>
+                  </div>
+                </div>
+              ) : null}
+
               {selectedSaleDetail ? (
                 <div className={cn(mutedSurfaceClass, 'p-4')}>
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
+                  <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="space-y-1.5">
                       <div className="flex flex-wrap items-center gap-2">
                         <ToneBadge tone={stateTone(selectedSaleDetail.state)}>{selectedSaleDetail.state}</ToneBadge>
                         <ToneBadge tone="sky">Return source selected</ToneBadge>
                       </div>
-                      <h3 className="mt-3 text-xl font-semibold text-slate-950">{selectedSaleDetail.documentNo}</h3>
-                      <p className="mt-1 text-sm text-slate-500">Session {selectedSaleDetail.posCartSession?.sessionNumber ?? '-'}</p>
+                      <div>
+                        <h3 className="text-xl font-semibold text-slate-950">{selectedSaleDetail.documentNo}</h3>
+                        <p className="mt-1 text-sm text-slate-500">Session {selectedSaleDetail.posCartSession?.sessionNumber ?? '-'} · {selectedSalePayment?.paymentMethod ?? 'Cash'}</p>
+                      </div>
                     </div>
-                    <div className="text-left lg:text-right">
-                      <p className="text-sm font-semibold text-slate-950">{formatMoney(selectedSaleDetail.grandTotal, selectedSaleDetail.currency)}</p>
-                      <p className="mt-1 text-sm text-slate-500">{selectedSalePayment?.paymentMethod ?? 'Cash'} · {formatDateTime(selectedSalePayment?.finalizedAt ?? selectedSaleDetail.finalizedAt)}</p>
+                    <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[320px]">
+                      <CompactInfoCard label="Sale total" value={formatMoney(selectedSaleDetail.grandTotal, selectedSaleDetail.currency)} tone="sky" />
+                      <CompactInfoCard label="Finalized at" value={formatDateTime(selectedSalePayment?.finalizedAt ?? selectedSaleDetail.finalizedAt)} tone="sky" />
                     </div>
                   </div>
                 </div>
               ) : (
-                <EmptyPanel title="No return source selected" body="Choose a finalized sale from the transaction lookup column and it will appear here as the return source." />
+                <EmptyPanel title="No return source selected" body="Choose a finalized sale from the transaction lookup area and it will appear here as the active return source." />
               )}
 
-              {returnSession ? (
-                <div className={cn('rounded-[24px] border p-4', returnSession.state === 'FINALIZED' ? 'border-emerald-200 bg-emerald-50/90' : 'border-slate-200 bg-slate-50/90')}>
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <ToneBadge tone={stateTone(returnSession.state)}>{returnSession.state}</ToneBadge>
-                        <h3 className="text-lg font-semibold text-slate-950">{returnSession.returnNumber}</h3>
-                      </div>
-                      <p className="mt-2 text-sm text-slate-500">Return fiscal reference {returnSession.fiscalReturnDocument?.documentNo ?? returnSession.fiscalReturnDocumentId ?? 'Pending'}</p>
-                    </div>
-                    <div className="text-left lg:text-right">
-                      <p className="text-sm text-slate-500">Refund total</p>
-                      <p className="text-xl font-semibold text-slate-950">{formatMoney(returnSession.grandTotal, returnSession.currency)}</p>
-                    </div>
-                  </div>
-                  {!isReturnMutable ? (
-                    <div className="mt-4 rounded-[18px] border border-emerald-200 bg-white px-4 py-3 text-sm leading-6 text-emerald-900">
-                      Return draft is finalized and locked. Return-entry controls are intentionally reduced so the final state reads clearly.
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
               {selectedSaleDetail ? (
                 <div className={cn(mutedSurfaceClass, 'p-4')}>
                   <div className="flex flex-col gap-2 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Returnable lines</p>
-                      <h3 className="mt-1 text-lg font-semibold text-slate-950">Choose the source line to return</h3>
+                      <h3 className="mt-1 text-lg font-semibold text-slate-950">Select the source line to return</h3>
                     </div>
                     <p className="text-sm text-slate-500">Remaining eligible quantity is surfaced directly on each line.</p>
                   </div>
-                  <div className="mt-4 grid gap-3">
+                  <div className="mt-4 grid gap-2">
                     {safeSelectedSaleLines.map((line) => {
                       const isSelected = line.id === returnSourceLineId;
                       return (
@@ -1190,24 +1349,27 @@ export default function PosPage() {
                             setReturnUnitPrice(line.unitPrice);
                           }}
                           className={cn(
-                            'rounded-[22px] border p-4 text-left transition',
+                            'rounded-[20px] border p-3 text-left transition',
                             isSelected ? 'border-emerald-300 bg-emerald-50 shadow-[0_16px_30px_rgba(16,185,129,0.12)]' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50',
                             !isReturnMutable && 'cursor-not-allowed opacity-60',
                           )}
                         >
-                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                            <div>
+                          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="space-y-1.5">
                               <div className="flex flex-wrap items-center gap-2">
                                 <ToneBadge tone="slate">Line {line.lineNo}</ToneBadge>
                                 <ToneBadge tone="amber">Batch {line.lotBatch?.batchNo ?? '-'}</ToneBadge>
+                                {isSelected ? <ToneBadge tone="emerald">Selected source line</ToneBadge> : null}
                               </div>
-                              <p className="mt-3 text-base font-semibold text-slate-950">{line.productPack.product.nameEn}</p>
-                              <p className="mt-1 text-sm text-slate-500">{line.productPack.product.nameAr} · Returnable sale line</p>
+                              <div>
+                                <p className="text-sm font-semibold text-slate-950">{line.productPack.product.nameEn}</p>
+                                <p className="text-xs text-slate-500">{line.productPack.product.nameAr} · Returnable sale line</p>
+                              </div>
                             </div>
-                            <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[320px]">
-                              <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">Sold <span className="ml-2 font-semibold text-slate-950">{line.quantity}</span></div>
-                              <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">Returned <span className="ml-2 font-semibold text-slate-950">{line.alreadyReturnedQty}</span></div>
-                              <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">Remaining <span className="ml-2 font-semibold">{line.remainingQty}</span></div>
+                            <div className="grid gap-1.5 sm:grid-cols-3 lg:min-w-[320px]">
+                              <MetricPill label="Sold" value={line.quantity} />
+                              <MetricPill label="Returned" value={line.alreadyReturnedQty} />
+                              <MetricPill label="Remaining" value={line.remainingQty} tone="emerald" />
                             </div>
                           </div>
                         </button>
@@ -1217,40 +1379,65 @@ export default function PosPage() {
                 </div>
               ) : null}
 
-              <div className={cn(mutedSurfaceClass, 'p-4')}>
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Return entry</p>
-                  <h3 className="text-lg font-semibold text-slate-950">Prepare the refund line</h3>
-                  <p className="text-sm text-slate-600">The selected source line stays visible above; this area only handles allowed quantity and refund value.</p>
-                </div>
-
-                <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-                  <input className={inputClass} type="number" min={1} step={1} value={returnQuantity} disabled={!isReturnMutable} onChange={(e) => setReturnQuantity(Number(e.target.value) || 1)} />
-                  <input className={inputClass} type="number" min={0} step={0.01} value={returnUnitPrice} disabled={!isReturnMutable} onChange={(e) => setReturnUnitPrice(Number(e.target.value) || 0)} />
-                  <button className={secondaryButtonClass} type="button" onClick={addReturnLine} disabled={!isReturnMutable}>Add return line</button>
-                </div>
-
-                {selectedReturnSourceLine ? (
-                  <div className="mt-4 rounded-[20px] border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600 shadow-sm">
-                    <p className="font-semibold text-slate-950">Selected source line</p>
-                    <p className="mt-2">{selectedReturnSourceLine.productPack.product.nameEn} · Batch {selectedReturnSourceLine.lotBatch?.batchNo ?? '-'}</p>
-                    <p className="mt-1">Remaining eligible quantity: <span className="font-semibold text-emerald-700">{selectedReturnSourceLine.remainingQty}</span></p>
+              {selectedSaleDetail ? (
+                <div className={cn(mutedSurfaceClass, 'p-4')}>
+                  <div className="space-y-1.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Return entry</p>
+                    <h3 className="text-lg font-semibold text-slate-950">Prepare and finalize the refund line</h3>
+                    <p className="text-sm text-slate-600">This panel stays tightly bound to the selected source line and becomes read only once the return is finalized.</p>
                   </div>
-                ) : null}
 
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button className={accentButtonClass} type="button" onClick={finalizeReturn} disabled={!isReturnMutable}>Finalize return</button>
+                  {selectedReturnSourceLine ? (
+                    <div className="mt-3 rounded-[18px] border border-emerald-200 bg-white px-4 py-3 shadow-sm">
+                      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">Selected return source</p>
+                          <p className="mt-1.5 text-sm font-semibold text-slate-950">{selectedReturnSourceLine.productPack.product.nameEn} · Batch {selectedReturnSourceLine.lotBatch?.batchNo ?? '-'}</p>
+                          <p className="mt-1 text-xs text-slate-500">Source sale {selectedSaleDetail.documentNo}</p>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[280px]">
+                          <MetricPill label="Remaining eligible" value={selectedReturnSourceLine.remainingQty} tone="emerald" />
+                          <MetricPill label="Refund unit" value={formatMoney(returnUnitPrice, selectedSaleDetail.currency)} />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-3 rounded-[18px] border border-sky-200 bg-sky-50 px-4 py-3 text-sm leading-6 text-sky-900">
+                      Select the source line first. This selected-source card appears here once the return relationship is actually bound.
+                    </div>
+                  )}
+
+                  <div className="mt-3 grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+                    <input className={inputClass} type="number" min={1} step={1} value={returnQuantity} disabled={!isReturnMutable} onChange={(e) => setReturnQuantity(Number(e.target.value) || 1)} />
+                    <input className={inputClass} type="number" min={0} step={0.01} value={returnUnitPrice} disabled={!isReturnMutable} onChange={(e) => setReturnUnitPrice(Number(e.target.value) || 0)} />
+                    <button className={secondaryButtonClass} type="button" onClick={addReturnLine} disabled={!isReturnMutable}>Add return line</button>
+                  </div>
+
+                  <div className="mt-2.5 flex flex-wrap gap-2">
+                    <button className={accentButtonClass} type="button" onClick={finalizeReturn} disabled={!isReturnMutable}>Finalize return</button>
+                    {returnFinalized ? <button className={secondaryButtonClass} type="button" onClick={resetReturnWorkspace}>Start another return</button> : null}
+                  </div>
+
+                  {returnFinalized ? (
+                    <div className="mt-3 rounded-[18px] border border-emerald-200 bg-white px-4 py-3 text-sm leading-6 text-emerald-900">
+                      Return finalized and locked. Line selection, quantity edits, and finalization controls are now read only by design.
+                    </div>
+                  ) : returnSession ? (
+                    <div className="mt-3 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-600">
+                      Return draft open. Add the allowed refund line, then finalize once the refund amount is correct.
+                    </div>
+                  ) : null}
                 </div>
-              </div>
+              ) : null}
 
               {returnSession ? (
                 <div className={cn(mutedSurfaceClass, 'p-4')}>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Return totals</p>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-[18px] bg-white px-4 py-4 shadow-sm"><p className="text-xs text-slate-500">Subtotal</p><p className="mt-2 text-lg font-semibold text-slate-950">{formatMoney(returnSession.subtotal, returnSession.currency)}</p></div>
-                    <div className="rounded-[18px] bg-white px-4 py-4 shadow-sm"><p className="text-xs text-slate-500">Discount</p><p className="mt-2 text-lg font-semibold text-slate-950">{formatMoney(returnSession.discountTotal, returnSession.currency)}</p></div>
-                    <div className="rounded-[18px] bg-white px-4 py-4 shadow-sm"><p className="text-xs text-slate-500">Tax</p><p className="mt-2 text-lg font-semibold text-slate-950">{formatMoney(returnSession.taxTotal, returnSession.currency)}</p></div>
-                    <div className="rounded-[18px] bg-slate-950 px-4 py-4 text-white shadow-sm"><p className="text-xs text-slate-400">Refund total</p><p className="mt-2 text-lg font-semibold">{formatMoney(returnSession.grandTotal, returnSession.currency)}</p></div>
+                  <div className="mt-3 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+                    <CompactInfoCard label="Subtotal" value={formatMoney(returnSession.subtotal, returnSession.currency)} />
+                    <CompactInfoCard label="Discount" value={formatMoney(returnSession.discountTotal, returnSession.currency)} />
+                    <CompactInfoCard label="Tax" value={formatMoney(returnSession.taxTotal, returnSession.currency)} />
+                    <CompactInfoCard label="Refund total" value={formatMoney(returnSession.grandTotal, returnSession.currency)} tone="emerald" />
                   </div>
                 </div>
               ) : null}
@@ -1263,5 +1450,28 @@ export default function PosPage() {
     </main>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
