@@ -206,20 +206,20 @@ type PosWorkspaceView = "cashier" | "search" | "maintenance" | "returns";
 const defaultTenant = "11111111-1111-4111-8111-111111111111";
 const defaultBranch = "22222222-2222-4222-8222-222222222222";
 const surfaceClass =
-  "rounded-[28px] border border-slate-200/80 bg-white/94 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur";
+  "rounded-[20px] border border-slate-700/90 bg-[#1b212b] shadow-[0_18px_48px_rgba(2,6,23,0.34)]";
 const mutedSurfaceClass =
-  "rounded-[24px] border border-slate-200/85 bg-slate-50/92";
+  "rounded-[18px] border border-slate-700/90 bg-[#222934]";
 const inputClass =
-  "h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400";
+  "h-11 w-full rounded-[14px] border border-slate-600 bg-[#161b23] px-4 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-[#10151d] disabled:text-slate-500";
 
 const primaryButtonClass =
-  "inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(5,150,105,0.28)] transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none";
+  "inline-flex items-center justify-center rounded-[14px] border border-blue-400/70 bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-700 disabled:text-slate-400";
 const secondaryButtonClass =
-  "inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400";
+  "inline-flex items-center justify-center rounded-[14px] border border-slate-600 bg-[#242b36] px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-[#2a3240] disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-[#171c24] disabled:text-slate-500";
 const accentButtonClass =
-  "inline-flex items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(15,23,42,0.18)] transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none";
+  "inline-flex items-center justify-center rounded-[14px] border border-emerald-400/70 bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-700 disabled:text-slate-400";
 const metricCardClass =
-  "rounded-[18px] border border-slate-200 bg-white px-3 py-2.5 shadow-sm";
+  "rounded-[14px] border border-slate-600 bg-[#181e27] px-3 py-2.5";
 const searchCategoryExamples = [
   "Tablets",
   "Syrup",
@@ -349,19 +349,19 @@ function ToneBadge({
 }) {
   const toneClass =
     tone === "emerald"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
       : tone === "amber"
-        ? "border-amber-200 bg-amber-50 text-amber-700"
+        ? "border-amber-400/30 bg-amber-500/10 text-amber-200"
         : tone === "rose"
-          ? "border-rose-200 bg-rose-50 text-rose-700"
+          ? "border-rose-400/30 bg-rose-500/10 text-rose-200"
           : tone === "sky"
-            ? "border-sky-200 bg-sky-50 text-sky-700"
-            : "border-slate-200 bg-slate-100 text-slate-700";
+            ? "border-sky-400/30 bg-sky-500/10 text-sky-200"
+            : "border-slate-600 bg-[#232a34] text-slate-300";
 
   return (
     <span
       className={cn(
-        "inline-flex rounded-full border px-3 py-1 text-xs font-semibold tracking-wide",
+        "inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-[0.16em]",
         toneClass,
       )}
     >
@@ -370,31 +370,6 @@ function ToneBadge({
   );
 }
 
-function KeyValue({
-  label,
-  value,
-  emphasis = false,
-}: {
-  label: string;
-  value: ReactNode;
-  emphasis?: boolean;
-}) {
-  return (
-    <div className="space-y-1">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-        {label}
-      </p>
-      <p
-        className={cn(
-          "text-sm text-slate-700",
-          emphasis && "text-base font-semibold text-slate-950",
-        )}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
 
 function CompactInfoCard({
   label,
@@ -409,25 +384,23 @@ function CompactInfoCard({
 }) {
   const toneClass =
     tone === "emerald"
-      ? "border-emerald-200 bg-emerald-50/90"
+      ? "border-emerald-400/30 bg-emerald-500/10"
       : tone === "amber"
-        ? "border-amber-200 bg-amber-50/90"
+        ? "border-amber-400/30 bg-amber-500/10"
         : tone === "rose"
-          ? "border-rose-200 bg-rose-50/90"
+          ? "border-rose-400/30 bg-rose-500/10"
           : tone === "sky"
-            ? "border-sky-200 bg-sky-50/90"
-            : "border-slate-200 bg-white";
+            ? "border-sky-400/30 bg-sky-500/10"
+            : "border-slate-600 bg-[#181e27]";
 
   return (
-    <div
-      className={cn("rounded-[18px] border px-3.5 py-3 shadow-sm", toneClass)}
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+    <div className={cn("rounded-[14px] border px-3.5 py-3", toneClass)}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
         {label}
       </p>
-      <p className="mt-1.5 text-sm font-semibold text-slate-950">{value}</p>
+      <p className="mt-1.5 text-sm font-semibold text-slate-100">{value}</p>
       {supporting ? (
-        <p className="mt-1 text-xs leading-5 text-slate-500">{supporting}</p>
+        <p className="mt-1 text-xs leading-5 text-slate-400">{supporting}</p>
       ) : null}
     </div>
   );
@@ -444,18 +417,18 @@ function MetricPill({
 }) {
   const toneClass =
     tone === "emerald"
-      ? "bg-emerald-50 text-emerald-900"
+      ? "border border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
       : tone === "amber"
-        ? "bg-amber-50 text-amber-900"
+        ? "border border-amber-400/30 bg-amber-500/10 text-amber-100"
         : tone === "rose"
-          ? "bg-rose-50 text-rose-900"
+          ? "border border-rose-400/30 bg-rose-500/10 text-rose-100"
           : tone === "sky"
-            ? "bg-sky-50 text-sky-900"
-            : "bg-slate-100 text-slate-800";
+            ? "border border-sky-400/30 bg-sky-500/10 text-sky-100"
+            : "border border-slate-600 bg-[#181e27] text-slate-200";
 
   return (
-    <div className={cn("rounded-2xl px-3 py-2 text-sm", toneClass)}>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] opacity-65">
+    <div className={cn("rounded-[14px] px-3 py-2 text-sm", toneClass)}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] opacity-70">
         {label}
       </p>
       <p className="mt-1 font-semibold">{value}</p>
@@ -474,13 +447,13 @@ function Notice({
 }) {
   const toneClass =
     tone === "success"
-      ? "border-emerald-200 bg-emerald-50/90 text-emerald-900"
+      ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
       : tone === "error"
-        ? "border-rose-200 bg-rose-50/90 text-rose-900"
-        : "border-sky-200 bg-sky-50/90 text-sky-900";
+        ? "border-rose-400/30 bg-rose-500/10 text-rose-100"
+        : "border-sky-400/30 bg-sky-500/10 text-sky-100";
 
   return (
-    <div className={cn("rounded-2xl border px-4 py-3 shadow-sm", toneClass)}>
+    <div className={cn("rounded-[14px] border px-4 py-3", toneClass)}>
       <p className="text-sm font-semibold">{title}</p>
       <p className="mt-1 text-sm opacity-90">{body}</p>
     </div>
@@ -489,8 +462,8 @@ function Notice({
 
 function EmptyPanel({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-[22px] border border-dashed border-slate-300 bg-slate-50/80 px-5 py-8 text-center text-sm text-slate-500">
-      <p className="text-base font-semibold text-slate-700">{title}</p>
+    <div className="rounded-[16px] border border-dashed border-slate-600 bg-[#181e27] px-5 py-8 text-center text-sm text-slate-400">
+      <p className="text-base font-semibold text-slate-200">{title}</p>
       <p className="mt-2 leading-6">{body}</p>
     </div>
   );
@@ -529,10 +502,10 @@ function SearchModeButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3 py-2 text-xs font-semibold tracking-[0.16em] transition",
+        "rounded-[14px] border px-3 py-2 text-xs font-semibold tracking-[0.16em] transition",
         active
-          ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
+          ? "border-blue-400/70 bg-blue-500/15 text-blue-100"
+          : "border-slate-600 bg-[#181e27] text-slate-300 hover:border-slate-500 hover:text-slate-100",
       )}
     >
       {label}
@@ -613,7 +586,7 @@ export default function PosPage() {
   const activeRegister =
     context?.registers.find((item) => item.id === registerId) ?? null;
   const isReturnMutable = !!returnSession && returnSession.state === "OPEN";
-  const latestCartPayment = cartSession?.paymentFinalizations?.[0] ?? null;
+
   const selectedSalePayment =
     selectedSaleDetail?.paymentFinalizations?.[0] ?? null;
   const selectedReturnSourceLine =
@@ -626,15 +599,8 @@ export default function PosPage() {
   const returnFocusMode = Boolean(
     selectedSaleDetail || returnSession || finalizedReturnSummary,
   );
-  const workspaceLabel = activeRegister
-    ? `${activeBranch?.name ?? "Branch"} · ${activeRegister.code} · ${activeRegister.nameEn}`
-    : (activeBranch?.name ?? "Workspace not loaded");
-  const runtimeLabel =
-    context?.contextSource === "DEMO_SEED_OR_REAL_DB"
-      ? "Demo-ready runtime"
-      : context
-        ? "Runtime database"
-        : "Not loaded";
+
+
   const operatorActionState: OperatorActionState = !operatorAuthenticated
     ? "setup"
     : !workspaceReady
@@ -1012,7 +978,7 @@ export default function PosPage() {
             registerId,
             legalEntityId: legalEntityId || undefined,
             currency: "JOD",
-            notes: "Stage 8.32B true cashier counter shell",
+            notes: "Stage 8.33A concept A cashier counter shell",
           }),
         },
       );
@@ -1347,863 +1313,778 @@ export default function PosPage() {
     ? newLinePrice
     : focusedInvoiceRow?.unitPrice ?? 0;
   const maintenanceTaxRate = focusedInvoiceRow?.taxRate ?? 0;
+  const workspaceTabs: Array<{
+    id: PosWorkspaceView;
+    label: string;
+    note: string;
+  }> = [
+    { id: "cashier", label: "Sell Counter", note: "Invoice-first selling" },
+    { id: "search", label: "Search", note: "Lookup workspace" },
+    { id: "maintenance", label: "Pricing & Entry", note: "Pricing and classification" },
+    { id: "returns", label: "Returns", note: "Transaction lookup and refunds" },
+  ];
+  const invoiceReference =
+    cartSession?.fiscalSaleDocument?.documentNo ??
+    cartSession?.sessionNumber ??
+    "No active invoice";
+  const stripStatusLabel = contextError || cartError || returnError
+    ? "Needs attention"
+    : workspaceReady
+      ? returnFocusMode
+        ? "Returns ready"
+        : cartSession
+          ? cartSession.state === "FINALIZED"
+            ? "Closed bill"
+            : cartSession.state
+          : "Ready"
+      : operatorAuthenticated
+        ? "Load workspace"
+        : "Auth required";
+  const workspaceModeLabel =
+    workspaceView === "cashier"
+      ? cartSession?.state === "FINALIZED"
+        ? "Closed sale"
+        : "Cash sale"
+      : workspaceView === "search"
+        ? "Lookup"
+        : workspaceView === "maintenance"
+          ? "Pricing review"
+          : "Returns";
+  const shiftLabel = returnFocusMode
+    ? finalizedReturnSummary?.returnSessionNumber ??
+      returnSession?.returnNumber ??
+      "Return flow"
+    : cartSession?.sessionNumber ?? "No active shift";
+  const selectedPackLabel = selectedCatalogContext
+    ? `${selectedCatalogContext.pack.product.nameEn} · Pack ${selectedCatalogContext.pack.packCode}`
+    : focusedInvoiceRow?.productPack
+      ? `${focusedInvoiceRow.productPack.product.nameEn} · Pack ${focusedInvoiceRow.productPack.code}`
+      : "No pack selected";
+  const selectedLotLabel = selectedCatalogContext
+    ? selectedCatalogContext.lot.batchNo
+    : focusedInvoiceRow?.lotBatch?.batchNo ?? "No lot selected";
+  const selectedExpiryLabel = selectedCatalogContext
+    ? formatDateLabel(selectedCatalogContext.lot.expiryDate)
+    : formatDateLabel(focusedInvoiceRow?.lotBatch?.expiryDate);
   return (
     <main
-      className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.14),_transparent_22%),linear-gradient(180deg,_#f8fafc_0%,_#eef6ff_48%,_#ecfeff_100%)] text-slate-950"
+      className="min-h-screen bg-[#0f1318] text-slate-100"
       style={{
         fontFamily: '"Segoe UI", "Noto Sans Arabic", Tahoma, sans-serif',
       }}
     >
-      <div className="mx-auto max-w-[1560px] space-y-4 px-4 py-4 lg:px-6 lg:py-5">
-        <header className={cn(surfaceClass, "space-y-2 p-3 lg:p-3")}>
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="min-w-0 flex-1 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <ToneBadge tone="emerald">Jordan pharmacy cashier</ToneBadge>
-                <ToneBadge
-                  tone={
-                    workspaceReady
-                      ? "emerald"
-                      : operatorAuthenticated
-                        ? "amber"
-                        : "rose"
-                  }
+      <div className="mx-auto max-w-[1540px] space-y-3 px-4 py-4 lg:px-6 lg:py-5">
+        <header className="space-y-3">
+          <section className={cn(surfaceClass, "space-y-3 px-4 py-4")}>
+            <div className="rounded-[16px] border border-slate-600 bg-[#202732] px-4 py-3">
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div className="min-w-0">
+                  <h1 className="text-[1.9rem] font-semibold tracking-tight text-slate-50 lg:text-[2.35rem]">
+                    Classic Pharmacy Cashier Counter
+                  </h1>
+                  <p className="text-sm text-slate-400">
+                    Best match for the target: invoice dominates, support tools stay secondary, and non-selling work lives in separate workspaces.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    className={primaryButtonClass}
+                    type="button"
+                    onClick={handleHeaderPrimaryAction}
+                    disabled={
+                      operatorActionState === "start-sale" && !workspaceReady
+                    }
+                  >
+                    {headerPrimaryLabel}
+                  </button>
+                  <button
+                    className={secondaryButtonClass}
+                    type="button"
+                    onClick={handleHeaderSecondaryAction}
+                  >
+                    {headerSecondaryLabel}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-2 xl:grid-cols-4">
+              {workspaceTabs.map((tab) => {
+                const isActive = workspaceView === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setWorkspaceView(tab.id)}
+                    className={cn(
+                      "rounded-[14px] border px-4 py-3 text-left transition",
+                      isActive
+                        ? "border-blue-400/80 bg-blue-500/20 text-blue-50"
+                        : "border-slate-600 bg-[#242b36] text-slate-300 hover:border-slate-500 hover:bg-[#2a3240] hover:text-slate-100",
+                    )}
+                  >
+                    <p className="text-sm font-semibold">{tab.label}</p>
+                    <p className="mt-1 text-xs text-slate-400">{tab.note}</p>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid gap-2 xl:grid-cols-5">
+              {[
+                { label: "Operator", value: operatorAuthenticated ? email : "Pending sign-in" },
+                {
+                  label: "Register",
+                  value: activeRegister
+                    ? `${activeRegister.code} · ${activeBranch?.name ?? "Branch"}`
+                    : "Register not loaded",
+                },
+                { label: "Shift", value: shiftLabel },
+                { label: "Status", value: stripStatusLabel },
+                { label: "Mode", value: workspaceModeLabel },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-[14px] border border-slate-600 bg-[#242b36] px-4 py-2.5"
                 >
-                  {workspaceReady
-                    ? "Counter ready"
-                    : operatorAuthenticated
-                      ? "Load workspace next"
-                      : "Authentication required"}
-                </ToneBadge>
-                {returnFocusMode ? (
-                  <ToneBadge tone="sky">Return proof preserved</ToneBadge>
-                ) : null}
-              </div>
-              <div className="space-y-1">
-                <h1 className="text-xl font-semibold tracking-tight text-slate-950 lg:text-[1.55rem]">
-                  Active counter workspace
-                </h1>
-                <p className="max-w-5xl text-sm leading-6 text-slate-600">
-                  Operator, register, shift, and runtime stay in a thin operational strip. Other work areas switch cleanly instead of stacking under selling.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 xl:justify-end">
-              <button
-                className={primaryButtonClass}
-                type="button"
-                onClick={handleHeaderPrimaryAction}
-                disabled={
-                  operatorActionState === "start-sale" && !workspaceReady
-                }
-              >
-                {headerPrimaryLabel}
-              </button>
-              <button
-                className={secondaryButtonClass}
-                type="button"
-                onClick={handleHeaderSecondaryAction}
-              >
-                {headerSecondaryLabel}
-              </button>
-            </div>
-          </div>
-
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-            <CompactInfoCard
-              label="Operator"
-              value={operatorAuthenticated ? email : "Needs sign-in"}
-              supporting={
-                operatorAuthenticated
-                  ? "Active operator session is loaded for this counter."
-                  : "Diagnostics stay collapsed until the operator actually needs them."
-              }
-              tone={operatorAuthenticated ? "emerald" : "rose"}
-            />
-            <CompactInfoCard
-              label="Register strip"
-              value={
-                activeRegister
-                  ? `${activeRegister.code} · ${activeRegister.nameEn}`
-                  : "Register not loaded"
-              }
-              supporting={activeBranch?.name ?? "No branch loaded"}
-              tone={workspaceReady ? "emerald" : "amber"}
-            />
-            <CompactInfoCard
-              label="Shift / session"
-              value={cartSession?.sessionNumber ?? "No active counter session"}
-              supporting={
-                cartSession
-                  ? `Invoice state ${cartSession.state}`
-                  : "Shift runtime is not wired yet, so the UI shows the live register session honestly."
-              }
-              tone={cartSession ? stateTone(cartSession.state) : "slate"}
-            />
-            <CompactInfoCard
-              label="Runtime"
-              value={runtimeLabel}
-              supporting={
-                workspaceReady
-                  ? "Tax-code, JoFotara, and controlled-substance policy remain pending backend compliance wiring."
-                  : workspaceLabel
-              }
-              tone={workspaceReady ? "emerald" : "amber"}
-            />
-          </div>
-
-          <details
-            id="utility-diagnostics"
-            className="rounded-[18px] border border-slate-200/80 bg-white/80 px-4 py-3 text-sm text-slate-600 shadow-sm"
-          >
-            <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Utility setup and diagnostics
-            </summary>
-            <div className="mt-3 grid gap-3 lg:grid-cols-2">
-              <form
-                className="space-y-3 rounded-[18px] border border-slate-200 bg-white p-4"
-                onSubmit={login}
-              >
-                <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-slate-950">
-                    Operator sign-in defaults
-                  </h3>
-                  <p className="text-sm text-slate-500">
-                    Visible on demand so setup never competes with the selling surface.
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    {item.label}
+                  </p>
+                  <p className="mt-1.5 truncate text-sm font-semibold text-slate-100">
+                    {item.value}
                   </p>
                 </div>
-                <input
-                  className={inputClass}
-                  placeholder="Tenant ID"
-                  value={tenantId}
-                  onChange={(e) => setTenantId(e.target.value)}
-                />
-                <input
-                  className={inputClass}
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-                <input
-                  className={inputClass}
-                  placeholder="Password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <button className={primaryButtonClass} type="submit">
-                  Sign in
-                </button>
-              </form>
-
-              <div className="space-y-3 rounded-[18px] border border-slate-200 bg-white p-4">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-slate-950">
-                    Advanced overrides
-                  </h3>
-                  <p className="text-sm text-slate-500">
-                    Only for branch, register, or token troubleshooting.
-                  </p>
-                </div>
-                <input
-                  className={inputClass}
-                  placeholder="Branch ID"
-                  value={branchId}
-                  onChange={(e) => setBranchId(e.target.value)}
-                />
-                <input
-                  className={inputClass}
-                  placeholder="Register ID"
-                  value={registerId}
-                  onChange={(e) => setRegisterId(e.target.value)}
-                />
-                <input
-                  className={inputClass}
-                  placeholder="Technical bearer token (advanced only)"
-                  type="password"
-                  autoComplete="off"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                />
-                <p className="text-xs leading-5 text-slate-500">
-                  Technical token access remains available for troubleshooting, but the live token stays masked so diagnostics never become the page headline.
-                </p>
-              </div>
+              ))}
             </div>
-          </details>
 
-          <div className="space-y-3">
+            <details
+              id="utility-diagnostics"
+              className="rounded-[14px] border border-slate-700 bg-[#161b23] px-4 py-3 text-sm text-slate-300"
+            >
+              <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Utility setup and diagnostics
+              </summary>
+              <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                <form
+                  className="space-y-3 rounded-[16px] border border-slate-700 bg-[#202732] p-4"
+                  onSubmit={login}
+                >
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-slate-100">
+                      Operator sign-in defaults
+                    </h3>
+                    <p className="text-sm text-slate-400">
+                      Setup stays collapsed until the counter actually needs it.
+                    </p>
+                  </div>
+                  <input className={inputClass} placeholder="Tenant ID" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
+                  <input className={inputClass} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  <input className={inputClass} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                  <button className={primaryButtonClass} type="submit">Sign in</button>
+                </form>
+
+                <div className="space-y-3 rounded-[16px] border border-slate-700 bg-[#202732] p-4">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-slate-100">Advanced overrides</h3>
+                    <p className="text-sm text-slate-400">Only for branch, register, or token troubleshooting.</p>
+                  </div>
+                  <input className={inputClass} placeholder="Branch ID" value={branchId} onChange={(e) => setBranchId(e.target.value)} />
+                  <input className={inputClass} placeholder="Register ID" value={registerId} onChange={(e) => setRegisterId(e.target.value)} />
+                  <input className={inputClass} placeholder="Technical bearer token (advanced only)" type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} />
+                  <p className="text-xs leading-5 text-slate-500">The live token stays masked. Diagnostics remain secondary and never become the cashier headline.</p>
+                </div>
+              </div>
+            </details>
+
             {contextError ? (
               <Notice title="Setup blocked" body={contextError} tone="error" />
             ) : null}
             {statusMessage ? (
-              <Notice
-                title="Latest operation"
-                body={statusMessage}
-                tone="success"
-              />
+              <Notice title="Latest operation" body={statusMessage} tone="success" />
             ) : null}
-          </div>
+          </section>
         </header>
 
-        <section className={cn(surfaceClass, "p-3 lg:p-4")}>
-          <div className="grid gap-2 xl:grid-cols-4">
-            {([
-              {
-                id: "cashier",
-                label: "Sell / cashier counter",
-                note: "Default selling surface",
-              },
-              {
-                id: "search",
-                label: "Search / product lookup",
-                note: "Richer lookup away from the bill",
-              },
-              {
-                id: "maintenance",
-                label: "Pricing / product entry",
-                note: "Classification and pricing scaffold",
-              },
-              {
-                id: "returns",
-                label: "Transaction lookup / returns",
-                note: "Finalized sale lookup and refunds",
-              },
-            ] as Array<{
-              id: PosWorkspaceView;
-              label: string;
-              note: string;
-            }>).map((tab) => {
-              const isActive = workspaceView === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setWorkspaceView(tab.id)}
-                  className={cn(
-                    "rounded-[20px] border px-4 py-3 text-left transition",
-                    isActive
-                      ? "border-emerald-300 bg-emerald-50 text-emerald-900"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50",
-                  )}
-                >
-                  <p className="text-sm font-semibold">{tab.label}</p>
-                  <p className="mt-1 text-xs leading-5 opacity-80">{tab.note}</p>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
         {workspaceView === "cashier" ? (
-          <section id="sale-workspace" className={cn(surfaceClass, "p-4 lg:p-5")}>
-          <div className="grid gap-4 xl:grid-cols-[1.58fr_0.8fr]">
-            <div className="space-y-4">
-              <section className="rounded-[30px] bg-slate-950 px-5 py-5 text-white shadow-[0_30px_70px_rgba(15,23,42,0.24)]">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="space-y-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-300">
-                      Active invoice lane
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-2xl font-semibold text-white">
-                        {cartSession?.fiscalSaleDocument?.documentNo ??
-                          cartSession?.sessionNumber ??
-                          "No sale open"}
-                      </h2>
-                      {cartSession ? (
-                        <ToneBadge tone={stateTone(cartSession.state)}>
-                          {cartSession.state}
+          <>
+            <section id="sale-workspace" className={cn(surfaceClass, "p-4 lg:p-5")}>
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="space-y-3">
+                <section className="rounded-[16px] border border-slate-700 bg-[#171c24]">
+                  <div className="flex flex-col gap-3 border-b border-slate-700 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <ToneBadge tone={workspaceReady ? "emerald" : "rose"}>
+                          Sell counter
                         </ToneBadge>
-                      ) : (
-                        <ToneBadge tone="slate">Idle</ToneBadge>
-                      )}
-                    </div>
-                    <p className="max-w-2xl text-sm leading-6 text-slate-300">
-                      Scanner or search entry, pack or lot selection, invoice rows, and totals all stay in the same selling lane so the operator never feels dropped into an admin dashboard.
-                    </p>
-                  </div>
-
-                  <div className="grid gap-2 sm:grid-cols-2 xl:min-w-[460px] xl:grid-cols-4">
-                    <div className="rounded-[20px] border border-white/10 bg-white/5 px-4 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                        Branch / register
-                      </p>
-                      <p className="mt-1.5 text-sm font-semibold text-white">
-                        {activeRegister
-                          ? `${activeBranch?.name ?? "Branch"} · ${activeRegister.code}`
-                          : activeBranch?.name ?? "Not loaded"}
-                      </p>
-                    </div>
-                    <div className="rounded-[20px] border border-white/10 bg-white/5 px-4 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                        Open carts
-                      </p>
-                      <p className="mt-1.5 text-sm font-semibold text-white">
-                        {safeOpenCarts.length}
-                      </p>
-                    </div>
-                    <div className="rounded-[20px] border border-white/10 bg-white/5 px-4 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                        Tax visible
-                      </p>
-                      <p className="mt-1.5 text-sm font-semibold text-white">
-                        {formatMoney(cartSession?.taxTotal ?? 0, cartSession?.currency ?? "JOD")}
-                      </p>
-                    </div>
-                    <div className="rounded-[20px] border border-emerald-400/30 bg-emerald-500/10 px-4 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200">
-                        Payable now
-                      </p>
-                      <p className="mt-1.5 text-sm font-semibold text-white">
-                        {formatMoney(
-                          cartSession?.grandTotal ?? 0,
-                          cartSession?.currency ?? "JOD",
+                        {cartSession ? (
+                          <ToneBadge tone={stateTone(cartSession.state)}>
+                            {cartSession.state}
+                          </ToneBadge>
+                        ) : (
+                          <ToneBadge tone="slate">Idle</ToneBadge>
                         )}
+                      </div>
+                      <h2 className="text-2xl font-semibold text-slate-50">
+                        {invoiceReference}
+                      </h2>
+                      <p className="text-sm text-slate-400">
+                        Search or scan, choose pack and lot, add the line, then
+                        close the bill from the cashier footer.
                       </p>
                     </div>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-4 xl:grid-cols-[1.25fr_0.95fr]">
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <ToneBadge tone="emerald">Barcode-first entry</ToneBadge>
-                      <ToneBadge tone="sky">Fast live search only</ToneBadge>
-                      {selectedCatalogContext ? (
-                        <ToneBadge tone="amber">
-                          Batch {selectedCatalogContext.lot.batchNo}
-                        </ToneBadge>
-                      ) : null}
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className={secondaryButtonClass}
+                        type="button"
+                        onClick={createCartSession}
+                        disabled={!workspaceReady}
+                      >
+                        Start new sale
+                      </button>
+                      <button
+                        className={secondaryButtonClass}
+                        type="button"
+                        onClick={loadContextAndCatalog}
+                        disabled={!workspaceReady}
+                      >
+                        Refresh workspace data
+                      </button>
                     </div>
+                  </div>
+                  <div className="grid gap-2 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,240px)_90px_120px_auto]">
                     <input
-                      className="h-14 w-full rounded-[22px] border border-white/10 bg-white/10 px-4 text-base text-white outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-400/20"
-                      placeholder="Scan barcode, pack code, trade name, or batch"
+                      className={inputClass}
+                      placeholder="Scan barcode / Search product, generic, barcode..."
                       value={catalogSearch}
                       onChange={(e) => setCatalogSearch(e.target.value)}
                     />
-                    <div className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-3 text-sm leading-6 text-slate-300">
-                      Richer trade/generic/supplier/category lookup has been moved to the dedicated Search / product lookup workspace so the live counter stays focused on scanning and adding lines.
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <button className={secondaryButtonClass} type="button" onClick={() => setWorkspaceView("search")}>
-                        Open dedicated lookup
-                      </button>
-                      <button className={secondaryButtonClass} type="button" onClick={() => setWorkspaceView("maintenance")}>
-                        Open pricing / entry
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                          Selling step
-                        </p>
-                        <h3 className="mt-2 text-lg font-semibold text-white">
-                          Select pack and lot, then push it straight into the bill.
-                        </h3>
-                        <p className="mt-1.5 text-sm leading-6 text-slate-300">
-                          Pack or lot choice stays in the cashier lane, not in a detached admin detour.
-                        </p>
-                      </div>
-                      <select
-                        className={cn(inputClass, "border-white/10 bg-white/95")}
-                        value={selectedCatalogKey}
-                        onChange={(e) => setSelectedCatalogKey(e.target.value)}
-                        disabled={!cartSession || !isCartMutable}
-                      >
-                        <option value="">Select product pack and lot</option>
-                        {visibleCatalogOptions.map((option) => (
-                          <option
-                            key={option.key}
-                            value={option.key}
-                          >{`${option.label} · ${option.subtitle}`}</option>
-                        ))}
-                      </select>
-                      <div className="grid gap-3 md:grid-cols-[0.65fr_0.9fr_auto]">
-                        <input
-                          className={cn(inputClass, "border-white/10 bg-white/95")}
-                          min={1}
-                          step={1}
-                          type="number"
-                          value={newLineQty}
-                          onChange={(e) =>
-                            setNewLineQty(Number(e.target.value) || 1)
-                          }
-                          disabled={!cartSession || !isCartMutable}
-                        />
-                        <input
-                          className={cn(inputClass, "border-white/10 bg-white/95")}
-                          min={0}
-                          step={0.01}
-                          type="number"
-                          value={newLinePrice}
-                          onChange={(e) =>
-                            setNewLinePrice(Number(e.target.value) || 0)
-                          }
-                          disabled={!cartSession || !isCartMutable}
-                        />
-                        <button
-                          className={primaryButtonClass}
-                          type="button"
-                          onClick={addCartLine}
-                          disabled={!cartSession || !isCartMutable}
-                        >
-                          Add line
-                        </button>
-                      </div>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <CompactInfoCard
-                          label="Selected barcode"
-                          value={
-                            selectedCatalogContext?.pack.packBarcode ??
-                            selectedCatalogContext?.pack.product.barcode ??
-                            "Awaiting selection"
-                          }
-                          supporting={
-                            selectedCatalogContext
-                              ? `Pack ${selectedCatalogContext.pack.packCode}`
-                              : `${visibleCatalogOptions.length} sellable pack/lot options in current scope.`
-                          }
-                          tone={selectedCatalogContext ? "emerald" : "slate"}
-                        />
-                        <CompactInfoCard
-                          label="Lot / expiry"
-                          value={
-                            selectedCatalogContext
-                              ? `${selectedCatalogContext.lot.batchNo} · ${formatDateLabel(selectedCatalogContext.lot.expiryDate)}`
-                              : "Select a lot first"
-                          }
-                          supporting={
-                            selectedCatalogContext
-                              ? `${selectedCatalogContext.lot.sellableQuantity} sellable · ${selectedCatalogContext.pack.packSellability ?? selectedCatalogContext.lot.status ?? "runtime status pending"}`
-                              : "Expiry, sellability, and barcode stay visible here once the lot is selected."
-                          }
-                          tone={selectedCatalogContext ? "amber" : "slate"}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section className="overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
-                <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 lg:flex-row lg:items-end lg:justify-between">
-                  <div className="space-y-1.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">
-                      Invoice surface
-                    </p>
-                    <h3 className="text-2xl font-semibold text-slate-950">
-                      {cartSession ? "Live bill rows" : "No active invoice yet"}
-                    </h3>
-                    <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                      Rows now read like an invoice: product identity, batch,
-                      quantity, before-tax unit price, tax impact, and line
-                      total stay visible together.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
+                    <select
+                      className={inputClass}
+                      value={selectedCatalogKey}
+                      onChange={(e) => setSelectedCatalogKey(e.target.value)}
+                      disabled={!cartSession || !isCartMutable}
+                    >
+                      <option value="">Select product pack and lot</option>
+                      {visibleCatalogOptions.map((option) => (
+                        <option key={option.key} value={option.key}>
+                          {option.label + " · " + option.subtitle}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      className={inputClass}
+                      min={1}
+                      step={1}
+                      type="number"
+                      value={newLineQty}
+                      onChange={(e) =>
+                        setNewLineQty(Number(e.target.value) || 1)
+                      }
+                      disabled={!cartSession || !isCartMutable}
+                    />
+                    <input
+                      className={inputClass}
+                      min={0}
+                      step={0.01}
+                      type="number"
+                      value={newLinePrice}
+                      onChange={(e) =>
+                        setNewLinePrice(Number(e.target.value) || 0)
+                      }
+                      disabled={!cartSession || !isCartMutable}
+                    />
                     <button
                       className={primaryButtonClass}
                       type="button"
-                      onClick={createCartSession}
-                      disabled={!workspaceReady}
+                      onClick={addCartLine}
+                      disabled={!cartSession || !isCartMutable}
                     >
-                      Start new sale
-                    </button>
-                    <button
-                      className={secondaryButtonClass}
-                      type="button"
-                      onClick={loadContextAndCatalog}
-                      disabled={!workspaceReady}
-                    >
-                      Refresh workspace data
+                      Add line
                     </button>
                   </div>
-                </div>
-
-                {!cartSession ? (
-                  <div className="px-4 py-10">
-                    <EmptyPanel
-                      title="No active sale yet"
-                      body="Authenticate the operator, load the workspace, then start or resume a sale. The invoice rows and bill footer will appear here once the counter is active."
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <div className="overflow-x-auto">
-                      <div className="min-w-[960px]">
-                        <div className="grid grid-cols-[0.55fr_2.35fr_1.1fr_0.7fr_1fr_0.7fr_1fr_1fr] gap-3 bg-slate-50 px-4 py-3">
-                          <InvoiceHeaderCell>Line</InvoiceHeaderCell>
-                          <InvoiceHeaderCell>Item</InvoiceHeaderCell>
-                          <InvoiceHeaderCell>Lot / batch</InvoiceHeaderCell>
-                          <InvoiceHeaderCell align="right">
-                            Qty
-                          </InvoiceHeaderCell>
-                          <InvoiceHeaderCell align="right">
-                            Before tax
-                          </InvoiceHeaderCell>
-                          <InvoiceHeaderCell align="right">
-                            Tax
-                          </InvoiceHeaderCell>
-                          <InvoiceHeaderCell align="right">
-                            After tax
-                          </InvoiceHeaderCell>
-                          <InvoiceHeaderCell align="right">
-                            Line total
-                          </InvoiceHeaderCell>
-                        </div>
-
-                        {invoiceRows.length ? (
-                          invoiceRows.map((line) => {
-                            const edit = lineEdits[line.id] ?? {
-                              quantity: line.quantity,
-                              unitPrice: line.unitPrice,
-                              discount: line.discount,
-                              taxRate: line.taxRate ?? 0,
-                            };
-                            const isFocused = line.id === focusedInvoiceRow?.id;
-                            return (
-                              <div
-                                key={line.id}
-                                className={cn(
-                                  "border-b border-slate-200 px-4 py-3 last:border-b-0",
-                                  isFocused && "bg-emerald-50/55",
-                                )}
-                                onClick={() => setFocusedInvoiceLineId(line.id)}
-                              >
-                                <div className="grid grid-cols-[0.55fr_2.5fr_1.15fr_0.7fr_1fr_0.75fr_1fr_1fr] items-start gap-3">
-                                  <div>
-                                    <p className="text-sm font-semibold text-slate-950">
-                                      {line.lineNo}
-                                    </p>
-                                    {isFocused ? (
-                                      <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">
-                                        Focused
-                                      </p>
-                                    ) : null}
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <p className="text-sm font-semibold text-slate-950">
-                                        {line.productPack?.product.nameEn ??
-                                          "Product pack"}
-                                      </p>
-                                      {line.productPack?.code ? (
-                                        <ToneBadge tone="sky">
-                                          Pack {line.productPack.code}
-                                        </ToneBadge>
-                                      ) : null}
-                                    </div>
-                                    <p className="text-xs leading-5 text-slate-500">
-                                      {line.productPack?.product.nameAr ?? "منتج"} · Barcode {line.productPack?.packBarcode ?? line.productPack?.product.barcode ?? "runtime not exposed"}
-                                    </p>
-                                    <p className="text-xs leading-5 text-slate-500">
-                                      Generic / active ingredient and dosage form are not exposed by the current POS runtime yet.
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-semibold text-slate-950">
-                                      {line.lotBatch?.batchNo ?? "-"}
-                                    </p>
-                                    <p className="mt-1 text-xs text-slate-500">
-                                      Exp {formatDateLabel(line.lotBatch?.expiryDate)}
-                                    </p>
-                                    <p className="mt-1 text-xs text-slate-500">
-                                      {line.productPack?.packSellability ?? line.lotBatch?.status ?? "Lot status not exposed"}
-                                    </p>
-                                  </div>
-                                  <div className="text-right text-sm font-semibold text-slate-950">
-                                    {line.quantity}
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-sm font-semibold text-slate-950">
-                                      {formatMoney(
-                                        line.unitPrice,
-                                        cartSession.currency,
-                                      )}
-                                    </p>
-                                    <p className="mt-1 text-xs text-slate-500">
-                                      Base {formatMoney(line.beforeTaxTotal, cartSession.currency)}
-                                    </p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-sm font-semibold text-slate-950">{`${line.taxRate ?? 0}%`}</p>
-                                    <p className="mt-1 text-xs text-slate-500">
-                                      {formatMoney(line.taxValue, cartSession.currency)}
-                                    </p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-sm font-semibold text-slate-950">
-                                      {formatMoney(
-                                        line.unitAfterTax,
-                                        cartSession.currency,
-                                      )}
-                                    </p>
-                                    <p className="mt-1 text-xs text-slate-500">
-                                      Per-unit after tax
-                                    </p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-sm font-semibold text-slate-950">
-                                      {formatMoney(
-                                        line.lineTotal,
-                                        cartSession.currency,
-                                      )}
-                                    </p>
-                                    <p className="mt-1 text-xs text-slate-500">
-                                      Discount {formatMoney(line.discount, cartSession.currency)}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                {isCartMutable && isFocused ? (
-                                  <div className="mt-3 rounded-[20px] border border-emerald-200 bg-white px-3 py-3 shadow-sm">
-                                    <div className="grid gap-2 xl:grid-cols-[0.65fr_0.9fr_0.8fr_0.75fr_auto_auto]">
-                                      <label className={metricCardClass}>
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                          Qty
-                                        </p>
-                                        <input
-                                          className="mt-1.5 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                                          type="number"
-                                          min={1}
-                                          step={1}
-                                          value={edit.quantity}
-                                          onChange={(e) =>
-                                            setLineEdits((cur) => ({
-                                              ...cur,
-                                              [line.id]: {
-                                                ...edit,
-                                                quantity:
-                                                  Number(e.target.value) || 1,
-                                              },
-                                            }))
-                                          }
-                                        />
-                                      </label>
-                                      <label className={metricCardClass}>
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                          Before tax
-                                        </p>
-                                        <input
-                                          className="mt-1.5 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                                          type="number"
-                                          min={0}
-                                          step={0.01}
-                                          value={edit.unitPrice}
-                                          onChange={(e) =>
-                                            setLineEdits((cur) => ({
-                                              ...cur,
-                                              [line.id]: {
-                                                ...edit,
-                                                unitPrice:
-                                                  Number(e.target.value) || 0,
-                                              },
-                                            }))
-                                          }
-                                        />
-                                      </label>
-                                      <label className={metricCardClass}>
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                          Discount
-                                        </p>
-                                        <input
-                                          className="mt-1.5 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                                          type="number"
-                                          min={0}
-                                          step={0.01}
-                                          value={edit.discount}
-                                          onChange={(e) =>
-                                            setLineEdits((cur) => ({
-                                              ...cur,
-                                              [line.id]: {
-                                                ...edit,
-                                                discount:
-                                                  Number(e.target.value) || 0,
-                                              },
-                                            }))
-                                          }
-                                        />
-                                      </label>
-                                      <label className={metricCardClass}>
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                          Tax %
-                                        </p>
-                                        <input
-                                          className="mt-1.5 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                                          type="number"
-                                          min={0}
-                                          step={0.01}
-                                          value={edit.taxRate}
-                                          onChange={(e) =>
-                                            setLineEdits((cur) => ({
-                                              ...cur,
-                                              [line.id]: {
-                                                ...edit,
-                                                taxRate:
-                                                  Number(e.target.value) || 0,
-                                              },
-                                            }))
-                                          }
-                                        />
-                                      </label>
-                                      <button
-                                        className={secondaryButtonClass}
-                                        type="button"
-                                        onClick={() => updateCartLine(line.id)}
-                                      >
-                                        Update line
-                                      </button>
-                                      <button
-                                        className="inline-flex items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
-                                        type="button"
-                                        onClick={() => removeCartLine(line.id)}
-                                      >
-                                        Remove line
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : isCartMutable ? (
-                                  <div className="mt-2 text-xs text-slate-500">
-                                    Select this row to adjust quantity, before-tax price, discount, or tax rate.
-                                  </div>
-                                ) : null}
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <div className="px-4 py-8">
-                            <EmptyPanel
-                              title="No sale lines yet"
-                              body="Scan or search the first product pack and lot to start building the invoice."
-                            />
-                          </div>
-                        )}
-                      </div>
+                  <div className="flex flex-col gap-2 border-t border-slate-700 px-4 py-2.5 text-xs text-slate-500 lg:flex-row lg:items-center lg:justify-between">
+                    <p>
+                      Richer lookup and pricing remain in their own workspaces
+                      so the live bill stays clean.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className={secondaryButtonClass}
+                        type="button"
+                        onClick={() => setWorkspaceView("search")}
+                      >
+                        Search workspace
+                      </button>
+                      <button
+                        className={secondaryButtonClass}
+                        type="button"
+                        onClick={() => setWorkspaceView("maintenance")}
+                      >
+                        Pricing workspace
+                      </button>
                     </div>
+                  </div>
+                </section>
 
-                    <div className="sticky bottom-2 z-10 border-t border-slate-200 bg-slate-50/95 px-4 py-4 shadow-[0_-14px_28px_rgba(15,23,42,0.08)]">
-                      <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
-                        <div className="space-y-3">
-                          <div className="rounded-[22px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                              Bill footer actions
-                            </p>
-                            <p className="mt-2 text-sm leading-6 text-slate-600">
-                              {isCartMutable
-                                ? "Tender and finalize from the bottom of the invoice, where the operator expects the bill to close."
-                                : "The invoice is finalized. Cash-entry controls are hidden so the footer reads like a closed bill, not a live form."}
-                            </p>
-                            {isCartMutable ? (
-                              <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_auto]">
-                                <input
-                                  className={inputClass}
-                                  placeholder="Cash tendered (optional)"
-                                  value={cashTendered}
-                                  onChange={(e) =>
-                                    setCashTendered(e.target.value)
-                                  }
-                                />
-                                <button
-                                  className={accentButtonClass}
-                                  type="button"
-                                  onClick={finalizeCashSale}
-                                >
-                                  Finalize cash sale
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="mt-3 rounded-[18px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900">
-                                Finalized sales are visually locked here. The
-                                footer now behaves like a closed bill with
-                                decisive totals, not a generic action wall.
-                              </div>
+                <section className="overflow-hidden rounded-[16px] border border-slate-700 bg-[#1a2028]">
+                  <div className="grid grid-cols-[2.35fr_1.25fr_0.9fr_0.6fr_0.9fr_0.7fr_0.9fr_1fr] gap-3 border-b border-slate-700 bg-[#161b23] px-4 py-2.5">
+                    <InvoiceHeaderCell>Item</InvoiceHeaderCell>
+                    <InvoiceHeaderCell>Pack/Strength</InvoiceHeaderCell>
+                    <InvoiceHeaderCell>Batch</InvoiceHeaderCell>
+                    <InvoiceHeaderCell align="right">Qty</InvoiceHeaderCell>
+                    <InvoiceHeaderCell align="right">Pre-tax</InvoiceHeaderCell>
+                    <InvoiceHeaderCell align="right">Tax</InvoiceHeaderCell>
+                    <InvoiceHeaderCell align="right">After-tax</InvoiceHeaderCell>
+                    <InvoiceHeaderCell align="right">Line total</InvoiceHeaderCell>
+                  </div>
+
+                  <div className="max-h-[540px] space-y-2 overflow-y-auto bg-[#1a2028] px-3 py-3">
+                    {invoiceRows.length ? (
+                      invoiceRows.map((line) => {
+                        const edit = lineEdits[line.id] ?? {
+                          quantity: line.quantity,
+                          unitPrice: line.unitPrice,
+                          discount: line.discount,
+                          taxRate: line.taxRate ?? 0,
+                        };
+                        const isFocused = line.id === focusedInvoiceRow?.id;
+                        return (
+                          <div
+                            key={line.id}
+                            className={cn(
+                              "cursor-pointer rounded-[14px] border px-3 py-3 transition",
+                              isFocused
+                                ? "border-blue-400/70 bg-[#273041]"
+                                : "border-slate-700 bg-[#202732] hover:border-slate-500 hover:bg-[#252d39]",
                             )}
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              <button
-                                className={secondaryButtonClass}
-                                type="button"
-                                onClick={() =>
-                                  cartSession &&
-                                  void openCartSession(cartSession.id)
-                                }
-                                disabled={!cartSession}
-                              >
-                                Refresh sale state
-                              </button>
-                              <button
-                                className={secondaryButtonClass}
-                                type="button"
-                                onClick={() => setSecondaryPane("lookup")}
-                              >
-                                Go to lookup
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="rounded-[26px] bg-slate-950 px-5 py-5 text-white shadow-[0_20px_50px_rgba(15,23,42,0.18)]">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                            Bill totals
-                          </p>
-                          <div className="mt-4 space-y-3">
-                            <div className="flex items-center justify-between gap-3 text-sm text-slate-300">
-                              <span>Subtotal / before tax</span>
-                              <span className="font-semibold text-white">
-                                {formatMoney(
-                                  cartSession.subtotal,
-                                  cartSession.currency,
-                                )}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between gap-3 text-sm text-slate-300">
-                              <span>Discount</span>
-                              <span className="font-semibold text-white">
-                                {formatMoney(
-                                  cartSession.discountTotal,
-                                  cartSession.currency,
-                                )}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between gap-3 text-sm text-slate-300">
-                              <span>Tax total</span>
-                              <span className="font-semibold text-white">
-                                {formatMoney(
-                                  cartSession.taxTotal,
-                                  cartSession.currency,
-                                )}
-                              </span>
-                            </div>
-                            <div className="border-t border-white/10 pt-3">
-                              <div className="flex items-end justify-between gap-3">
-                                <div>
-                                  <p className="text-xs uppercase tracking-[0.18em] text-emerald-300">
-                                    Payable / after tax
+                            onClick={() => setFocusedInvoiceLineId(line.id)}
+                          >
+                            <div className="grid grid-cols-[2.35fr_1.25fr_0.9fr_0.6fr_0.9fr_0.7fr_0.9fr_1fr] items-start gap-3">
+                              <div className="space-y-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="text-sm font-semibold text-slate-100">
+                                    {line.productPack?.product.nameEn ??
+                                      "Product pack"}
                                   </p>
-                                  <p className="mt-1 text-sm text-slate-300">
-                                    Visible at the invoice footer by design.
-                                  </p>
+                                  {isFocused ? (
+                                    <ToneBadge tone="sky">Focused</ToneBadge>
+                                  ) : null}
                                 </div>
-                                <p className="text-2xl font-semibold text-white">
+                                <p className="text-xs text-slate-400">
+                                  {line.productPack?.product.nameAr ?? "منتج"}
+                                </p>
+                                <p className="text-[11px] text-slate-500">
+                                  Generic / active ingredient stays honest: not
+                                  exposed on the current POS runtime payload.
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-sm font-semibold text-slate-100">
+                                  {line.productPack?.code
+                                    ? "Pack " + line.productPack.code
+                                    : "Runtime not exposed"}
+                                </p>
+                                <p className="text-xs text-slate-400">
+                                  {line.productPack?.unitsPerPack
+                                    ? String(line.productPack.unitsPerPack) +
+                                      " units per pack"
+                                    : "Strength/form pending runtime"}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-sm font-semibold text-slate-100">
+                                  {line.lotBatch?.batchNo ?? "-"}
+                                </p>
+                                <p className="text-xs text-slate-400">
+                                  Exp {formatDateLabel(line.lotBatch?.expiryDate)}
+                                </p>
+                              </div>
+                              <div className="text-right text-sm font-semibold text-slate-100">
+                                {line.quantity}
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-semibold text-slate-100">
                                   {formatMoney(
-                                    cartSession.grandTotal,
-                                    cartSession.currency,
+                                    line.unitPrice,
+                                    cartSession?.currency ?? "JOD",
+                                  )}
+                                </p>
+                                <p className="text-[11px] text-slate-500">
+                                  Base{" "}
+                                  {formatMoney(
+                                    line.beforeTaxTotal,
+                                    cartSession?.currency ?? "JOD",
+                                  )}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-semibold text-slate-100">
+                                  {(line.taxRate ?? 0) + "%"}
+                                </p>
+                                <p className="text-[11px] text-slate-500">
+                                  {formatMoney(
+                                    line.taxValue,
+                                    cartSession?.currency ?? "JOD",
+                                  )}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-semibold text-slate-100">
+                                  {formatMoney(
+                                    line.unitAfterTax,
+                                    cartSession?.currency ?? "JOD",
+                                  )}
+                                </p>
+                                <p className="text-[11px] text-slate-500">
+                                  Per unit
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-semibold text-slate-100">
+                                  {formatMoney(
+                                    line.lineTotal,
+                                    cartSession?.currency ?? "JOD",
+                                  )}
+                                </p>
+                                <p className="text-[11px] text-slate-500">
+                                  Discount{" "}
+                                  {formatMoney(
+                                    line.discount,
+                                    cartSession?.currency ?? "JOD",
                                   )}
                                 </p>
                               </div>
                             </div>
+
+                            {isCartMutable && isFocused ? (
+                              <div className="mt-3 rounded-[14px] border border-slate-600 bg-[#181e27] px-3 py-3">
+                                <div className="grid gap-2 xl:grid-cols-[0.65fr_0.9fr_0.8fr_0.75fr_auto_auto]">
+                                  <label className={metricCardClass}>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                      Qty
+                                    </p>
+                                    <input
+                                      className="mt-1.5 h-9 w-full rounded-[10px] border border-slate-600 bg-[#10151d] px-3 text-sm text-slate-100 outline-none transition focus:border-blue-400"
+                                      type="number"
+                                      min={1}
+                                      step={1}
+                                      value={edit.quantity}
+                                      onChange={(e) =>
+                                        setLineEdits((cur) => ({
+                                          ...cur,
+                                          [line.id]: {
+                                            ...edit,
+                                            quantity:
+                                              Number(e.target.value) || 1,
+                                          },
+                                        }))
+                                      }
+                                    />
+                                  </label>
+                                  <label className={metricCardClass}>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                      Before tax
+                                    </p>
+                                    <input
+                                      className="mt-1.5 h-9 w-full rounded-[10px] border border-slate-600 bg-[#10151d] px-3 text-sm text-slate-100 outline-none transition focus:border-blue-400"
+                                      type="number"
+                                      min={0}
+                                      step={0.01}
+                                      value={edit.unitPrice}
+                                      onChange={(e) =>
+                                        setLineEdits((cur) => ({
+                                          ...cur,
+                                          [line.id]: {
+                                            ...edit,
+                                            unitPrice:
+                                              Number(e.target.value) || 0,
+                                          },
+                                        }))
+                                      }
+                                    />
+                                  </label>
+                                  <label className={metricCardClass}>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                      Discount
+                                    </p>
+                                    <input
+                                      className="mt-1.5 h-9 w-full rounded-[10px] border border-slate-600 bg-[#10151d] px-3 text-sm text-slate-100 outline-none transition focus:border-blue-400"
+                                      type="number"
+                                      min={0}
+                                      step={0.01}
+                                      value={edit.discount}
+                                      onChange={(e) =>
+                                        setLineEdits((cur) => ({
+                                          ...cur,
+                                          [line.id]: {
+                                            ...edit,
+                                            discount:
+                                              Number(e.target.value) || 0,
+                                          },
+                                        }))
+                                      }
+                                    />
+                                  </label>
+                                  <label className={metricCardClass}>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                      Tax %
+                                    </p>
+                                    <input
+                                      className="mt-1.5 h-9 w-full rounded-[10px] border border-slate-600 bg-[#10151d] px-3 text-sm text-slate-100 outline-none transition focus:border-blue-400"
+                                      type="number"
+                                      min={0}
+                                      step={0.01}
+                                      value={edit.taxRate}
+                                      onChange={(e) =>
+                                        setLineEdits((cur) => ({
+                                          ...cur,
+                                          [line.id]: {
+                                            ...edit,
+                                            taxRate:
+                                              Number(e.target.value) || 0,
+                                          },
+                                        }))
+                                      }
+                                    />
+                                  </label>
+                                  <button
+                                    className={secondaryButtonClass}
+                                    type="button"
+                                    onClick={() => updateCartLine(line.id)}
+                                  >
+                                    Update line
+                                  </button>
+                                  <button
+                                    className="inline-flex items-center justify-center rounded-[14px] border border-rose-400/40 bg-rose-500/10 px-4 py-2.5 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20"
+                                    type="button"
+                                    onClick={() => removeCartLine(line.id)}
+                                  >
+                                    Remove line
+                                  </button>
+                                </div>
+                              </div>
+                            ) : null}
                           </div>
-                        </div>
+                        );
+                      })
+                    ) : (
+                      <EmptyPanel
+                        title="No sale lines yet"
+                        body="Authenticate the operator, load the workspace, start a sale, then push the first scanned pack into the invoice lane."
+                      />
+                    )}
+                  </div>
+
+                  <div className="sticky bottom-0 border-t border-slate-700 bg-[#171c24] px-4 py-3">
+                    <div className="grid gap-3 xl:grid-cols-[1fr_1fr_1fr_220px_auto_auto] xl:items-end">
+                      <div className="rounded-[14px] border border-slate-600 bg-[#202732] px-4 py-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          Subtotal
+                        </p>
+                        <p className="mt-1.5 text-[1.05rem] font-semibold text-slate-50">
+                          {formatMoney(
+                            cartSession?.subtotal ?? 0,
+                            cartSession?.currency ?? "JOD",
+                          )}
+                        </p>
+                      </div>
+                      <div className="rounded-[14px] border border-slate-600 bg-[#202732] px-4 py-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          Tax
+                        </p>
+                        <p className="mt-1.5 text-[1.05rem] font-semibold text-slate-50">
+                          {formatMoney(
+                            cartSession?.taxTotal ?? 0,
+                            cartSession?.currency ?? "JOD",
+                          )}
+                        </p>
+                      </div>
+                      <div className="rounded-[14px] border border-emerald-400/30 bg-emerald-500/10 px-4 py-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200">
+                          Payable
+                        </p>
+                        <p className="mt-1.5 text-[1.3rem] font-semibold text-slate-50">
+                          {formatMoney(
+                            cartSession?.grandTotal ?? 0,
+                            cartSession?.currency ?? "JOD",
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          Tendered cash
+                        </label>
+                        <input
+                          className={inputClass}
+                          placeholder="Cash tendered"
+                          value={cashTendered}
+                          onChange={(e) => setCashTendered(e.target.value)}
+                          disabled={!isCartMutable}
+                        />
+                      </div>
+                      <button
+                        className={secondaryButtonClass}
+                        type="button"
+                        disabled
+                        title="Suspend / hold is not wired on this POS runtime yet."
+                      >
+                        Hold pending
+                      </button>
+                      <div className="flex gap-2 xl:justify-end">
+                        <button
+                          className={secondaryButtonClass}
+                          type="button"
+                          disabled
+                          title="Clear / cancel is not wired on this POS runtime yet."
+                        >
+                          Clear pending
+                        </button>
+                        <button
+                          className={accentButtonClass}
+                          type="button"
+                          onClick={finalizeCashSale}
+                          disabled={!isCartMutable}
+                        >
+                          Finalize cash sale
+                        </button>
                       </div>
                     </div>
-                  </>
-                )}
-              </section>
+                    <p className="mt-2 text-xs text-slate-500">
+                      Hold, suspend, and clear remain visibly secondary and are
+                      labeled pending until the runtime actually exposes them.
+                    </p>
+                    {cartSession?.state === "FINALIZED" ? (
+                      <div className="mt-3 rounded-[14px] border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+                        Bill closed. Final reference{" "}
+                        {cartSession.fiscalSaleDocument?.documentNo ??
+                          cartSession.sessionNumber}{" "}
+                        stays visible here so the footer reads like a finalized
+                        cashier bill.
+                      </div>
+                    ) : null}
+                  </div>
+                </section>
+              </div>
 
+              <aside className="space-y-3">
+                <section className={cn(mutedSurfaceClass, "p-4")}>
+                  <div className="space-y-1.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Pack / Lot selector
+                    </p>
+                    <h3 className="text-lg font-semibold text-slate-50">
+                      Selected pack and lot stay adjacent to the bill.
+                    </h3>
+                  </div>
+                  <ul className="mt-4 space-y-2 text-sm text-slate-300">
+                    <li>Selected pack: {selectedPackLabel}</li>
+                    <li>Lot: {selectedLotLabel}</li>
+                    <li>Expiry: {selectedExpiryLabel}</li>
+                  </ul>
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        Open sale session
+                      </label>
+                      <select
+                        className={inputClass}
+                        value=""
+                        onChange={(e) =>
+                          e.target.value && void openCartSession(e.target.value)
+                        }
+                        disabled={!workspaceReady || !safeOpenCarts.length}
+                      >
+                        <option value="">Select an open sale</option>
+                        {safeOpenCarts.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.sessionNumber +
+                              " · " +
+                              formatMoney(item.grandTotal, "JOD")}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className={secondaryButtonClass}
+                        type="button"
+                        onClick={() => setWorkspaceView("search")}
+                      >
+                        Open search
+                      </button>
+                      <button
+                        className={secondaryButtonClass}
+                        type="button"
+                        onClick={() => setWorkspaceView("maintenance")}
+                      >
+                        Open pricing
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
+                <section className={cn(mutedSurfaceClass, "p-4")}>
+                  <div className="space-y-1.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Quick info
+                    </p>
+                    <h3 className="text-lg font-semibold text-slate-50">
+                      Runtime-backed cues only.
+                    </h3>
+                  </div>
+                  {focusedProductSnapshot ? (
+                    <ul className="mt-4 space-y-2 text-sm text-slate-300">
+                      <li>Generic: pending backend catalog truth</li>
+                      <li>Use / indication: pending integration</li>
+                      <li>Strength / form: {focusedProductSnapshot.packCode}</li>
+                      <li>Barcode: {focusedProductSnapshot.barcode}</li>
+                      <li>
+                        Batch / expiry: {focusedProductSnapshot.batch} ·{" "}
+                        {focusedProductSnapshot.expiryLabel}
+                      </li>
+                    </ul>
+                  ) : (
+                    <ul className="mt-4 space-y-2 text-sm text-slate-400">
+                      <li>Generic</li>
+                      <li>Use / indication</li>
+                      <li>Strength / form</li>
+                    </ul>
+                  )}
+                  <p className="mt-3 text-xs leading-5 text-slate-500">
+                    Honest only: runtime-backed where available, pending
+                    integration where the payload does not expose it.
+                  </p>
+                </section>
+
+                <section className={cn(mutedSurfaceClass, "p-4")}>
+                  <div className="space-y-1.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Pharmacist guidance
+                    </p>
+                    <h3 className="text-lg font-semibold text-slate-50">
+                      Secondary, visible, and non-blocking.
+                    </h3>
+                  </div>
+                  <ul className="mt-4 space-y-3 text-sm text-slate-300">
+                    {pharmacistAlerts.map((alert) => (
+                      <li
+                        key={alert.title}
+                        className="rounded-[14px] border border-slate-600 bg-[#181e27] px-3 py-3"
+                      >
+                        <p className="font-semibold text-slate-100">
+                          {alert.title}
+                        </p>
+                        <p className="mt-1 text-sm leading-6 text-slate-400">
+                          {alert.body}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              </aside>
+            </div>
+          </section>
               {cartError ? (
                 <Notice
                   title="Sale action blocked"
@@ -2211,241 +2092,18 @@ export default function PosPage() {
                   tone="error"
                 />
               ) : null}
-            </div>
-
-            <aside className="space-y-4">
-              <section className={cn(mutedSurfaceClass, "p-4")}>
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">
-                    Counter strip
-                  </p>
-                  <h3 className="text-lg font-semibold text-slate-950">
-                    Compact operator and shift context.
-                  </h3>
-                </div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <KeyValue label="Workspace" value={workspaceLabel} emphasis />
-                  <KeyValue label="Runtime" value={runtimeLabel} emphasis />
-                  <KeyValue
-                    label="Authentication"
-                    value={
-                      operatorAuthenticated
-                        ? "Operator authenticated"
-                        : "Sign-in pending"
-                    }
-                  />
-                  <KeyValue
-                    label="Register"
-                    value={
-                      activeRegister
-                        ? `${activeRegister.code} · ${activeRegister.nameAr}`
-                        : "No register loaded"
-                    }
-                  />
-                </div>
-              </section>
-
-              <section className={cn(mutedSurfaceClass, "p-4")}>
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Resume / open sale
-                  </p>
-                  <p className="text-sm leading-6 text-slate-600">
-                    Open carts stay accessible, but they no longer compete with
-                    the invoice face.
-                  </p>
-                </div>
-                <div className="mt-3 space-y-3">
-                  <select
-                    className={inputClass}
-                    value=""
-                    onChange={(e) =>
-                      e.target.value && void openCartSession(e.target.value)
-                    }
-                    disabled={!workspaceReady || !safeOpenCarts.length}
-                  >
-                    <option value="">Select an open sale</option>
-                    {safeOpenCarts.map((item) => (
-                      <option
-                        key={item.id}
-                        value={item.id}
-                      >{`${item.sessionNumber} · ${formatMoney(item.grandTotal, "JOD")}`}</option>
-                    ))}
-                  </select>
-                  <p className="text-xs leading-5 text-slate-500">
-                    {safeOpenCarts.length} open sale
-                    {safeOpenCarts.length === 1 ? "" : "s"} in the current
-                    branch/register scope.
-                  </p>
-                </div>
-              </section>
-
-              <section className={cn(mutedSurfaceClass, "p-4")}>
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">
-                    Drug quick info
-                  </p>
-                  <h3 className="text-lg font-semibold text-slate-950">
-                    Bounded adjacent runtime view.
-                  </h3>
-                  <p className="text-sm leading-6 text-slate-600">
-                    This slot stays compact and honest. It shows runtime-backed pack, barcode, expiry, and stock cues now, while clearly labeling missing clinical data.
-                  </p>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {focusedProductSnapshot ? (
-                    <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
-                      <p className="text-sm font-semibold text-slate-950">
-                        {focusedProductSnapshot.title}
-                      </p>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {focusedProductSnapshot.subtitle}
-                      </p>
-                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                        <CompactInfoCard
-                          label="Pack / barcode"
-                          value={focusedProductSnapshot.packCode}
-                          supporting={focusedProductSnapshot.barcode}
-                          tone="sky"
-                        />
-                        <CompactInfoCard
-                          label="Batch / expiry"
-                          value={focusedProductSnapshot.batch}
-                          supporting={`Expiry ${focusedProductSnapshot.expiryLabel}`}
-                          tone="amber"
-                        />
-                        <CompactInfoCard
-                          label="Current sellability"
-                          value={focusedProductSnapshot.sellability}
-                          supporting={focusedProductSnapshot.stockLabel}
-                          tone="emerald"
-                        />
-                        <CompactInfoCard
-                          label="Composition / use"
-                          value="Pending backend catalog truth"
-                          supporting={focusedProductSnapshot.runtimeHonesty}
-                          tone="slate"
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <EmptyPanel
-                      title="No medicine in focus"
-                      body="Once the operator highlights a row or selects a pack, this quick-info slot stays adjacent to the cashier surface without pretending clinical completeness."
-                    />
-                  )}
-                </div>
-              </section>
-
-              <section className={cn(mutedSurfaceClass, "p-4")}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">
-                      Pharmacist guidance lane
-                    </p>
-                    <h3 className="text-lg font-semibold text-slate-950">
-                      Visible, secondary, and non-blocking.
-                    </h3>
-                  </div>
-                  <ToneBadge tone="sky">Guidance scaffold only</ToneBadge>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {pharmacistAlerts.map((alert) => (
-                    <Notice
-                      key={alert.title}
-                      title={alert.title}
-                      body={alert.body}
-                      tone="info"
-                    />
-                  ))}
-                </div>
-              </section>
-
-              <section className={cn(mutedSurfaceClass, "p-4")}>
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">
-                    Finalized sale summary
-                  </p>
-                  <h3 className="text-lg font-semibold text-slate-950">
-                    Compact post-sale reference.
-                  </h3>
-                </div>
-                {cartSession ? (
-                  <div
-                    className={cn(
-                      "mt-4 rounded-[24px] p-4",
-                      cartSession.state === "FINALIZED"
-                        ? "border border-emerald-200 bg-emerald-50/90"
-                        : "border border-slate-200 bg-white",
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Reference
-                        </p>
-                        <p className="mt-2 text-lg font-semibold text-slate-950">
-                          {cartSession.fiscalSaleDocument?.documentNo ??
-                            cartSession.sessionNumber}
-                        </p>
-                      </div>
-                      <ToneBadge tone={stateTone(cartSession.state)}>
-                        {cartSession.state}
-                      </ToneBadge>
-                    </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <KeyValue
-                        label="Payment"
-                        value={latestCartPayment?.paymentMethod ?? "Cash"}
-                      />
-                      <KeyValue
-                        label="Payable"
-                        value={formatMoney(
-                          cartSession.grandTotal,
-                          cartSession.currency,
-                        )}
-                      />
-                      <KeyValue
-                        label="Finalized at"
-                        value={formatDateTime(
-                          latestCartPayment?.finalizedAt ??
-                            cartSession.fiscalSaleDocument?.finalizedAt,
-                        )}
-                      />
-                      <KeyValue
-                        label="Session"
-                        value={cartSession.sessionNumber}
-                      />
-                    </div>
-                    <div className="mt-3 rounded-[18px] border border-white/60 bg-white/80 px-4 py-3 text-sm leading-6 text-slate-600">
-                      {cartSession.state === "FINALIZED"
-                        ? "This stays small by design. The invoice surface carries the operator, and this summary becomes a compact reference for lookup and returns."
-                        : "The sale is still open. This card remains reference-only until finalization is complete."}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-4">
-                    <EmptyPanel
-                      title="No sale summary yet"
-                      body="Complete a sale and the compact post-sale reference will settle here without overtaking the counter."
-                    />
-                  </div>
-                )}
-              </section>
-            </aside>
-          </div>
-        </section>
+          </>
         ) : workspaceView === "search" ? (
           <section className={cn(surfaceClass, "p-4 lg:p-5")}>
-            <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex flex-col gap-4 border-b border-slate-700/90 pb-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-1.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                   Search / product lookup
                 </p>
-                <h2 className="text-2xl font-semibold text-slate-950">
+                <h2 className="text-2xl font-semibold text-slate-50">
                   Richer lookup stays off the cashier bill.
                 </h2>
-                <p className="max-w-3xl text-sm leading-6 text-slate-600">
+                <p className="max-w-3xl text-sm leading-6 text-slate-400">
                   Trade, generic, supplier/company shell, and category/form lookup live here so the counter can stay barcode-first and narrow.
                 </p>
               </div>
@@ -2468,20 +2126,20 @@ export default function PosPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {searchCategoryExamples.map((example) => (
-                    <button key={example} type="button" onClick={() => { setCatalogSearchMode("category"); setCatalogSearch(example); }} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold tracking-[0.16em] text-slate-600 transition hover:border-slate-300 hover:text-slate-900">
+                    <button key={example} type="button" onClick={() => { setCatalogSearchMode("category"); setCatalogSearch(example); }} className="rounded-full border border-slate-600 bg-[#181e27] px-3 py-2 text-xs font-semibold tracking-[0.16em] text-slate-300 transition hover:border-slate-500 hover:bg-[#202732] hover:text-slate-100">
                       {example}
                     </button>
                   ))}
                 </div>
-                <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-600 shadow-sm">
+                <div className="rounded-[20px] border border-slate-700 bg-[#181e27] px-4 py-3 text-sm leading-6 text-slate-400">
                   {searchMeta.note}
                 </div>
               </section>
               <section className={cn(mutedSurfaceClass, "p-4")}>
-                <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-4">
+                <div className="flex items-center justify-between gap-3 border-b border-slate-700/90 pb-4">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Runtime results</p>
-                    <h3 className="mt-1 text-lg font-semibold text-slate-950">{visibleCatalogOptions.length} pack / lot results</h3>
+                    <h3 className="mt-1 text-lg font-semibold text-slate-50">{visibleCatalogOptions.length} pack / lot results</h3>
                   </div>
                   <button className={secondaryButtonClass} type="button" onClick={loadContextAndCatalog} disabled={!workspaceReady}>
                     Refresh lookup
@@ -2491,9 +2149,9 @@ export default function PosPage() {
                   {visibleSearchResults.length ? visibleSearchResults.map((option) => {
                     const isSelected = option.key === selectedCatalogKey;
                     return (
-                      <button key={option.key} type="button" onClick={() => setSelectedCatalogKey(option.key)} className={cn("rounded-[22px] border p-4 text-left shadow-sm transition", isSelected ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50")}> 
-                        <p className="text-sm font-semibold text-slate-950">{option.label}</p>
-                        <p className="mt-2 text-sm leading-6 text-slate-500">{option.subtitle}</p>
+                      <button key={option.key} type="button" onClick={() => setSelectedCatalogKey(option.key)} className={cn("rounded-[22px] border p-4 text-left transition", isSelected ? "border-emerald-400/60 bg-emerald-500/10" : "border-slate-700 bg-[#171c24] hover:border-slate-500 hover:bg-[#1d2430]")}> 
+                        <p className="text-sm font-semibold text-slate-50">{option.label}</p>
+                        <p className="mt-2 text-sm leading-6 text-slate-400">{option.subtitle}</p>
                       </button>
                     );
                   }) : (
@@ -2506,8 +2164,8 @@ export default function PosPage() {
               <aside className={cn(mutedSurfaceClass, "p-4")}>
                 {selectedCatalogContext ? (
                   <div className="space-y-3">
-                    <p className="text-lg font-semibold text-slate-950">{selectedCatalogContext.pack.product.nameEn}</p>
-                    <p className="text-sm text-slate-500">{selectedCatalogContext.pack.product.nameAr} · Pack {selectedCatalogContext.pack.packCode}</p>
+                    <p className="text-lg font-semibold text-slate-50">{selectedCatalogContext.pack.product.nameEn}</p>
+                    <p className="text-sm text-slate-400">{selectedCatalogContext.pack.product.nameAr} · Pack {selectedCatalogContext.pack.packCode}</p>
                     <CompactInfoCard label="Barcode" value={selectedCatalogContext.pack.packBarcode ?? selectedCatalogContext.pack.product.barcode ?? "Runtime not exposed"} tone="sky" />
                     <CompactInfoCard label="Lot / expiry" value={`${selectedCatalogContext.lot.batchNo} · ${formatDateLabel(selectedCatalogContext.lot.expiryDate)}`} tone="amber" />
                     <CompactInfoCard label="Sellability" value={selectedCatalogContext.pack.packSellability ?? selectedCatalogContext.lot.status ?? "Runtime status pending"} supporting={`${selectedCatalogContext.lot.sellableQuantity} sellable`} tone="emerald" />
@@ -2524,15 +2182,15 @@ export default function PosPage() {
           </section>
         ) : workspaceView === "maintenance" ? (
           <section className={cn(surfaceClass, "p-4 lg:p-5")}>
-            <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex flex-col gap-4 border-b border-slate-700/90 pb-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-1.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                   Pricing / product entry / classification
                 </p>
-                <h2 className="text-2xl font-semibold text-slate-950">
+                <h2 className="text-2xl font-semibold text-slate-50">
                   Product maintenance stays off the live bill.
                 </h2>
-                <p className="max-w-3xl text-sm leading-6 text-slate-600">
+                <p className="max-w-3xl text-sm leading-6 text-slate-400">
                   Pricing review, category examples, dosage-form examples, and product-entry scaffolding live here without crowding the cashier counter.
                 </p>
               </div>
@@ -2545,8 +2203,8 @@ export default function PosPage() {
               <section className={cn(mutedSurfaceClass, "space-y-4 p-4")}>
                 {focusedProductSnapshot ? (
                   <>
-                    <p className="text-lg font-semibold text-slate-950">{focusedProductSnapshot.title}</p>
-                    <p className="text-sm text-slate-500">{focusedProductSnapshot.subtitle}</p>
+                    <p className="text-lg font-semibold text-slate-50">{focusedProductSnapshot.title}</p>
+                    <p className="text-sm text-slate-400">{focusedProductSnapshot.subtitle}</p>
                     <div className="grid gap-3 md:grid-cols-2">
                       <CompactInfoCard label="Pack / barcode" value={focusedProductSnapshot.packCode} supporting={focusedProductSnapshot.barcode} tone="sky" />
                       <CompactInfoCard label="Batch / expiry" value={focusedProductSnapshot.batch} supporting={`Expiry ${focusedProductSnapshot.expiryLabel}`} tone="amber" />
@@ -2560,18 +2218,18 @@ export default function PosPage() {
               </section>
               <section className={cn(mutedSurfaceClass, "space-y-4 p-4")}>
                 <div className="grid gap-3 md:grid-cols-2">
-                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Trade / commercial name</p><input className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none" value={focusedProductSnapshot?.title ?? ""} readOnly /></label>
-                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Before-tax price</p><input className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none" value={maintenanceUnitPrice} readOnly /></label>
-                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tax rate</p><input className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none" value={`${maintenanceTaxRate}%`} readOnly /></label>
-                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Pack / lot context</p><input className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none" value={focusedProductSnapshot?.batch ?? ""} readOnly /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Trade / commercial name</p><input className="mt-1.5 h-10 w-full rounded-xl border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={focusedProductSnapshot?.title ?? ""} readOnly /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Before-tax price</p><input className="mt-1.5 h-10 w-full rounded-xl border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={maintenanceUnitPrice} readOnly /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tax rate</p><input className="mt-1.5 h-10 w-full rounded-xl border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={`${maintenanceTaxRate}%`} readOnly /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Pack / lot context</p><input className="mt-1.5 h-10 w-full rounded-xl border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={focusedProductSnapshot?.batch ?? ""} readOnly /></label>
                 </div>
                 <div className="space-y-2">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Classification examples</p>
-                  <div className="flex flex-wrap gap-2">{maintenanceCategories.map((category) => (<span key={category} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold tracking-[0.16em] text-slate-600">{category}</span>))}</div>
+                  <div className="flex flex-wrap gap-2">{maintenanceCategories.map((category) => (<span key={category} className="rounded-full border border-slate-600 bg-[#181e27] px-3 py-2 text-xs font-semibold tracking-[0.16em] text-slate-300">{category}</span>))}</div>
                 </div>
                 <div className="space-y-2">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Dosage form examples</p>
-                  <div className="flex flex-wrap gap-2">{dosageFormExamples.map((form) => (<span key={form} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold tracking-[0.16em] text-slate-600">{form}</span>))}</div>
+                  <div className="flex flex-wrap gap-2">{dosageFormExamples.map((form) => (<span key={form} className="rounded-full border border-slate-600 bg-[#181e27] px-3 py-2 text-xs font-semibold tracking-[0.16em] text-slate-300">{form}</span>))}</div>
                 </div>
                 <Notice title="Persistence scope" body="This slice separates pricing / entry from selling, but it does not fake backend save flows that are not wired yet." tone="info" />
               </section>
@@ -2582,15 +2240,15 @@ export default function PosPage() {
           id="secondary-workspace"
           className={cn(surfaceClass, "p-4 lg:p-5")}
         >
-          <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-4 border-b border-slate-700/90 pb-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-1.5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                 Transaction lookup / returns
               </p>
-              <h2 className="text-2xl font-semibold text-slate-950">
+              <h2 className="text-2xl font-semibold text-slate-50">
                 Finalized-sale lookup and bounded returns are separated from selling.
               </h2>
-              <p className="max-w-3xl text-sm leading-6 text-slate-600">
+              <p className="max-w-3xl text-sm leading-6 text-slate-400">
                 The accepted finalized-return proof remains here without crowding the cashier counter.
                 This lane is intentionally subordinate to the sales counter
                 above.
@@ -2601,7 +2259,7 @@ export default function PosPage() {
                 className={cn(
                   secondaryButtonClass,
                   secondaryPane === "lookup" &&
-                    "border-emerald-300 bg-emerald-50 text-emerald-700",
+                    "border-emerald-400/60 bg-emerald-500/10 text-emerald-100",
                 )}
                 type="button"
                 onClick={() => setSecondaryPane("lookup")}
@@ -2612,7 +2270,7 @@ export default function PosPage() {
                 className={cn(
                   secondaryButtonClass,
                   secondaryPane === "return" &&
-                    "border-emerald-300 bg-emerald-50 text-emerald-700",
+                    "border-emerald-400/60 bg-emerald-500/10 text-emerald-100",
                 )}
                 type="button"
                 onClick={() => setSecondaryPane("return")}
@@ -2625,13 +2283,13 @@ export default function PosPage() {
           {secondaryPane === "lookup" ? (
             <div className="mt-4 space-y-4">
               {selectedSaleDetail ? (
-                <div className="rounded-[22px] border border-sky-200 bg-sky-50 px-4 py-4 text-sky-950 shadow-sm">
+                <div className="rounded-[22px] border border-sky-400/30 bg-sky-500/10 px-4 py-4 text-sky-100">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                       <p className="text-sm font-semibold">
                         Return source selected: {selectedSaleDetail.documentNo}
                       </p>
-                      <p className="mt-1 text-sm text-sky-900">
+                      <p className="mt-1 text-sm text-sky-200">
                         The lookup list remains the selection surface. Switch to
                         the return tab only when you want to execute the bounded
                         refund flow.
@@ -2656,18 +2314,18 @@ export default function PosPage() {
                     value={salesSearch}
                     onChange={(e) => setSalesSearch(e.target.value)}
                   />
-                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+                  <div className="rounded-2xl border border-slate-700 bg-[#181e27] px-4 py-3 text-sm text-slate-300">
                     {visibleFinalizedSales.length} transaction
                     {visibleFinalizedSales.length === 1 ? "" : "s"} in scope
                   </div>
                 </div>
-                <p className="mt-3 text-sm text-slate-500">
+                <p className="mt-3 text-sm text-slate-400">
                   Scoped to{" "}
-                  <span className="font-semibold text-slate-700">
+                  <span className="font-semibold text-slate-200">
                     {activeBranch?.name ?? "current branch"}
                   </span>{" "}
                   and{" "}
-                  <span className="font-semibold text-slate-700">
+                  <span className="font-semibold text-slate-200">
                     {activeRegister
                       ? `${activeRegister.code} · ${activeRegister.nameEn}`
                       : "current register"}
@@ -2687,10 +2345,10 @@ export default function PosPage() {
                         type="button"
                         onClick={() => void loadSaleDetail(sale.id)}
                         className={cn(
-                          "rounded-[24px] border p-4 text-left shadow-sm transition",
+                          "rounded-[24px] border p-4 text-left transition",
                           isSelected
-                            ? "border-emerald-300 bg-emerald-50 shadow-[0_18px_32px_rgba(16,185,129,0.12)]"
-                            : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50",
+                            ? "border-emerald-400/60 bg-emerald-500/10"
+                            : "border-slate-700 bg-[#171c24] hover:border-slate-500 hover:bg-[#1d2430]",
                         )}
                       >
                         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -2706,25 +2364,25 @@ export default function PosPage() {
                               ) : null}
                             </div>
                             <div>
-                              <p className="text-lg font-semibold text-slate-950">
+                              <p className="text-lg font-semibold text-slate-50">
                                 {sale.documentNo}
                               </p>
-                              <p className="mt-1 text-sm text-slate-500">
+                              <p className="mt-1 text-sm text-slate-400">
                                 Session{" "}
                                 {sale.posCartSession?.sessionNumber ?? "-"}
                               </p>
                             </div>
                           </div>
                           <div className="space-y-1 text-left lg:text-right">
-                            <p className="text-sm font-semibold text-slate-950">
+                            <p className="text-sm font-semibold text-slate-50">
                               {formatMoney(sale.grandTotal, sale.currency)}
                             </p>
-                            <p className="text-sm text-slate-500">
+                            <p className="text-sm text-slate-400">
                               {formatDateTime(
                                 payment?.finalizedAt ?? sale.finalizedAt,
                               )}
                             </p>
-                            <p className="text-sm text-slate-500">
+                            <p className="text-sm text-slate-400">
                               {payment?.paymentMethod ?? "Cash"}
                             </p>
                           </div>
@@ -2751,17 +2409,17 @@ export default function PosPage() {
           ) : (
             <div className="mt-4 space-y-4">
               {finalizedReturnSummary ? (
-                <div className="rounded-[26px] border border-emerald-200 bg-emerald-50/95 p-4 shadow-[0_20px_40px_rgba(16,185,129,0.12)]">
+                <div className="rounded-[26px] border border-emerald-400/30 bg-emerald-500/10 p-4">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="space-y-1.5">
                       <div className="flex flex-wrap items-center gap-2">
                         <ToneBadge tone="emerald">FINALIZED</ToneBadge>
                         <ToneBadge tone="emerald">Return completed</ToneBadge>
                       </div>
-                      <h3 className="text-xl font-semibold text-emerald-950">
+                      <h3 className="text-xl font-semibold text-emerald-100">
                         {finalizedReturnSummary.returnReference}
                       </h3>
-                      <p className="text-sm text-emerald-900">
+                      <p className="text-sm text-emerald-200">
                         Source sale {finalizedReturnSummary.sourceSaleReference}{" "}
                         · Return session{" "}
                         {finalizedReturnSummary.returnSessionNumber}
@@ -2798,7 +2456,7 @@ export default function PosPage() {
                       />
                     </div>
                   </div>
-                  <div className="mt-3 rounded-[18px] border border-emerald-200 bg-white/85 px-4 py-3 text-sm leading-6 text-emerald-950">
+                  <div className="mt-3 rounded-[18px] border border-emerald-400/30 bg-[#10151d] px-4 py-3 text-sm leading-6 text-emerald-100">
                     Return finalized and locked. This completion surface remains
                     visible so the operator can prove the refund reference,
                     source-sale relationship, and next safe action at a glance.
@@ -2833,10 +2491,10 @@ export default function PosPage() {
                         <ToneBadge tone="sky">Return source selected</ToneBadge>
                       </div>
                       <div>
-                        <h3 className="text-xl font-semibold text-slate-950">
+                        <h3 className="text-xl font-semibold text-slate-50">
                           {selectedSaleDetail.documentNo}
                         </h3>
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="mt-1 text-sm text-slate-400">
                           Session{" "}
                           {selectedSaleDetail.posCartSession?.sessionNumber ??
                             "-"}{" "}
@@ -2902,16 +2560,16 @@ export default function PosPage() {
 
               {selectedSaleDetail ? (
                 <div className={cn(mutedSurfaceClass, "p-4")}>
-                  <div className="flex flex-col gap-2 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="flex flex-col gap-2 border-b border-slate-700/90 pb-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                         Returnable lines
                       </p>
-                      <h3 className="mt-1 text-lg font-semibold text-slate-950">
+                      <h3 className="mt-1 text-lg font-semibold text-slate-50">
                         Select the source line to return
                       </h3>
                     </div>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-slate-400">
                       Remaining eligible quantity stays visible directly on each
                       line.
                     </p>
@@ -2931,8 +2589,8 @@ export default function PosPage() {
                           className={cn(
                             "rounded-[20px] border p-3 text-left transition",
                             isSelected
-                              ? "border-emerald-300 bg-emerald-50 shadow-[0_16px_30px_rgba(16,185,129,0.12)]"
-                              : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50",
+                              ? "border-emerald-400/60 bg-emerald-500/10"
+                              : "border-slate-700 bg-[#171c24] hover:border-slate-500 hover:bg-[#1d2430]",
                             !isReturnMutable && "cursor-not-allowed opacity-60",
                           )}
                         >
@@ -2952,10 +2610,10 @@ export default function PosPage() {
                                 ) : null}
                               </div>
                               <div>
-                                <p className="text-sm font-semibold text-slate-950">
+                                <p className="text-sm font-semibold text-slate-50">
                                   {line.productPack.product.nameEn}
                                 </p>
-                                <p className="text-xs text-slate-500">
+                                <p className="text-xs text-slate-400">
                                   {line.productPack.product.nameAr} · Returnable
                                   sale line
                                 </p>
@@ -2987,23 +2645,23 @@ export default function PosPage() {
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                       Return entry
                     </p>
-                    <h3 className="text-lg font-semibold text-slate-950">
+                    <h3 className="text-lg font-semibold text-slate-50">
                       Prepare and finalize the refund line
                     </h3>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-slate-400">
                       This stays bound to the selected source line and becomes
                       read only once the return is finalized.
                     </p>
                   </div>
 
                   {selectedReturnSourceLine ? (
-                    <div className="mt-3 rounded-[18px] border border-emerald-200 bg-white px-4 py-3 shadow-sm">
+                    <div className="mt-3 rounded-[18px] border border-emerald-400/30 bg-[#10151d] px-4 py-3">
                       <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between">
                         <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
                             Selected return source
                           </p>
-                          <p className="mt-1.5 text-sm font-semibold text-slate-950">
+                          <p className="mt-1.5 text-sm font-semibold text-slate-50">
                             {
                               selectedReturnSourceLine.productPack.product
                                 .nameEn
@@ -3011,7 +2669,7 @@ export default function PosPage() {
                             · Batch{" "}
                             {selectedReturnSourceLine.lotBatch?.batchNo ?? "-"}
                           </p>
-                          <p className="mt-1 text-xs text-slate-500">
+                          <p className="mt-1 text-xs text-slate-400">
                             Source sale {selectedSaleDetail.documentNo}
                           </p>
                         </div>
@@ -3032,7 +2690,7 @@ export default function PosPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-3 rounded-[18px] border border-sky-200 bg-sky-50 px-4 py-3 text-sm leading-6 text-sky-900">
+                    <div className="mt-3 rounded-[18px] border border-sky-400/30 bg-sky-500/10 px-4 py-3 text-sm leading-6 text-sky-100">
                       Select the source line first. This selected-source card
                       appears only once the return relationship is actually
                       bound.
@@ -3093,13 +2751,13 @@ export default function PosPage() {
                   </div>
 
                   {returnFinalized ? (
-                    <div className="mt-3 rounded-[18px] border border-emerald-200 bg-white px-4 py-3 text-sm leading-6 text-emerald-900">
+                    <div className="mt-3 rounded-[18px] border border-emerald-400/30 bg-[#10151d] px-4 py-3 text-sm leading-6 text-emerald-100">
                       Return finalized and locked. Line selection, quantity
                       edits, and finalization controls are now read only by
                       design.
                     </div>
                   ) : returnSession ? (
-                    <div className="mt-3 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-600">
+                    <div className="mt-3 rounded-[18px] border border-slate-700 bg-[#10151d] px-4 py-3 text-sm leading-6 text-slate-300">
                       Return draft open. Add the allowed refund line, then
                       finalize once the refund amount is correct.
                     </div>
