@@ -206,20 +206,20 @@ type PosWorkspaceView = "cashier" | "search" | "maintenance" | "returns";
 const defaultTenant = "11111111-1111-4111-8111-111111111111";
 const defaultBranch = "22222222-2222-4222-8222-222222222222";
 const surfaceClass =
-  "rounded-[20px] border border-slate-700/90 bg-[#1b212b] shadow-[0_18px_48px_rgba(2,6,23,0.34)]";
+  "rounded-[14px] border border-slate-800 bg-[#151b22]";
 const mutedSurfaceClass =
-  "rounded-[18px] border border-slate-700/90 bg-[#222934]";
+  "rounded-[10px] border border-slate-800 bg-[#161d25]";
 const inputClass =
-  "h-11 w-full rounded-[14px] border border-slate-600 bg-[#161b23] px-4 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-[#10151d] disabled:text-slate-500";
+  "h-10 w-full rounded-[8px] border border-slate-700 bg-[#10151c] px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-emerald-400/70 focus:ring-2 focus:ring-emerald-400/10 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-[#0d1117] disabled:text-slate-500";
 
 const primaryButtonClass =
-  "inline-flex items-center justify-center rounded-[14px] border border-blue-400/70 bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-700 disabled:text-slate-400";
+  "inline-flex h-10 items-center justify-center rounded-[8px] border border-emerald-500/60 bg-emerald-600 px-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-slate-800 disabled:text-slate-500";
 const secondaryButtonClass =
-  "inline-flex items-center justify-center rounded-[14px] border border-slate-600 bg-[#242b36] px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-[#2a3240] disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-[#171c24] disabled:text-slate-500";
+  "inline-flex h-10 items-center justify-center rounded-[8px] border border-slate-700 bg-[#171d26] px-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-200 transition hover:border-slate-500 hover:bg-[#1d2430] disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-[#11161c] disabled:text-slate-500";
 const accentButtonClass =
-  "inline-flex items-center justify-center rounded-[14px] border border-emerald-400/70 bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-700 disabled:text-slate-400";
+  "inline-flex h-10 items-center justify-center rounded-[8px] border border-amber-500/60 bg-amber-500 px-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-slate-800 disabled:text-slate-500";
 const metricCardClass =
-  "rounded-[14px] border border-slate-600 bg-[#181e27] px-3 py-2.5";
+  "rounded-[8px] border border-slate-700 bg-[#11161d] px-3 py-2.5";
 const searchCategoryExamples = [
   "Tablets",
   "Syrup",
@@ -394,7 +394,7 @@ function CompactInfoCard({
             : "border-slate-600 bg-[#181e27]";
 
   return (
-    <div className={cn("rounded-[14px] border px-3.5 py-3", toneClass)}>
+    <div className={cn("rounded-[8px] border px-3 py-2.5", toneClass)}>
       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
         {label}
       </p>
@@ -427,7 +427,7 @@ function MetricPill({
             : "border border-slate-600 bg-[#181e27] text-slate-200";
 
   return (
-    <div className={cn("rounded-[14px] px-3 py-2 text-sm", toneClass)}>
+    <div className={cn("rounded-[8px] px-3 py-2 text-sm", toneClass)}>
       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] opacity-70">
         {label}
       </p>
@@ -453,7 +453,7 @@ function Notice({
         : "border-sky-400/30 bg-sky-500/10 text-sky-100";
 
   return (
-    <div className={cn("rounded-[14px] border px-4 py-3", toneClass)}>
+    <div className={cn("rounded-[8px] border px-3.5 py-3", toneClass)}>
       <p className="text-sm font-semibold">{title}</p>
       <p className="mt-1 text-sm opacity-90">{body}</p>
     </div>
@@ -462,7 +462,7 @@ function Notice({
 
 function EmptyPanel({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-[16px] border border-dashed border-slate-600 bg-[#181e27] px-5 py-8 text-center text-sm text-slate-400">
+    <div className="rounded-[8px] border border-dashed border-slate-700 bg-[#11161d] px-5 py-8 text-center text-sm text-slate-400">
       <p className="text-base font-semibold text-slate-200">{title}</p>
       <p className="mt-2 leading-6">{body}</p>
     </div>
@@ -502,10 +502,10 @@ function SearchModeButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-[14px] border px-3 py-2 text-xs font-semibold tracking-[0.16em] transition",
+        "rounded-[8px] border px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition",
         active
-          ? "border-blue-400/70 bg-blue-500/15 text-blue-100"
-          : "border-slate-600 bg-[#181e27] text-slate-300 hover:border-slate-500 hover:text-slate-100",
+          ? "border-amber-500/60 bg-amber-500/10 text-amber-100"
+          : "border-slate-700 bg-[#11161d] text-slate-300 hover:border-slate-500 hover:text-slate-100",
       )}
     >
       {label}
@@ -1317,11 +1317,32 @@ export default function PosPage() {
     id: PosWorkspaceView;
     label: string;
     note: string;
+    activeClass: string;
   }> = [
-    { id: "cashier", label: "Sell Counter", note: "Invoice-first selling" },
-    { id: "search", label: "Search", note: "Lookup workspace" },
-    { id: "maintenance", label: "Pricing & Entry", note: "Pricing and classification" },
-    { id: "returns", label: "Returns", note: "Transaction lookup and refunds" },
+    {
+      id: "cashier",
+      label: "Sell Counter",
+      note: "Live invoice workstation",
+      activeClass: "border-emerald-500/60 bg-emerald-500/10 text-emerald-50",
+    },
+    {
+      id: "search",
+      label: "Lookup Bench",
+      note: "Trade, generic, supplier, category",
+      activeClass: "border-amber-500/60 bg-amber-500/10 text-amber-50",
+    },
+    {
+      id: "maintenance",
+      label: "Pricing Desk",
+      note: "Classification and maintenance",
+      activeClass: "border-sky-500/60 bg-sky-500/10 text-sky-50",
+    },
+    {
+      id: "returns",
+      label: "Returns",
+      note: "Lookup and refund execution",
+      activeClass: "border-rose-500/60 bg-rose-500/10 text-rose-50",
+    },
   ];
   const invoiceReference =
     cartSession?.fiscalSaleDocument?.documentNo ??
@@ -1373,38 +1394,41 @@ export default function PosPage() {
         fontFamily: '"Segoe UI", "Noto Sans Arabic", Tahoma, sans-serif',
       }}
     >
-      <div className="mx-auto max-w-[1540px] space-y-3 px-4 py-4 lg:px-6 lg:py-5">
-        <header className="space-y-3">
-          <section className={cn(surfaceClass, "space-y-3 px-4 py-4")}>
-            <div className="rounded-[16px] border border-slate-600 bg-[#202732] px-4 py-3">
-              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                <div className="min-w-0">
-                  <h1 className="text-[1.9rem] font-semibold tracking-tight text-slate-50 lg:text-[2.35rem]">
+      <div className="mx-auto max-w-[1560px] space-y-2 px-4 py-3 lg:px-6 lg:py-4">
+        <header>
+          <section className={cn(surfaceClass, "space-y-2 px-3 py-3")}>
+            <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+              <div className="min-w-0 space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-300">
+                  Pharmacy cashier / accounting counter
+                </p>
+                <div className="flex flex-col gap-1 xl:flex-row xl:items-end xl:justify-between">
+                  <h1 className="text-[1.4rem] font-semibold tracking-[0.01em] text-slate-50 lg:text-[1.75rem]">
                     Classic Pharmacy Cashier Counter
                   </h1>
-                  <p className="text-sm text-slate-400">
-                    Best match for the target: invoice dominates, support tools stay secondary, and non-selling work lives in separate workspaces.
+                  <p className="max-w-3xl text-xs leading-5 text-slate-400">
+                    Thin operational chrome only. The live invoice stays primary; lookup, pricing, and returns remain purpose-built side workspaces.
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    className={primaryButtonClass}
-                    type="button"
-                    onClick={handleHeaderPrimaryAction}
-                    disabled={
-                      operatorActionState === "start-sale" && !workspaceReady
-                    }
-                  >
-                    {headerPrimaryLabel}
-                  </button>
-                  <button
-                    className={secondaryButtonClass}
-                    type="button"
-                    onClick={handleHeaderSecondaryAction}
-                  >
-                    {headerSecondaryLabel}
-                  </button>
-                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 xl:justify-end">
+                <button
+                  className={primaryButtonClass}
+                  type="button"
+                  onClick={handleHeaderPrimaryAction}
+                  disabled={
+                    operatorActionState === "start-sale" && !workspaceReady
+                  }
+                >
+                  {headerPrimaryLabel}
+                </button>
+                <button
+                  className={secondaryButtonClass}
+                  type="button"
+                  onClick={handleHeaderSecondaryAction}
+                >
+                  {headerSecondaryLabel}
+                </button>
               </div>
             </div>
 
@@ -1417,22 +1441,27 @@ export default function PosPage() {
                     type="button"
                     onClick={() => setWorkspaceView(tab.id)}
                     className={cn(
-                      "rounded-[14px] border px-4 py-3 text-left transition",
+                      "rounded-[8px] border border-slate-800 bg-[#11161d] px-3 py-2.5 text-left transition",
                       isActive
-                        ? "border-blue-400/80 bg-blue-500/20 text-blue-50"
-                        : "border-slate-600 bg-[#242b36] text-slate-300 hover:border-slate-500 hover:bg-[#2a3240] hover:text-slate-100",
+                        ? tab.activeClass
+                        : "text-slate-300 hover:border-slate-600 hover:bg-[#161d27] hover:text-slate-100",
                     )}
                   >
-                    <p className="text-sm font-semibold">{tab.label}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em]">
+                      {tab.label}
+                    </p>
                     <p className="mt-1 text-xs text-slate-400">{tab.note}</p>
                   </button>
                 );
               })}
             </div>
 
-            <div className="grid gap-2 xl:grid-cols-5">
+            <div className="grid gap-2 xl:grid-cols-[1.15fr_1.25fr_1fr_1fr_0.9fr]">
               {[
-                { label: "Operator", value: operatorAuthenticated ? email : "Pending sign-in" },
+                {
+                  label: "Operator",
+                  value: operatorAuthenticated ? email : "Pending sign-in",
+                },
                 {
                   label: "Register",
                   value: activeRegister
@@ -1445,12 +1474,12 @@ export default function PosPage() {
               ].map((item) => (
                 <div
                   key={item.label}
-                  className="rounded-[14px] border border-slate-600 bg-[#242b36] px-4 py-2.5"
+                  className="rounded-[8px] border border-slate-800 bg-[#11161d] px-3 py-2"
                 >
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                     {item.label}
                   </p>
-                  <p className="mt-1.5 truncate text-sm font-semibold text-slate-100">
+                  <p className="mt-1 truncate text-sm font-semibold text-slate-100">
                     {item.value}
                   </p>
                 </div>
@@ -1459,22 +1488,22 @@ export default function PosPage() {
 
             <details
               id="utility-diagnostics"
-              className="rounded-[14px] border border-slate-700 bg-[#161b23] px-4 py-3 text-sm text-slate-300"
+              className="rounded-[8px] border border-slate-800 bg-[#10151c] px-3 py-3 text-sm text-slate-300"
             >
-              <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                 Utility setup and diagnostics
               </summary>
               <div className="mt-3 grid gap-3 lg:grid-cols-2">
                 <form
-                  className="space-y-3 rounded-[16px] border border-slate-700 bg-[#202732] p-4"
+                  className="space-y-3 rounded-[8px] border border-slate-800 bg-[#151b22] p-3"
                   onSubmit={login}
                 >
                   <div className="space-y-1">
                     <h3 className="text-sm font-semibold text-slate-100">
                       Operator sign-in defaults
                     </h3>
-                    <p className="text-sm text-slate-400">
-                      Setup stays collapsed until the counter actually needs it.
+                    <p className="text-xs leading-5 text-slate-400">
+                      Setup remains subordinate until the counter actually needs it.
                     </p>
                   </div>
                   <input className={inputClass} placeholder="Tenant ID" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
@@ -1483,15 +1512,15 @@ export default function PosPage() {
                   <button className={primaryButtonClass} type="submit">Sign in</button>
                 </form>
 
-                <div className="space-y-3 rounded-[16px] border border-slate-700 bg-[#202732] p-4">
+                <div className="space-y-3 rounded-[8px] border border-slate-800 bg-[#151b22] p-3">
                   <div className="space-y-1">
                     <h3 className="text-sm font-semibold text-slate-100">Advanced overrides</h3>
-                    <p className="text-sm text-slate-400">Only for branch, register, or token troubleshooting.</p>
+                    <p className="text-xs leading-5 text-slate-400">Used only for branch, register, or token troubleshooting.</p>
                   </div>
                   <input className={inputClass} placeholder="Branch ID" value={branchId} onChange={(e) => setBranchId(e.target.value)} />
                   <input className={inputClass} placeholder="Register ID" value={registerId} onChange={(e) => setRegisterId(e.target.value)} />
                   <input className={inputClass} placeholder="Technical bearer token (advanced only)" type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} />
-                  <p className="text-xs leading-5 text-slate-500">The live token stays masked. Diagnostics remain secondary and never become the cashier headline.</p>
+                  <p className="text-xs leading-5 text-slate-500">The live token stays masked. Diagnostics never become the counter headline.</p>
                 </div>
               </div>
             </details>
@@ -1504,14 +1533,13 @@ export default function PosPage() {
             ) : null}
           </section>
         </header>
-
         {workspaceView === "cashier" ? (
           <>
-            <section id="sale-workspace" className={cn(surfaceClass, "p-4 lg:p-5")}>
-            <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <section id="sale-workspace" className={cn(surfaceClass, "p-3 lg:p-4")}>
+            <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_290px]">
               <div className="space-y-3">
-                <section className="rounded-[16px] border border-slate-700 bg-[#171c24]">
-                  <div className="flex flex-col gap-3 border-b border-slate-700 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+                <section className="rounded-[10px] border border-slate-800 bg-[#10151c]">
+                  <div className="flex flex-col gap-3 border-b border-slate-800 px-4 py-3 lg:flex-row lg:items-end lg:justify-between">
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <ToneBadge tone={workspaceReady ? "emerald" : "rose"}>
@@ -1525,12 +1553,11 @@ export default function PosPage() {
                           <ToneBadge tone="slate">Idle</ToneBadge>
                         )}
                       </div>
-                      <h2 className="text-2xl font-semibold text-slate-50">
+                      <h2 className="text-[1.55rem] font-semibold tracking-[0.02em] text-slate-50">
                         {invoiceReference}
                       </h2>
-                      <p className="text-sm text-slate-400">
-                        Search or scan, choose pack and lot, add the line, then
-                        close the bill from the cashier footer.
+                      <p className="text-xs leading-5 text-slate-400">
+                        Search or scan, bind the correct pack and lot, post the line into the live invoice, then close the bill from the cashier footer.
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -1552,7 +1579,7 @@ export default function PosPage() {
                       </button>
                     </div>
                   </div>
-                  <div className="grid gap-2 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,240px)_90px_120px_auto]">
+                  <div className="grid gap-2 border-b border-slate-800 bg-[#0d1218] px-4 py-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,240px)_90px_120px_auto]">
                     <input
                       className={inputClass}
                       placeholder="Scan barcode / Search product, generic, barcode..."
@@ -1603,11 +1630,8 @@ export default function PosPage() {
                       Add line
                     </button>
                   </div>
-                  <div className="flex flex-col gap-2 border-t border-slate-700 px-4 py-2.5 text-xs text-slate-500 lg:flex-row lg:items-center lg:justify-between">
-                    <p>
-                      Richer lookup and pricing remain in their own workspaces
-                      so the live bill stays clean.
-                    </p>
+                  <div className="flex flex-col gap-2 px-4 py-2.5 text-[11px] uppercase tracking-[0.16em] text-slate-500 lg:flex-row lg:items-center lg:justify-between">
+                    <p>Lookup and pricing stay outside the live invoice lane so the counter remains narrow and operational.</p>
                     <div className="flex flex-wrap gap-2">
                       <button
                         className={secondaryButtonClass}
@@ -1627,8 +1651,8 @@ export default function PosPage() {
                   </div>
                 </section>
 
-                <section className="overflow-hidden rounded-[16px] border border-slate-700 bg-[#1a2028]">
-                  <div className="grid grid-cols-[2.35fr_1.25fr_0.9fr_0.6fr_0.9fr_0.7fr_0.9fr_1fr] gap-3 border-b border-slate-700 bg-[#161b23] px-4 py-2.5">
+                <section className="overflow-hidden rounded-[10px] border border-slate-800 bg-[#10151c]">
+                  <div className="grid grid-cols-[2.35fr_1.25fr_0.9fr_0.6fr_0.9fr_0.7fr_0.9fr_1fr] gap-3 border-b border-slate-800 bg-[#0d1218] px-4 py-2">
                     <InvoiceHeaderCell>Item</InvoiceHeaderCell>
                     <InvoiceHeaderCell>Pack/Strength</InvoiceHeaderCell>
                     <InvoiceHeaderCell>Batch</InvoiceHeaderCell>
@@ -1639,7 +1663,7 @@ export default function PosPage() {
                     <InvoiceHeaderCell align="right">Line total</InvoiceHeaderCell>
                   </div>
 
-                  <div className="max-h-[540px] space-y-2 overflow-y-auto bg-[#1a2028] px-3 py-3">
+                  <div className="max-h-[540px] divide-y divide-slate-800 overflow-y-auto bg-[#10151c]">
                     {invoiceRows.length ? (
                       invoiceRows.map((line) => {
                         const edit = lineEdits[line.id] ?? {
@@ -1653,10 +1677,10 @@ export default function PosPage() {
                           <div
                             key={line.id}
                             className={cn(
-                              "cursor-pointer rounded-[14px] border px-3 py-3 transition",
+                              "cursor-pointer border-l-[3px] px-3 py-3 transition",
                               isFocused
-                                ? "border-blue-400/70 bg-[#273041]"
-                                : "border-slate-700 bg-[#202732] hover:border-slate-500 hover:bg-[#252d39]",
+                                ? "border-amber-400/80 bg-[#18212c]"
+                                : "border-transparent bg-[#10151c] hover:bg-[#151c26]",
                             )}
                             onClick={() => setFocusedInvoiceLineId(line.id)}
                           >
@@ -1758,14 +1782,14 @@ export default function PosPage() {
                             </div>
 
                             {isCartMutable && isFocused ? (
-                              <div className="mt-3 rounded-[14px] border border-slate-600 bg-[#181e27] px-3 py-3">
+                              <div className="mt-3 rounded-[8px] border border-slate-700 bg-[#0c1117] px-3 py-3">
                                 <div className="grid gap-2 xl:grid-cols-[0.65fr_0.9fr_0.8fr_0.75fr_auto_auto]">
                                   <label className={metricCardClass}>
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                                       Qty
                                     </p>
                                     <input
-                                      className="mt-1.5 h-9 w-full rounded-[10px] border border-slate-600 bg-[#10151d] px-3 text-sm text-slate-100 outline-none transition focus:border-blue-400"
+                                      className="mt-1.5 h-9 w-full rounded-[6px] border border-slate-700 bg-[#10151c] px-3 text-sm text-slate-100 outline-none transition focus:border-amber-400/70"
                                       type="number"
                                       min={1}
                                       step={1}
@@ -1787,7 +1811,7 @@ export default function PosPage() {
                                       Before tax
                                     </p>
                                     <input
-                                      className="mt-1.5 h-9 w-full rounded-[10px] border border-slate-600 bg-[#10151d] px-3 text-sm text-slate-100 outline-none transition focus:border-blue-400"
+                                      className="mt-1.5 h-9 w-full rounded-[6px] border border-slate-700 bg-[#10151c] px-3 text-sm text-slate-100 outline-none transition focus:border-amber-400/70"
                                       type="number"
                                       min={0}
                                       step={0.01}
@@ -1809,7 +1833,7 @@ export default function PosPage() {
                                       Discount
                                     </p>
                                     <input
-                                      className="mt-1.5 h-9 w-full rounded-[10px] border border-slate-600 bg-[#10151d] px-3 text-sm text-slate-100 outline-none transition focus:border-blue-400"
+                                      className="mt-1.5 h-9 w-full rounded-[6px] border border-slate-700 bg-[#10151c] px-3 text-sm text-slate-100 outline-none transition focus:border-amber-400/70"
                                       type="number"
                                       min={0}
                                       step={0.01}
@@ -1831,7 +1855,7 @@ export default function PosPage() {
                                       Tax %
                                     </p>
                                     <input
-                                      className="mt-1.5 h-9 w-full rounded-[10px] border border-slate-600 bg-[#10151d] px-3 text-sm text-slate-100 outline-none transition focus:border-blue-400"
+                                      className="mt-1.5 h-9 w-full rounded-[6px] border border-slate-700 bg-[#10151c] px-3 text-sm text-slate-100 outline-none transition focus:border-amber-400/70"
                                       type="number"
                                       min={0}
                                       step={0.01}
@@ -1856,7 +1880,7 @@ export default function PosPage() {
                                     Update line
                                   </button>
                                   <button
-                                    className="inline-flex items-center justify-center rounded-[14px] border border-rose-400/40 bg-rose-500/10 px-4 py-2.5 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20"
+                                    className="inline-flex h-10 items-center justify-center rounded-[8px] border border-rose-500/40 bg-rose-500/10 px-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-rose-100 transition hover:bg-rose-500/20"
                                     type="button"
                                     onClick={() => removeCartLine(line.id)}
                                   >
@@ -1876,9 +1900,9 @@ export default function PosPage() {
                     )}
                   </div>
 
-                  <div className="sticky bottom-0 border-t border-slate-700 bg-[#171c24] px-4 py-3">
+                  <div className="sticky bottom-0 border-t border-amber-500/20 bg-[#0f141b]/95 px-4 py-3 backdrop-blur">
                     <div className="grid gap-3 xl:grid-cols-[1fr_1fr_1fr_220px_auto_auto] xl:items-end">
-                      <div className="rounded-[14px] border border-slate-600 bg-[#202732] px-4 py-3">
+                      <div className="rounded-[8px] border border-slate-800 bg-[#10151c] px-3 py-2.5">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                           Subtotal
                         </p>
@@ -1889,7 +1913,7 @@ export default function PosPage() {
                           )}
                         </p>
                       </div>
-                      <div className="rounded-[14px] border border-slate-600 bg-[#202732] px-4 py-3">
+                      <div className="rounded-[8px] border border-slate-800 bg-[#10151c] px-3 py-2.5">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                           Tax
                         </p>
@@ -1900,9 +1924,9 @@ export default function PosPage() {
                           )}
                         </p>
                       </div>
-                      <div className="rounded-[14px] border border-emerald-400/30 bg-emerald-500/10 px-4 py-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200">
-                          Payable
+                      <div className="rounded-[8px] border border-amber-500/40 bg-amber-500/10 px-3 py-2.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-100">
+                          Amount due
                         </p>
                         <p className="mt-1.5 text-[1.3rem] font-semibold text-slate-50">
                           {formatMoney(
@@ -1955,8 +1979,8 @@ export default function PosPage() {
                       labeled pending until the runtime actually exposes them.
                     </p>
                     {cartSession?.state === "FINALIZED" ? (
-                      <div className="mt-3 rounded-[14px] border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-                        Bill closed. Final reference{" "}
+                      <div className="mt-3 rounded-[8px] border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+                        Bill closed. Fiscal reference{" "}
                         {cartSession.fiscalSaleDocument?.documentNo ??
                           cartSession.sessionNumber}{" "}
                         stays visible here so the footer reads like a finalized
@@ -1968,7 +1992,7 @@ export default function PosPage() {
               </div>
 
               <aside className="space-y-3">
-                <section className={cn(mutedSurfaceClass, "p-4")}>
+                <section className="rounded-[10px] border border-amber-900/50 bg-[#120f0b] p-4">
                   <div className="space-y-1.5">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Pack / Lot selector
@@ -2070,7 +2094,7 @@ export default function PosPage() {
                     {pharmacistAlerts.map((alert) => (
                       <li
                         key={alert.title}
-                        className="rounded-[14px] border border-slate-600 bg-[#181e27] px-3 py-3"
+                        className="rounded-[8px] border border-slate-700 bg-[#11161d] px-3 py-3"
                       >
                         <p className="font-semibold text-slate-100">
                           {alert.title}
@@ -2094,17 +2118,17 @@ export default function PosPage() {
               ) : null}
           </>
         ) : workspaceView === "search" ? (
-          <section className={cn(surfaceClass, "p-4 lg:p-5")}>
+          <section className="rounded-[14px] border border-amber-900/50 bg-[#17140f] p-4 lg:p-5">
             <div className="flex flex-col gap-4 border-b border-slate-700/90 pb-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-1.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Search / product lookup
+                  Lookup bench / product search
                 </p>
                 <h2 className="text-2xl font-semibold text-slate-50">
-                  Richer lookup stays off the cashier bill.
+                  Dedicated lookup bench for trade, generic, supplier, and category search.
                 </h2>
                 <p className="max-w-3xl text-sm leading-6 text-slate-400">
-                  Trade, generic, supplier/company shell, and category/form lookup live here so the counter can stay barcode-first and narrow.
+                  This workspace exists to search broadly without turning the sell counter into a dashboard of lookup panels.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -2117,7 +2141,7 @@ export default function PosPage() {
               </div>
             </div>
             <div className="mt-4 grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)_340px]">
-              <section className={cn(mutedSurfaceClass, "space-y-4 p-4")}>
+              <section className="space-y-4 rounded-[10px] border border-amber-900/50 bg-[#120f0b] p-4">
                 <input className={inputClass} placeholder={searchMeta.placeholder} value={catalogSearch} onChange={(e) => setCatalogSearch(e.target.value)} />
                 <div className="flex flex-wrap gap-2">
                   {(Object.entries(searchModeMeta) as Array<[CatalogSearchMode, { label: string }]>).map(([mode, meta]) => (
@@ -2126,12 +2150,12 @@ export default function PosPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {searchCategoryExamples.map((example) => (
-                    <button key={example} type="button" onClick={() => { setCatalogSearchMode("category"); setCatalogSearch(example); }} className="rounded-full border border-slate-600 bg-[#181e27] px-3 py-2 text-xs font-semibold tracking-[0.16em] text-slate-300 transition hover:border-slate-500 hover:bg-[#202732] hover:text-slate-100">
+                    <button key={example} type="button" onClick={() => { setCatalogSearchMode("category"); setCatalogSearch(example); }} className="rounded-[8px] border border-amber-900/50 bg-[#1a1610] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300 transition hover:border-amber-700/50 hover:bg-[#231c12] hover:text-slate-100">
                       {example}
                     </button>
                   ))}
                 </div>
-                <div className="rounded-[20px] border border-slate-700 bg-[#181e27] px-4 py-3 text-sm leading-6 text-slate-400">
+                <div className="rounded-[8px] border border-amber-900/50 bg-[#1a1610] px-4 py-3 text-sm leading-6 text-slate-400">
                   {searchMeta.note}
                 </div>
               </section>
@@ -2149,7 +2173,7 @@ export default function PosPage() {
                   {visibleSearchResults.length ? visibleSearchResults.map((option) => {
                     const isSelected = option.key === selectedCatalogKey;
                     return (
-                      <button key={option.key} type="button" onClick={() => setSelectedCatalogKey(option.key)} className={cn("rounded-[22px] border p-4 text-left transition", isSelected ? "border-emerald-400/60 bg-emerald-500/10" : "border-slate-700 bg-[#171c24] hover:border-slate-500 hover:bg-[#1d2430]")}> 
+                      <button key={option.key} type="button" onClick={() => setSelectedCatalogKey(option.key)} className={cn("rounded-[8px] border-l-[3px] p-4 text-left transition", isSelected ? "border-amber-400/70 bg-[#221b12]" : "border-transparent bg-[#17130f] hover:bg-[#1e1810]")}> 
                         <p className="text-sm font-semibold text-slate-50">{option.label}</p>
                         <p className="mt-2 text-sm leading-6 text-slate-400">{option.subtitle}</p>
                       </button>
@@ -2161,7 +2185,7 @@ export default function PosPage() {
                   )}
                 </div>
               </section>
-              <aside className={cn(mutedSurfaceClass, "p-4")}>
+              <aside className="rounded-[10px] border border-amber-900/50 bg-[#120f0b] p-4">
                 {selectedCatalogContext ? (
                   <div className="space-y-3">
                     <p className="text-lg font-semibold text-slate-50">{selectedCatalogContext.pack.product.nameEn}</p>
@@ -2181,17 +2205,17 @@ export default function PosPage() {
             </div>
           </section>
         ) : workspaceView === "maintenance" ? (
-          <section className={cn(surfaceClass, "p-4 lg:p-5")}>
+          <section className="rounded-[14px] border border-sky-900/50 bg-[#121920] p-4 lg:p-5">
             <div className="flex flex-col gap-4 border-b border-slate-700/90 pb-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-1.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Pricing / product entry / classification
+                  Pricing desk / product entry / classification
                 </p>
                 <h2 className="text-2xl font-semibold text-slate-50">
-                  Product maintenance stays off the live bill.
+                  Separate pricing desk for maintenance and classification work.
                 </h2>
                 <p className="max-w-3xl text-sm leading-6 text-slate-400">
-                  Pricing review, category examples, dosage-form examples, and product-entry scaffolding live here without crowding the cashier counter.
+                  Maintenance and classification stay purpose-built here instead of sharing the cashier surface.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -2218,18 +2242,18 @@ export default function PosPage() {
               </section>
               <section className={cn(mutedSurfaceClass, "space-y-4 p-4")}>
                 <div className="grid gap-3 md:grid-cols-2">
-                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Trade / commercial name</p><input className="mt-1.5 h-10 w-full rounded-xl border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={focusedProductSnapshot?.title ?? ""} readOnly /></label>
-                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Before-tax price</p><input className="mt-1.5 h-10 w-full rounded-xl border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={maintenanceUnitPrice} readOnly /></label>
-                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tax rate</p><input className="mt-1.5 h-10 w-full rounded-xl border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={`${maintenanceTaxRate}%`} readOnly /></label>
-                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Pack / lot context</p><input className="mt-1.5 h-10 w-full rounded-xl border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={focusedProductSnapshot?.batch ?? ""} readOnly /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Trade / commercial name</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={focusedProductSnapshot?.title ?? ""} readOnly /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Before-tax price</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={maintenanceUnitPrice} readOnly /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tax rate</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={`${maintenanceTaxRate}%`} readOnly /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Pack / lot context</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={focusedProductSnapshot?.batch ?? ""} readOnly /></label>
                 </div>
                 <div className="space-y-2">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Classification examples</p>
-                  <div className="flex flex-wrap gap-2">{maintenanceCategories.map((category) => (<span key={category} className="rounded-full border border-slate-600 bg-[#181e27] px-3 py-2 text-xs font-semibold tracking-[0.16em] text-slate-300">{category}</span>))}</div>
+                  <div className="flex flex-wrap gap-2">{maintenanceCategories.map((category) => (<span key={category} className="rounded-[8px] border border-sky-900/40 bg-[#10151d] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">{category}</span>))}</div>
                 </div>
                 <div className="space-y-2">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Dosage form examples</p>
-                  <div className="flex flex-wrap gap-2">{dosageFormExamples.map((form) => (<span key={form} className="rounded-full border border-slate-600 bg-[#181e27] px-3 py-2 text-xs font-semibold tracking-[0.16em] text-slate-300">{form}</span>))}</div>
+                  <div className="flex flex-wrap gap-2">{dosageFormExamples.map((form) => (<span key={form} className="rounded-[8px] border border-sky-900/40 bg-[#10151d] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">{form}</span>))}</div>
                 </div>
                 <Notice title="Persistence scope" body="This slice separates pricing / entry from selling, but it does not fake backend save flows that are not wired yet." tone="info" />
               </section>
@@ -2238,20 +2262,18 @@ export default function PosPage() {
         ) : (
           <section
           id="secondary-workspace"
-          className={cn(surfaceClass, "p-4 lg:p-5")}
+          className="rounded-[14px] border border-rose-900/40 bg-[#191114] p-4 lg:p-5"
         >
           <div className="flex flex-col gap-4 border-b border-slate-700/90 pb-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-1.5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Transaction lookup / returns
+                Returns desk / transaction lookup
               </p>
               <h2 className="text-2xl font-semibold text-slate-50">
-                Finalized-sale lookup and bounded returns are separated from selling.
+                Returns stay on their own desk with source-sale lookup and bounded refund execution.
               </h2>
               <p className="max-w-3xl text-sm leading-6 text-slate-400">
-                The accepted finalized-return proof remains here without crowding the cashier counter.
-                This lane is intentionally subordinate to the sales counter
-                above.
+                Finalized-return proof remains intact here while the sell counter stays focused on live billing.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -2283,7 +2305,7 @@ export default function PosPage() {
           {secondaryPane === "lookup" ? (
             <div className="mt-4 space-y-4">
               {selectedSaleDetail ? (
-                <div className="rounded-[22px] border border-sky-400/30 bg-sky-500/10 px-4 py-4 text-sky-100">
+                <div className="rounded-[8px] border border-sky-400/30 bg-sky-500/10 px-4 py-4 text-sky-100">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                       <p className="text-sm font-semibold">
@@ -2314,7 +2336,7 @@ export default function PosPage() {
                     value={salesSearch}
                     onChange={(e) => setSalesSearch(e.target.value)}
                   />
-                  <div className="rounded-2xl border border-slate-700 bg-[#181e27] px-4 py-3 text-sm text-slate-300">
+                  <div className="rounded-[8px] border border-slate-800 bg-[#11161d] px-4 py-3 text-sm text-slate-300">
                     {visibleFinalizedSales.length} transaction
                     {visibleFinalizedSales.length === 1 ? "" : "s"} in scope
                   </div>
@@ -2345,10 +2367,10 @@ export default function PosPage() {
                         type="button"
                         onClick={() => void loadSaleDetail(sale.id)}
                         className={cn(
-                          "rounded-[24px] border p-4 text-left transition",
+                          "rounded-[8px] border-l-[3px] p-4 text-left transition",
                           isSelected
-                            ? "border-emerald-400/60 bg-emerald-500/10"
-                            : "border-slate-700 bg-[#171c24] hover:border-slate-500 hover:bg-[#1d2430]",
+                            ? "border-rose-400/70 bg-[#241619]"
+                            : "border-transparent bg-[#130e10] hover:bg-[#1a1215]",
                         )}
                       >
                         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -2409,7 +2431,7 @@ export default function PosPage() {
           ) : (
             <div className="mt-4 space-y-4">
               {finalizedReturnSummary ? (
-                <div className="rounded-[26px] border border-emerald-400/30 bg-emerald-500/10 p-4">
+                <div className="rounded-[8px] border border-emerald-400/30 bg-emerald-500/10 p-4">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="space-y-1.5">
                       <div className="flex flex-wrap items-center gap-2">
@@ -2456,7 +2478,7 @@ export default function PosPage() {
                       />
                     </div>
                   </div>
-                  <div className="mt-3 rounded-[18px] border border-emerald-400/30 bg-[#10151d] px-4 py-3 text-sm leading-6 text-emerald-100">
+                  <div className="mt-3 rounded-[8px] border border-emerald-400/30 bg-[#10151d] px-4 py-3 text-sm leading-6 text-emerald-100">
                     Return finalized and locked. This completion surface remains
                     visible so the operator can prove the refund reference,
                     source-sale relationship, and next safe action at a glance.
@@ -2587,10 +2609,10 @@ export default function PosPage() {
                             setReturnUnitPrice(line.unitPrice);
                           }}
                           className={cn(
-                            "rounded-[20px] border p-3 text-left transition",
+                            "rounded-[8px] border-l-[3px] p-3 text-left transition",
                             isSelected
-                              ? "border-emerald-400/60 bg-emerald-500/10"
-                              : "border-slate-700 bg-[#171c24] hover:border-slate-500 hover:bg-[#1d2430]",
+                              ? "border-rose-400/70 bg-[#241619]"
+                              : "border-transparent bg-[#130e10] hover:bg-[#1a1215]",
                             !isReturnMutable && "cursor-not-allowed opacity-60",
                           )}
                         >
@@ -2655,7 +2677,7 @@ export default function PosPage() {
                   </div>
 
                   {selectedReturnSourceLine ? (
-                    <div className="mt-3 rounded-[18px] border border-emerald-400/30 bg-[#10151d] px-4 py-3">
+                    <div className="mt-3 rounded-[8px] border border-emerald-400/30 bg-[#10151d] px-4 py-3">
                       <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between">
                         <div>
                           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
@@ -2690,7 +2712,7 @@ export default function PosPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-3 rounded-[18px] border border-sky-400/30 bg-sky-500/10 px-4 py-3 text-sm leading-6 text-sky-100">
+                    <div className="mt-3 rounded-[8px] border border-sky-400/30 bg-sky-500/10 px-4 py-3 text-sm leading-6 text-sky-100">
                       Select the source line first. This selected-source card
                       appears only once the return relationship is actually
                       bound.
@@ -2751,13 +2773,13 @@ export default function PosPage() {
                   </div>
 
                   {returnFinalized ? (
-                    <div className="mt-3 rounded-[18px] border border-emerald-400/30 bg-[#10151d] px-4 py-3 text-sm leading-6 text-emerald-100">
+                    <div className="mt-3 rounded-[8px] border border-emerald-400/30 bg-[#10151d] px-4 py-3 text-sm leading-6 text-emerald-100">
                       Return finalized and locked. Line selection, quantity
                       edits, and finalization controls are now read only by
                       design.
                     </div>
                   ) : returnSession ? (
-                    <div className="mt-3 rounded-[18px] border border-slate-700 bg-[#10151d] px-4 py-3 text-sm leading-6 text-slate-300">
+                    <div className="mt-3 rounded-[8px] border border-slate-700 bg-[#10151d] px-4 py-3 text-sm leading-6 text-slate-300">
                       Return draft open. Add the allowed refund line, then
                       finalize once the refund amount is correct.
                     </div>
