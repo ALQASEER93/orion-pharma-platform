@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { getApiBase } from "../../lib/api-base";
 
 type PosContextResponse = {
@@ -28,11 +28,32 @@ type CatalogPack = {
   packSellability?: string | null;
   unitsPerPack?: number | null;
   product: {
-    id?: string;
+    id: string;
     nameEn: string;
     nameAr: string;
+    tradeNameEn?: string | null;
+    tradeNameAr?: string | null;
+    genericNameEn?: string | null;
+    genericNameAr?: string | null;
+    categoryEn?: string | null;
+    categoryAr?: string | null;
     barcode?: string | null;
+    strength?: string | null;
+    packSize?: string | null;
+    defaultSalePrice?: number | null;
+    taxProfileCode?: string | null;
     isActive?: boolean;
+    dosageForm?: {
+      id: string;
+      nameEn: string;
+      nameAr: string;
+    } | null;
+    supplier?: {
+      id: string;
+      code: string;
+      nameEn: string;
+      nameAr: string;
+    } | null;
   };
   lots: Array<{
     lotBatchId: string;
@@ -202,6 +223,34 @@ type OperatorActionState =
   | "return-mode";
 type CatalogSearchMode = "trade" | "generic" | "supplier" | "category";
 type PosWorkspaceView = "cashier" | "search" | "maintenance" | "returns";
+type SupplierOption = {
+  id: string;
+  code: string;
+  nameEn: string;
+  nameAr: string;
+};
+type MaintenanceFormState = {
+  productId: string;
+  tradeNameEn: string;
+  tradeNameAr: string;
+  genericNameEn: string;
+  genericNameAr: string;
+  categoryEn: string;
+  categoryAr: string;
+  strength: string;
+  dosageFormName: string;
+  packSize: string;
+  barcode: string;
+  supplierId: string;
+  defaultSalePrice: string;
+  taxProfileCode: string;
+  packCode: string;
+  packBarcode: string;
+  batchNo: string;
+  expiryDate: string;
+  branchStockQuantity: string;
+  isActive: boolean;
+};
 
 const defaultTenant = "11111111-1111-4111-8111-111111111111";
 const defaultBranch = "22222222-2222-4222-8222-222222222222";
@@ -250,25 +299,81 @@ const searchModeMeta: Record<
 > = {
   trade: {
     label: "Trade name",
-    placeholder: "Scan barcode or search by trade name, pack code, or batch",
-    note: "Trade-name search is active against the current runtime payload.",
+    placeholder: "Search by trade/commercial name or barcode",
+    note: "Lookup is backed by persisted product truth plus the current branch runtime anchor.",
   },
   generic: {
     label: "Generic / active ingredient",
-    placeholder: "Search by generic name or active ingredient shell",
-    note: "Generic search uses the product naming fields exposed by the current runtime until richer catalog truth exists.",
+    placeholder: "Search by generic name or active ingredient",
+    note: "Generic search uses persisted generic fields from the product truth and keeps the same sellable runtime anchor visible when it exists.",
   },
   supplier: {
     label: "Supplier / company",
-    placeholder: "Search by supplier or company shell",
-    note: "Supplier/company search affordance is honest UI shell only in this slice. The current POS runtime does not expose supplier indexing on this route.",
+    placeholder: "Search by supplier or company",
+    note: "Supplier/company search now uses the current supplier model only where supplier truth actually exists.",
   },
   category: {
     label: "Category / form",
-    placeholder: "Search by category or dosage form shell",
-    note: "Category/form affordance is shown now so pharmacists have the right search mental model. Catalog metadata wiring is still pending.",
+    placeholder: "Search by category or dosage form",
+    note: "Category and dosage-form search now use persisted classification fields instead of placeholder affordances.",
   },
 };
+
+const emptyMaintenanceForm = (): MaintenanceFormState => ({
+  productId: "",
+  tradeNameEn: "",
+  tradeNameAr: "",
+  genericNameEn: "",
+  genericNameAr: "",
+  categoryEn: "Medicine",
+  categoryAr: "",
+  strength: "",
+  dosageFormName: "Tablet",
+  packSize: "",
+  barcode: "",
+  supplierId: "",
+  defaultSalePrice: "0.00",
+  taxProfileCode: "READINESS_STANDARD",
+  packCode: "",
+  packBarcode: "",
+  batchNo: "",
+  expiryDate: "",
+  branchStockQuantity: "0",
+  isActive: true,
+});
+
+function buildMaintenanceFormFromSelection(
+  selection: { pack: CatalogPack; lot: CatalogPack["lots"][number] } | null,
+): MaintenanceFormState {
+  if (!selection) {
+    return emptyMaintenanceForm();
+  }
+
+  const product = selection.pack.product;
+  return {
+    productId: product.id,
+    tradeNameEn: product.tradeNameEn ?? product.nameEn,
+    tradeNameAr: product.tradeNameAr ?? product.nameAr,
+    genericNameEn: product.genericNameEn ?? "",
+    genericNameAr: product.genericNameAr ?? "",
+    categoryEn: product.categoryEn ?? "Medicine",
+    categoryAr: product.categoryAr ?? "",
+    strength: product.strength ?? "",
+    dosageFormName: product.dosageForm?.nameEn ?? "Tablet",
+    packSize: product.packSize ?? "",
+    barcode: product.barcode ?? "",
+    supplierId: product.supplier?.id ?? "",
+    defaultSalePrice: `${product.defaultSalePrice ?? 0}`,
+    taxProfileCode: product.taxProfileCode ?? "READINESS_STANDARD",
+    packCode: selection.pack.packCode,
+    packBarcode: selection.pack.packBarcode ?? product.barcode ?? "",
+    batchNo: selection.lot.batchNo,
+    expiryDate: selection.lot.expiryDate?.slice(0, 10) ?? "",
+    branchStockQuantity: `${selection.lot.sellableQuantity}`,
+    isActive: product.isActive ?? true,
+  };
+}
+
 function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
@@ -519,15 +624,20 @@ export default function PosPage() {
   const [branchId, setBranchId] = useState(defaultBranch);
   const [registerId, setRegisterId] = useState("");
   const [legalEntityId, setLegalEntityId] = useState("");
-  const [email, setEmail] = useState("products-workspace@orion.local");
+  const [email, setEmail] = useState("admin@orion.local");
   const [password, setPassword] = useState("Admin@123");
   const [token, setToken] = useState("");
 
   const [context, setContext] = useState<PosContextResponse | null>(null);
   const [catalog, setCatalog] = useState<CatalogPack[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
   const [catalogSearch, setCatalogSearch] = useState("");
   const [catalogSearchMode, setCatalogSearchMode] =
     useState<CatalogSearchMode>("trade");
+  const [maintenanceForm, setMaintenanceForm] =
+    useState<MaintenanceFormState>(emptyMaintenanceForm);
+  const [maintenanceError, setMaintenanceError] = useState<string | null>(null);
+  const [maintenanceSuccess, setMaintenanceSuccess] = useState<string | null>(null);
   const [openCarts, setOpenCarts] = useState<OpenCartSession[]>([]);
 
   const [cartSession, setCartSession] = useState<PosCartSession | null>(null);
@@ -613,14 +723,25 @@ export default function PosPage() {
 
   const visibleCatalogOptions = useMemo(() => {
     const packs = Array.isArray(catalog) ? catalog : [];
+    const search = catalogSearch.trim().toLowerCase();
     return packs.flatMap((pack) =>
       (Array.isArray(pack.lots) ? pack.lots : [])
         .filter((lot) => {
-          const search = catalogSearch.trim().toLowerCase();
           if (!search) return true;
           return [
             pack.product.nameEn,
             pack.product.nameAr,
+            pack.product.tradeNameEn ?? "",
+            pack.product.tradeNameAr ?? "",
+            pack.product.genericNameEn ?? "",
+            pack.product.genericNameAr ?? "",
+            pack.product.categoryEn ?? "",
+            pack.product.categoryAr ?? "",
+            pack.product.dosageForm?.nameEn ?? "",
+            pack.product.dosageForm?.nameAr ?? "",
+            pack.product.supplier?.nameEn ?? "",
+            pack.product.supplier?.nameAr ?? "",
+            pack.product.supplier?.code ?? "",
             pack.packCode,
             pack.packBarcode ?? "",
             pack.product.barcode ?? "",
@@ -629,8 +750,11 @@ export default function PosPage() {
         })
         .map((lot) => ({
           key: `${pack.packId}::${lot.lotBatchId}`,
-          label: `${pack.product.nameEn} · Pack ${pack.packCode}`,
-          subtitle: `Batch ${lot.batchNo} · ${lot.sellableQuantity} sellable · Exp ${formatDateLabel(lot.expiryDate)}`,
+          pack,
+          lot,
+          label: `${pack.product.tradeNameEn ?? pack.product.nameEn} · Pack ${pack.packCode}`,
+          subtitle: `${pack.product.genericNameEn ?? "Generic not set"} · ${pack.product.categoryEn ?? pack.product.dosageForm?.nameEn ?? "Unclassified"} · ${pack.product.supplier?.nameEn ?? "No supplier"}`,
+          supporting: `Batch ${lot.batchNo} · ${lot.sellableQuantity} sellable · Exp ${formatDateLabel(lot.expiryDate)} · ${formatMoney(pack.product.defaultSalePrice ?? 0, "JOD")}`,
         })),
     );
   }, [catalogSearch, catalog]);
@@ -657,6 +781,14 @@ export default function PosPage() {
       pack.lots.find((item) => item.lotBatchId === lotBatchId) ?? null;
     return lot ? { pack, lot } : null;
   }, [selectedCatalogKey, catalog]);
+
+  useEffect(() => {
+    if (!selectedCatalogContext) {
+      return;
+    }
+    setMaintenanceForm(buildMaintenanceFormFromSelection(selectedCatalogContext));
+    setNewLinePrice(selectedCatalogContext.pack.product.defaultSalePrice ?? 0);
+  }, [selectedCatalogContext]);
 
   const invoiceRows = useMemo(
     () =>
@@ -923,6 +1055,140 @@ export default function PosPage() {
     await performLogin();
   }
 
+  async function loadSuppliers() {
+    try {
+      const records = await apiRequest<SupplierOption[]>(
+        "/suppliers?isActive=true",
+      );
+      setSuppliers(Array.isArray(records) ? records : []);
+    } catch {
+      setSuppliers([]);
+    }
+  }
+
+  function handleCatalogSelection(nextKey: string) {
+    setSelectedCatalogKey(nextKey);
+  }
+
+  function updateMaintenanceField<K extends keyof MaintenanceFormState>(
+    key: K,
+    value: MaintenanceFormState[K],
+  ) {
+    setMaintenanceForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function validateMaintenanceForm() {
+    if (!maintenanceForm.tradeNameEn.trim()) {
+      return "Trade / commercial name is required.";
+    }
+    if (!maintenanceForm.barcode.trim()) {
+      return "Barcode is required.";
+    }
+    if (!maintenanceForm.strength.trim()) {
+      return "Strength is required.";
+    }
+    if (!maintenanceForm.packSize.trim()) {
+      return "Pack is required.";
+    }
+    if (!maintenanceForm.dosageFormName.trim()) {
+      return "Dosage form is required.";
+    }
+    if (!maintenanceForm.batchNo.trim()) {
+      return "Batch number is required so the saved product can be sold truthfully.";
+    }
+    const price = Number(maintenanceForm.defaultSalePrice);
+    if (!Number.isFinite(price) || price < 0) {
+      return "Before-tax price must be zero or greater.";
+    }
+    const stock = Number(maintenanceForm.branchStockQuantity);
+    if (!Number.isInteger(stock) || stock < 0) {
+      return "Branch stock quantity must be a whole number zero or greater.";
+    }
+    return null;
+  }
+
+  async function saveMaintenanceRecord() {
+    setMaintenanceError(null);
+    setMaintenanceSuccess(null);
+    if (!workspaceReady) {
+      setMaintenanceError("Load the workspace before saving product truth.");
+      return;
+    }
+
+    const validationError = validateMaintenanceForm();
+    if (validationError) {
+      setMaintenanceError(validationError);
+      return;
+    }
+
+    const payload = {
+      branchId,
+      nameEn: maintenanceForm.tradeNameEn.trim(),
+      nameAr: maintenanceForm.tradeNameAr.trim() || maintenanceForm.tradeNameEn.trim(),
+      tradeNameEn: maintenanceForm.tradeNameEn.trim(),
+      tradeNameAr: maintenanceForm.tradeNameAr.trim() || maintenanceForm.tradeNameEn.trim(),
+      genericNameEn: maintenanceForm.genericNameEn.trim() || undefined,
+      genericNameAr: maintenanceForm.genericNameAr.trim() || undefined,
+      categoryEn: maintenanceForm.categoryEn.trim() || undefined,
+      categoryAr: maintenanceForm.categoryAr.trim() || undefined,
+      strength: maintenanceForm.strength.trim(),
+      dosageFormName: maintenanceForm.dosageFormName.trim(),
+      packSize: maintenanceForm.packSize.trim(),
+      barcode: maintenanceForm.barcode.trim(),
+      supplierId: maintenanceForm.supplierId || undefined,
+      defaultSalePrice: Number(maintenanceForm.defaultSalePrice),
+      taxProfileCode: maintenanceForm.taxProfileCode.trim() || undefined,
+      packCode: maintenanceForm.packCode.trim() || undefined,
+      packBarcode: maintenanceForm.packBarcode.trim() || undefined,
+      batchNo: maintenanceForm.batchNo.trim(),
+      expiryDate: maintenanceForm.expiryDate || undefined,
+      branchStockQuantity: Number(maintenanceForm.branchStockQuantity),
+      isActive: maintenanceForm.isActive,
+    };
+
+    try {
+      const response = await apiRequest<{
+        product: CatalogPack["product"] & {
+          runtime?: {
+            productPackId: string;
+            lotBatchId: string;
+          } | null;
+        };
+      }>(
+        maintenanceForm.productId
+          ? `/products/${maintenanceForm.productId}/maintenance`
+          : "/products/maintenance",
+        {
+          method: maintenanceForm.productId ? "PATCH" : "POST",
+          body: JSON.stringify(payload),
+        },
+      );
+
+      await loadContextAndCatalog();
+      if (response.product.runtime?.productPackId && response.product.runtime?.lotBatchId) {
+        handleCatalogSelection(
+          `${response.product.runtime.productPackId}::${response.product.runtime.lotBatchId}`,
+        );
+      }
+      setMaintenanceSuccess(
+        maintenanceForm.productId
+          ? "Product maintenance was persisted and rebound to the live runtime."
+          : "New product truth was created, stocked, and bound to the live runtime.",
+      );
+      setStatusMessage("Product truth persisted through the current architecture.");
+      setWorkspaceView("maintenance");
+    } catch (error) {
+      setMaintenanceError((error as Error).message);
+    }
+  }
+
+  function startNewMaintenanceRecord() {
+    setSelectedCatalogKey("");
+    setMaintenanceError(null);
+    setMaintenanceSuccess(null);
+    setMaintenanceForm(emptyMaintenanceForm());
+  }
+
   async function loadContextAndCatalog() {
     setContextError(null);
     try {
@@ -944,7 +1210,15 @@ export default function PosPage() {
       const packs = await apiRequest<CatalogPack[]>(
         `/pos/operational/catalog?branchId=${encodeURIComponent(branchId)}&search=${encodeURIComponent(catalogSearch)}`,
       );
-      setCatalog(Array.isArray(packs) ? packs : []);
+      const normalizedPacks = Array.isArray(packs) ? packs : [];
+      setCatalog(normalizedPacks);
+      if (!selectedCatalogKey && normalizedPacks[0]?.lots[0]) {
+        handleCatalogSelection(
+          `${normalizedPacks[0].packId}::${normalizedPacks[0].lots[0].lotBatchId}`,
+        );
+      }
+
+      await loadSuppliers();
 
       const carts = await apiRequest<OpenCartSession[]>(
         `/pos/operational/cart-sessions?branchId=${encodeURIComponent(branchId)}&registerId=${encodeURIComponent(resolvedRegister)}`,
@@ -955,7 +1229,7 @@ export default function PosPage() {
         `/pos/operational/finalized-sales?branchId=${encodeURIComponent(branchId)}&registerId=${encodeURIComponent(resolvedRegister)}&search=${encodeURIComponent(salesSearch)}`,
       );
       setFinalizedSales(Array.isArray(sales) ? sales : []);
-      setStatusMessage("Workspace loaded from the accepted backend runtime.");
+      setStatusMessage("Workspace loaded from the accepted backend runtime with product truth and maintenance persistence.");
     } catch (error) {
       setContextError((error as Error).message);
     }
@@ -1309,10 +1583,7 @@ export default function PosPage() {
     },
   ];
   const visibleSearchResults = visibleCatalogOptions.slice(0, 12);
-  const maintenanceUnitPrice = selectedCatalogContext
-    ? newLinePrice
-    : focusedInvoiceRow?.unitPrice ?? 0;
-  const maintenanceTaxRate = focusedInvoiceRow?.taxRate ?? 0;
+
   const workspaceTabs: Array<{
     id: PosWorkspaceView;
     label: string;
@@ -1589,7 +1860,7 @@ export default function PosPage() {
                     <select
                       className={inputClass}
                       value={selectedCatalogKey}
-                      onChange={(e) => setSelectedCatalogKey(e.target.value)}
+                      onChange={(e) => handleCatalogSelection(e.target.value)}
                       disabled={!cartSession || !isCartMutable}
                     >
                       <option value="">Select product pack and lot</option>
@@ -2057,10 +2328,19 @@ export default function PosPage() {
                       Runtime-backed cues only.
                     </h3>
                   </div>
-                  {focusedProductSnapshot ? (
+                  {selectedCatalogContext ? (
                     <ul className="mt-4 space-y-2 text-sm text-slate-300">
-                      <li>Generic: pending backend catalog truth</li>
-                      <li>Use / indication: pending integration</li>
+                      <li>Generic: {selectedCatalogContext.pack.product.genericNameEn ?? "Not set"}</li>
+                      <li>Category / form: {selectedCatalogContext.pack.product.categoryEn ?? "Unclassified"} · {selectedCatalogContext.pack.product.dosageForm?.nameEn ?? "No dosage form"}</li>
+                      <li>Supplier: {selectedCatalogContext.pack.product.supplier?.nameEn ?? "No supplier linked"}</li>
+                      <li>Barcode: {selectedCatalogContext.pack.packBarcode ?? selectedCatalogContext.pack.product.barcode ?? "Runtime not exposed"}</li>
+                      <li>
+                        Batch / expiry: {selectedCatalogContext.lot.batchNo} ·{" "}
+                        {formatDateLabel(selectedCatalogContext.lot.expiryDate)}
+                      </li>
+                    </ul>
+                  ) : focusedProductSnapshot ? (
+                    <ul className="mt-4 space-y-2 text-sm text-slate-300">
                       <li>Strength / form: {focusedProductSnapshot.packCode}</li>
                       <li>Barcode: {focusedProductSnapshot.barcode}</li>
                       <li>
@@ -2071,13 +2351,12 @@ export default function PosPage() {
                   ) : (
                     <ul className="mt-4 space-y-2 text-sm text-slate-400">
                       <li>Generic</li>
-                      <li>Use / indication</li>
+                      <li>Category / form</li>
                       <li>Strength / form</li>
                     </ul>
                   )}
                   <p className="mt-3 text-xs leading-5 text-slate-500">
-                    Honest only: runtime-backed where available, pending
-                    integration where the payload does not expose it.
+                    Honest only: runtime-backed where available, no fake supplier or compliance claims where the current model does not support them.
                   </p>
                 </section>
 
@@ -2125,10 +2404,10 @@ export default function PosPage() {
                   Lookup bench / product search
                 </p>
                 <h2 className="text-2xl font-semibold text-slate-50">
-                  Dedicated lookup bench for trade, generic, supplier, and category search.
+                  Dedicated lookup bench for runtime-backed trade, generic, supplier, and category search.
                 </h2>
                 <p className="max-w-3xl text-sm leading-6 text-slate-400">
-                  This workspace exists to search broadly without turning the sell counter into a dashboard of lookup panels.
+                  This workspace stays separate from the cashier while exposing richer lookup identity from the live runtime-backed product truth.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -2140,7 +2419,7 @@ export default function PosPage() {
                 </button>
               </div>
             </div>
-            <div className="mt-4 grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)_340px]">
+            <div className="mt-4 grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
               <section className="space-y-4 rounded-[10px] border border-amber-900/50 bg-[#120f0b] p-4">
                 <input className={inputClass} placeholder={searchMeta.placeholder} value={catalogSearch} onChange={(e) => setCatalogSearch(e.target.value)} />
                 <div className="flex flex-wrap gap-2">
@@ -2158,11 +2437,12 @@ export default function PosPage() {
                 <div className="rounded-[8px] border border-amber-900/50 bg-[#1a1610] px-4 py-3 text-sm leading-6 text-slate-400">
                   {searchMeta.note}
                 </div>
+                <Notice title="Lookup truth" body="Results come from live pack/lot runtime records that now carry trade, generic, category, dosage-form, supplier, and price cues where those fields exist in the current product truth." tone="info" />
               </section>
               <section className={cn(mutedSurfaceClass, "p-4")}>
                 <div className="flex items-center justify-between gap-3 border-b border-slate-700/90 pb-4">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Runtime results</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Runtime lookup results</p>
                     <h3 className="mt-1 text-lg font-semibold text-slate-50">{visibleCatalogOptions.length} pack / lot results</h3>
                   </div>
                   <button className={secondaryButtonClass} type="button" onClick={loadContextAndCatalog} disabled={!workspaceReady}>
@@ -2173,14 +2453,15 @@ export default function PosPage() {
                   {visibleSearchResults.length ? visibleSearchResults.map((option) => {
                     const isSelected = option.key === selectedCatalogKey;
                     return (
-                      <button key={option.key} type="button" onClick={() => setSelectedCatalogKey(option.key)} className={cn("rounded-[8px] border-l-[3px] p-4 text-left transition", isSelected ? "border-amber-400/70 bg-[#221b12]" : "border-transparent bg-[#17130f] hover:bg-[#1e1810]")}> 
+                      <button key={option.key} type="button" onClick={() => handleCatalogSelection(option.key)} className={cn("rounded-[8px] border-l-[3px] p-4 text-left transition", isSelected ? "border-amber-400/70 bg-[#221b12]" : "border-transparent bg-[#17130f] hover:bg-[#1e1810]")}> 
                         <p className="text-sm font-semibold text-slate-50">{option.label}</p>
-                        <p className="mt-2 text-sm leading-6 text-slate-400">{option.subtitle}</p>
+                        <p className="mt-2 text-sm leading-6 text-slate-300">{option.subtitle}</p>
+                        <p className="mt-2 text-xs leading-5 text-slate-500">{option.supporting}</p>
                       </button>
                     );
                   }) : (
                     <div className="xl:col-span-2">
-                      <EmptyPanel title="No lookup results" body="Refresh the runtime, widen the search term, or switch search mode. Supplier/category search remains an honest shell until indexed fields exist." />
+                      <EmptyPanel title="No lookup results" body="The runtime does not have a matching pack / lot record for the current search. Adjust the search term, refresh the workspace, or create the product truth from the pricing desk." />
                     </div>
                   )}
                 </div>
@@ -2188,11 +2469,12 @@ export default function PosPage() {
               <aside className="rounded-[10px] border border-amber-900/50 bg-[#120f0b] p-4">
                 {selectedCatalogContext ? (
                   <div className="space-y-3">
-                    <p className="text-lg font-semibold text-slate-50">{selectedCatalogContext.pack.product.nameEn}</p>
-                    <p className="text-sm text-slate-400">{selectedCatalogContext.pack.product.nameAr} · Pack {selectedCatalogContext.pack.packCode}</p>
+                    <p className="text-lg font-semibold text-slate-50">{selectedCatalogContext.pack.product.tradeNameEn ?? selectedCatalogContext.pack.product.nameEn}</p>
+                    <p className="text-sm text-slate-400">{selectedCatalogContext.pack.product.genericNameEn ?? "Generic not set"} · {selectedCatalogContext.pack.product.categoryEn ?? selectedCatalogContext.pack.product.dosageForm?.nameEn ?? "Unclassified"}</p>
+                    <CompactInfoCard label="Supplier" value={selectedCatalogContext.pack.product.supplier?.nameEn ?? "No supplier linked"} supporting={selectedCatalogContext.pack.product.supplier?.code ?? "Supplier truth is optional in this scope."} tone="sky" />
+                    <CompactInfoCard label="Price" value={formatMoney(selectedCatalogContext.pack.product.defaultSalePrice ?? 0, "JOD")} supporting={`Tax readiness ${selectedCatalogContext.pack.product.taxProfileCode ?? "not set"}`} tone="emerald" />
                     <CompactInfoCard label="Barcode" value={selectedCatalogContext.pack.packBarcode ?? selectedCatalogContext.pack.product.barcode ?? "Runtime not exposed"} tone="sky" />
-                    <CompactInfoCard label="Lot / expiry" value={`${selectedCatalogContext.lot.batchNo} · ${formatDateLabel(selectedCatalogContext.lot.expiryDate)}`} tone="amber" />
-                    <CompactInfoCard label="Sellability" value={selectedCatalogContext.pack.packSellability ?? selectedCatalogContext.lot.status ?? "Runtime status pending"} supporting={`${selectedCatalogContext.lot.sellableQuantity} sellable`} tone="emerald" />
+                    <CompactInfoCard label="Lot / expiry" value={`${selectedCatalogContext.lot.batchNo} · ${formatDateLabel(selectedCatalogContext.lot.expiryDate)}`} supporting={`${selectedCatalogContext.lot.sellableQuantity} sellable at this branch`} tone="amber" />
                     <div className="flex flex-wrap gap-2">
                       <button className={primaryButtonClass} type="button" onClick={() => setWorkspaceView("cashier")}>Use at counter</button>
                       <button className={secondaryButtonClass} type="button" onClick={() => setWorkspaceView("maintenance")}>Open pricing / entry</button>
@@ -2212,50 +2494,77 @@ export default function PosPage() {
                   Pricing desk / product entry / classification
                 </p>
                 <h2 className="text-2xl font-semibold text-slate-50">
-                  Separate pricing desk for maintenance and classification work.
+                  Separate pricing desk for real maintenance, classification, and persistence work.
                 </h2>
                 <p className="max-w-3xl text-sm leading-6 text-slate-400">
-                  Maintenance and classification stay purpose-built here instead of sharing the cashier surface.
+                  This workspace saves through the current backend architecture and keeps the cashier screen focused on selling.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button className={secondaryButtonClass} type="button" onClick={() => setWorkspaceView("cashier")}>Back to cashier</button>
                 <button className={secondaryButtonClass} type="button" onClick={() => setWorkspaceView("search")}>Open lookup</button>
+                <button className={secondaryButtonClass} type="button" onClick={startNewMaintenanceRecord}>New product</button>
               </div>
             </div>
-            <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_1fr]">
+            <div className="mt-4 grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
               <section className={cn(mutedSurfaceClass, "space-y-4 p-4")}>
-                {focusedProductSnapshot ? (
-                  <>
-                    <p className="text-lg font-semibold text-slate-50">{focusedProductSnapshot.title}</p>
-                    <p className="text-sm text-slate-400">{focusedProductSnapshot.subtitle}</p>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <CompactInfoCard label="Pack / barcode" value={focusedProductSnapshot.packCode} supporting={focusedProductSnapshot.barcode} tone="sky" />
-                      <CompactInfoCard label="Batch / expiry" value={focusedProductSnapshot.batch} supporting={`Expiry ${focusedProductSnapshot.expiryLabel}`} tone="amber" />
-                      <CompactInfoCard label="Current sellability" value={focusedProductSnapshot.sellability} supporting={focusedProductSnapshot.stockLabel} tone="emerald" />
-                      <CompactInfoCard label="Metadata honesty" value="Pending richer catalog payload" supporting={focusedProductSnapshot.runtimeHonesty} />
-                    </div>
-                  </>
-                ) : (
-                  <EmptyPanel title="No product in focus" body="Select a lookup result or invoice row first so this separated pricing / entry workspace has real product context." />
-                )}
-              </section>
-              <section className={cn(mutedSurfaceClass, "space-y-4 p-4")}>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Trade / commercial name</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={focusedProductSnapshot?.title ?? ""} readOnly /></label>
-                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Before-tax price</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={maintenanceUnitPrice} readOnly /></label>
-                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tax rate</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={`${maintenanceTaxRate}%`} readOnly /></label>
-                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Pack / lot context</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={focusedProductSnapshot?.batch ?? ""} readOnly /></label>
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Runtime focus</p>
+                  <h3 className="text-lg font-semibold text-slate-50">{selectedCatalogContext ? (selectedCatalogContext.pack.product.tradeNameEn ?? selectedCatalogContext.pack.product.nameEn) : "New maintenance record"}</h3>
+                  <p className="text-sm leading-6 text-slate-400">
+                    {selectedCatalogContext ? "The selected runtime product stays visible here while you edit fields, pricing, classification, and branch stock truth." : "Start a new product record here or open a runtime result first to edit an existing record."}
+                  </p>
                 </div>
+                {selectedCatalogContext ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <CompactInfoCard label="Generic" value={selectedCatalogContext.pack.product.genericNameEn ?? "Not set"} supporting={selectedCatalogContext.pack.product.nameAr} tone="sky" />
+                    <CompactInfoCard label="Class / form" value={selectedCatalogContext.pack.product.categoryEn ?? "Unclassified"} supporting={selectedCatalogContext.pack.product.dosageForm?.nameEn ?? "No dosage form"} tone="amber" />
+                    <CompactInfoCard label="Pack / batch" value={selectedCatalogContext.pack.packCode} supporting={selectedCatalogContext.lot.batchNo} tone="emerald" />
+                    <CompactInfoCard label="Sellable stock" value={`${selectedCatalogContext.lot.sellableQuantity}`} supporting={`Expiry ${formatDateLabel(selectedCatalogContext.lot.expiryDate)}`} tone="emerald" />
+                  </div>
+                ) : (
+                  <EmptyPanel title="No runtime product selected" body="Use the lookup bench to open an existing product or start a new record directly from this desk." />
+                )}
                 <div className="space-y-2">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Classification examples</p>
-                  <div className="flex flex-wrap gap-2">{maintenanceCategories.map((category) => (<span key={category} className="rounded-[8px] border border-sky-900/40 bg-[#10151d] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">{category}</span>))}</div>
+                  <div className="flex flex-wrap gap-2">{maintenanceCategories.map((category) => (<button key={category} type="button" onClick={() => updateMaintenanceField("categoryEn", category)} className="rounded-[8px] border border-sky-900/40 bg-[#10151d] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300 transition hover:border-sky-700/50 hover:text-slate-100">{category}</button>))}</div>
                 </div>
                 <div className="space-y-2">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Dosage form examples</p>
-                  <div className="flex flex-wrap gap-2">{dosageFormExamples.map((form) => (<span key={form} className="rounded-[8px] border border-sky-900/40 bg-[#10151d] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">{form}</span>))}</div>
+                  <div className="flex flex-wrap gap-2">{dosageFormExamples.map((form) => (<button key={form} type="button" onClick={() => updateMaintenanceField("dosageFormName", form)} className="rounded-[8px] border border-sky-900/40 bg-[#10151d] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300 transition hover:border-sky-700/50 hover:text-slate-100">{form}</button>))}</div>
                 </div>
-                <Notice title="Persistence scope" body="This slice separates pricing / entry from selling, but it does not fake backend save flows that are not wired yet." tone="info" />
+                <Notice title="Persistence scope" body="Save now updates product truth, pack / lot anchors, and branch stock through the current architecture. Tax readiness remains a modeling field only; it does not claim live fiscal integration." tone="info" />
+              </section>
+              <section className={cn(mutedSurfaceClass, "space-y-4 p-4")}>
+                {maintenanceError ? (
+                  <Notice title="Maintenance save blocked" body={maintenanceError} tone="error" />
+                ) : null}
+                {maintenanceSuccess ? (
+                  <Notice title="Maintenance save persisted" body={maintenanceSuccess} tone="success" />
+                ) : null}
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Trade / commercial name</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={maintenanceForm.tradeNameEn} onChange={(e) => updateMaintenanceField("tradeNameEn", e.target.value)} /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Generic name</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={maintenanceForm.genericNameEn} onChange={(e) => updateMaintenanceField("genericNameEn", e.target.value)} /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Category / classification</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={maintenanceForm.categoryEn} onChange={(e) => updateMaintenanceField("categoryEn", e.target.value)} /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Dosage form</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={maintenanceForm.dosageFormName} onChange={(e) => updateMaintenanceField("dosageFormName", e.target.value)} /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Strength</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={maintenanceForm.strength} onChange={(e) => updateMaintenanceField("strength", e.target.value)} /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Pack</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={maintenanceForm.packSize} onChange={(e) => updateMaintenanceField("packSize", e.target.value)} /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Barcode</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={maintenanceForm.barcode} onChange={(e) => updateMaintenanceField("barcode", e.target.value)} /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Supplier / company</p><select className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={maintenanceForm.supplierId} onChange={(e) => updateMaintenanceField("supplierId", e.target.value)}><option value="">No supplier linked</option>{suppliers.map((supplier) => (<option key={supplier.id} value={supplier.id}>{supplier.nameEn} · {supplier.code}</option>))}</select></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Before-tax price</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" type="number" min={0} step={0.01} value={maintenanceForm.defaultSalePrice} onChange={(e) => updateMaintenanceField("defaultSalePrice", e.target.value)} /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tax readiness code</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={maintenanceForm.taxProfileCode} onChange={(e) => updateMaintenanceField("taxProfileCode", e.target.value)} /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Pack code</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={maintenanceForm.packCode} onChange={(e) => updateMaintenanceField("packCode", e.target.value)} /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Pack barcode</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={maintenanceForm.packBarcode} onChange={(e) => updateMaintenanceField("packBarcode", e.target.value)} /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Batch number</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" value={maintenanceForm.batchNo} onChange={(e) => updateMaintenanceField("batchNo", e.target.value)} /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Expiry date</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" type="date" value={maintenanceForm.expiryDate} onChange={(e) => updateMaintenanceField("expiryDate", e.target.value)} /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Branch sellable stock</p><input className="mt-1.5 h-10 w-full rounded-[6px] border border-slate-700 bg-[#10151d] px-3 text-sm text-slate-100 outline-none" type="number" min={0} step={1} value={maintenanceForm.branchStockQuantity} onChange={(e) => updateMaintenanceField("branchStockQuantity", e.target.value)} /></label>
+                </div>
+                <label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" checked={maintenanceForm.isActive} onChange={(e) => updateMaintenanceField("isActive", e.target.checked)} /> Product is active for search and cashier use</label>
+                <div className="flex flex-wrap gap-2">
+                  <button className={primaryButtonClass} type="button" onClick={saveMaintenanceRecord}>Save product truth</button>
+                  <button className={secondaryButtonClass} type="button" onClick={() => setWorkspaceView("search")}>Find it in lookup</button>
+                  <button className={secondaryButtonClass} type="button" onClick={() => setWorkspaceView("cashier")}>Send to cashier</button>
+                </div>
               </section>
             </div>
           </section>
@@ -2841,6 +3150,16 @@ export default function PosPage() {
     </main>
   );
 }
+
+
+
+
+
+
+
+
+
+
 
 
 

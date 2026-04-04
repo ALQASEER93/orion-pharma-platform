@@ -116,6 +116,7 @@ model Supplier {
   supplierStockReturns  SupplierStockReturn[]
   apBills              ApBill[]
   apPayments           ApPayment[]
+  products             Product[]
 
   @@unique([tenantId, code])
   @@index([tenantId, nameEn])
@@ -670,6 +671,7 @@ model Product {
   dosageFormId               String?                     @map("dosage_form_id")
   storageConditionId         String?                     @map("storage_condition_id")
   regulatoryTypeId           String?                     @map("regulatory_type_id")
+  supplierId                 String?                     @map("supplier_id")
   nameAr                     String                      @map("name_ar")
   nameEn                     String                      @map("name_en")
   tradeNameAr                String?                     @map("trade_name_ar")
@@ -682,6 +684,7 @@ model Product {
   strength                   String
   packSize                   String                      @map("pack_size")
   unitOfMeasure              String?                     @map("unit_of_measure")
+  defaultSalePrice           Float?                      @map("default_sale_price")
   taxProfileCode             String?                     @map("tax_profile_code")
   medicationAccessMode       MedicationAccessMode        @default(UNSPECIFIED) @map("medication_access_mode")
   isActive                   Boolean                     @default(true) @map("is_active")
@@ -693,6 +696,7 @@ model Product {
   dosageForm                 DosageForm?                 @relation(fields: [dosageFormId], references: [id], onDelete: SetNull)
   storageCondition           StorageCondition?           @relation(fields: [storageConditionId], references: [id], onDelete: SetNull)
   regulatoryType             RegulatoryType?             @relation(fields: [regulatoryTypeId], references: [id], onDelete: SetNull)
+  supplier                   Supplier?                   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   inventoryMovements         InventoryMovement[]
   inventoryBalances          InventoryBalance[]
   inventoryValuationStates   InventoryValuationState[]
@@ -711,6 +715,7 @@ model Product {
   @@index([tenantId, nameAr])
   @@index([tenantId, tradeNameEn])
   @@index([tenantId, genericNameEn])
+  @@index([tenantId, supplierId])
   @@index([tenantId, isActive, nameEn])
   @@map("products")
 }

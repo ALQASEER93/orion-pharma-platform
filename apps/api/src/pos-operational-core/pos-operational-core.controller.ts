@@ -29,7 +29,7 @@ import {
 } from './pos-operational-core.http.dto';
 import { PosOperationalCoreService } from './pos-operational-core.service';
 
-const DEMO_TENANT_ID = '11111111-1111-1111-1111-111111111111';
+const DEMO_TENANT_ID = '11111111-1111-4111-8111-111111111111';
 const RETURN_ACCOUNTED_STATES = ['FINALIZED', 'QUEUED', 'ACCEPTED'] as const;
 
 @Controller('pos/operational')
@@ -103,6 +103,10 @@ export class PosOperationalCoreController {
     const packs = await this.prisma.productPack.findMany({
       where: {
         tenantId,
+        status: { not: 'INACTIVE' },
+        product: {
+          isActive: true,
+        },
         ...(search
           ? {
               OR: [
@@ -110,6 +114,17 @@ export class PosOperationalCoreController {
                 { barcode: { contains: search } },
                 { product: { nameEn: { contains: search } } },
                 { product: { nameAr: { contains: search } } },
+                { product: { tradeNameEn: { contains: search } } },
+                { product: { tradeNameAr: { contains: search } } },
+                { product: { genericNameEn: { contains: search } } },
+                { product: { genericNameAr: { contains: search } } },
+                { product: { categoryEn: { contains: search } } },
+                { product: { categoryAr: { contains: search } } },
+                { product: { dosageForm: { is: { nameEn: { contains: search } } } } },
+                { product: { dosageForm: { is: { nameAr: { contains: search } } } } },
+                { product: { supplier: { is: { nameEn: { contains: search } } } } },
+                { product: { supplier: { is: { nameAr: { contains: search } } } } },
+                { product: { supplier: { is: { code: { contains: search } } } } },
                 { product: { barcode: { contains: search } } },
               ],
             }
@@ -127,8 +142,33 @@ export class PosOperationalCoreController {
             id: true,
             nameEn: true,
             nameAr: true,
+            tradeNameEn: true,
+            tradeNameAr: true,
+            genericNameEn: true,
+            genericNameAr: true,
+            categoryEn: true,
+            categoryAr: true,
             barcode: true,
+            strength: true,
+            packSize: true,
+            defaultSalePrice: true,
+            taxProfileCode: true,
             isActive: true,
+            dosageForm: {
+              select: {
+                id: true,
+                nameEn: true,
+                nameAr: true,
+              },
+            },
+            supplier: {
+              select: {
+                id: true,
+                code: true,
+                nameEn: true,
+                nameAr: true,
+              },
+            },
           },
         },
         lotBatches: {
@@ -559,3 +599,4 @@ export class PosOperationalCoreController {
     });
   }
 }
+
