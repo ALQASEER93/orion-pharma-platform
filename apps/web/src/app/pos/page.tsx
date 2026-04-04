@@ -201,6 +201,7 @@ type OperatorActionState =
   | "resume-sale"
   | "return-mode";
 type CatalogSearchMode = "trade" | "generic" | "supplier" | "category";
+type PosWorkspaceView = "cashier" | "search" | "maintenance" | "returns";
 
 const defaultTenant = "11111111-1111-4111-8111-111111111111";
 const defaultBranch = "22222222-2222-4222-8222-222222222222";
@@ -225,6 +226,23 @@ const searchCategoryExamples = [
   "Suppositories",
   "Supplements",
   "Cosmetics",
+];
+const maintenanceCategories = [
+  "Medicine",
+  "Supplement",
+  "Cosmetic",
+  "Syrup",
+  "Tablets",
+  "Suppositories",
+  "Medical device",
+];
+const dosageFormExamples = [
+  "Tablet",
+  "Capsule",
+  "Syrup",
+  "Suppository",
+  "Cream",
+  "Device",
 ];
 const searchModeMeta: Record<
   CatalogSearchMode,
@@ -566,6 +584,8 @@ export default function PosPage() {
   const [secondaryPane, setSecondaryPane] = useState<"lookup" | "return">(
     "lookup",
   );
+  const [workspaceView, setWorkspaceView] =
+    useState<PosWorkspaceView>("cashier");
 
   const [contextError, setContextError] = useState<string | null>(null);
   const [cartError, setCartError] = useState<string | null>(null);
@@ -853,6 +873,7 @@ export default function PosPage() {
     setReturnError(null);
     setSecondaryPane("lookup");
     setFocusedInvoiceLineId("");
+    setWorkspaceView("returns");
   }
 
   function scrollToSection(sectionId: string) {
@@ -871,14 +892,15 @@ export default function PosPage() {
       return;
     }
     if (operatorActionState === "resume-sale") {
-      scrollToSection("sale-workspace");
+      setWorkspaceView("cashier");
       return;
     }
     if (operatorActionState === "return-mode") {
-      setSecondaryPane("return");
-      scrollToSection("secondary-workspace");
+      setWorkspaceView("returns");
+      setSecondaryPane(returnSession || finalizedReturnSummary ? "return" : "lookup");
       return;
     }
+    setWorkspaceView("cashier");
     void createCartSession();
   }
 
@@ -887,8 +909,12 @@ export default function PosPage() {
       scrollToSection("utility-diagnostics");
       return;
     }
-    setSecondaryPane("lookup");
-    scrollToSection("secondary-workspace");
+    if (returnFocusMode) {
+      setWorkspaceView("returns");
+      setSecondaryPane(returnSession || finalizedReturnSummary ? "return" : "lookup");
+      return;
+    }
+    setWorkspaceView("search");
   }
 
   const headerPrimaryLabel =
@@ -904,7 +930,9 @@ export default function PosPage() {
 
   const headerSecondaryLabel = !workspaceReady
     ? "Open setup tools"
-    : "Open secondary workflows";
+    : returnFocusMode
+      ? "Open returns workspace"
+      : "Open product lookup";
 
   async function performLogin() {
     setContextError(null);
@@ -984,11 +1012,12 @@ export default function PosPage() {
             registerId,
             legalEntityId: legalEntityId || undefined,
             currency: "JOD",
-            notes: "Stage 8.31B Jordan cashier counter shell",
+            notes: "Stage 8.32B true cashier counter shell",
           }),
         },
       );
       bindCart(created);
+      setWorkspaceView("cashier");
       setStatusMessage(`New sale started: ${created.sessionNumber}`);
     } catch (error) {
       setCartError((error as Error).message);
@@ -1007,6 +1036,7 @@ export default function PosPage() {
         ),
         preferredLineId,
       );
+      setWorkspaceView("cashier");
     } catch (error) {
       setCartError((error as Error).message);
     }
@@ -1140,6 +1170,7 @@ export default function PosPage() {
     setReturnFinalizedAt(null);
     setFinalizedReturnSummary(null);
     setSecondaryPane("lookup");
+    setWorkspaceView("returns");
     try {
       setSelectedSaleDetail(
         await apiRequest<FinalizedSaleDetail | null>(
@@ -1186,6 +1217,7 @@ export default function PosPage() {
         }),
       );
       setSecondaryPane("return");
+      setWorkspaceView("returns");
       setStatusMessage("Return draft created against the selected sale.");
     } catch (error) {
       setReturnError((error as Error).message);
@@ -1280,6 +1312,7 @@ export default function PosPage() {
       }
       await refreshFinalizedSales();
       setSecondaryPane("return");
+      setWorkspaceView("returns");
       setStatusMessage("Return finalized.");
     } catch (error) {
       setReturnError((error as Error).message);
@@ -1309,6 +1342,11 @@ export default function PosPage() {
       tone: "info" as const,
     },
   ];
+  const visibleSearchResults = visibleCatalogOptions.slice(0, 12);
+  const maintenanceUnitPrice = selectedCatalogContext
+    ? newLinePrice
+    : focusedInvoiceRow?.unitPrice ?? 0;
+  const maintenanceTaxRate = focusedInvoiceRow?.taxRate ?? 0;
   return (
     <main
       className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.14),_transparent_22%),linear-gradient(180deg,_#f8fafc_0%,_#eef6ff_48%,_#ecfeff_100%)] text-slate-950"
@@ -1317,7 +1355,7 @@ export default function PosPage() {
       }}
     >
       <div className="mx-auto max-w-[1560px] space-y-4 px-4 py-4 lg:px-6 lg:py-5">
-        <header className={cn(surfaceClass, "space-y-3 p-4 lg:p-4")}>
+        <header className={cn(surfaceClass, "space-y-2 p-3 lg:p-3")}>
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="min-w-0 flex-1 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
@@ -1343,10 +1381,10 @@ export default function PosPage() {
               </div>
               <div className="space-y-1">
                 <h1 className="text-xl font-semibold tracking-tight text-slate-950 lg:text-[1.55rem]">
-                  Cashier lane first. Lookup, returns, and setup stay behind it.
+                  Active counter workspace
                 </h1>
                 <p className="max-w-5xl text-sm leading-6 text-slate-600">
-                  The selling face is now anchored around scan or search, compact invoice rows, and a decisive JOD totals footer. Any runtime or compliance gap is labeled honestly instead of being faked.
+                  Operator, register, shift, and runtime stay in a thin operational strip. Other work areas switch cleanly instead of stacking under selling.
                 </p>
               </div>
             </div>
@@ -1509,7 +1547,57 @@ export default function PosPage() {
           </div>
         </header>
 
-        <section id="sale-workspace" className={cn(surfaceClass, "p-4 lg:p-5")}>
+        <section className={cn(surfaceClass, "p-3 lg:p-4")}>
+          <div className="grid gap-2 xl:grid-cols-4">
+            {([
+              {
+                id: "cashier",
+                label: "Sell / cashier counter",
+                note: "Default selling surface",
+              },
+              {
+                id: "search",
+                label: "Search / product lookup",
+                note: "Richer lookup away from the bill",
+              },
+              {
+                id: "maintenance",
+                label: "Pricing / product entry",
+                note: "Classification and pricing scaffold",
+              },
+              {
+                id: "returns",
+                label: "Transaction lookup / returns",
+                note: "Finalized sale lookup and refunds",
+              },
+            ] as Array<{
+              id: PosWorkspaceView;
+              label: string;
+              note: string;
+            }>).map((tab) => {
+              const isActive = workspaceView === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setWorkspaceView(tab.id)}
+                  className={cn(
+                    "rounded-[20px] border px-4 py-3 text-left transition",
+                    isActive
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50",
+                  )}
+                >
+                  <p className="text-sm font-semibold">{tab.label}</p>
+                  <p className="mt-1 text-xs leading-5 opacity-80">{tab.note}</p>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {workspaceView === "cashier" ? (
+          <section id="sale-workspace" className={cn(surfaceClass, "p-4 lg:p-5")}>
           <div className="grid gap-4 xl:grid-cols-[1.58fr_0.8fr]">
             <div className="space-y-4">
               <section className="rounded-[30px] bg-slate-950 px-5 py-5 text-white shadow-[0_30px_70px_rgba(15,23,42,0.24)]">
@@ -1582,7 +1670,7 @@ export default function PosPage() {
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <ToneBadge tone="emerald">Barcode-first entry</ToneBadge>
-                      <ToneBadge tone="sky">{searchMeta.label}</ToneBadge>
+                      <ToneBadge tone="sky">Fast live search only</ToneBadge>
                       {selectedCatalogContext ? (
                         <ToneBadge tone="amber">
                           Batch {selectedCatalogContext.lot.batchNo}
@@ -1591,38 +1679,20 @@ export default function PosPage() {
                     </div>
                     <input
                       className="h-14 w-full rounded-[22px] border border-white/10 bg-white/10 px-4 text-base text-white outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-400/20"
-                      placeholder={searchMeta.placeholder}
+                      placeholder="Scan barcode, pack code, trade name, or batch"
                       value={catalogSearch}
                       onChange={(e) => setCatalogSearch(e.target.value)}
                     />
-                    <div className="flex flex-wrap gap-2">
-                      {(
-                        Object.entries(searchModeMeta) as Array<
-                          [CatalogSearchMode, { label: string }]
-                        >
-                      ).map(([mode, meta]) => (
-                        <SearchModeButton
-                          key={mode}
-                          active={catalogSearchMode === mode}
-                          label={meta.label}
-                          onClick={() => setCatalogSearchMode(mode)}
-                        />
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {searchCategoryExamples.map((example) => (
-                        <button
-                          key={example}
-                          type="button"
-                          onClick={() => setCatalogSearchMode("category")}
-                          className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold tracking-[0.16em] text-slate-300 transition hover:border-white/20 hover:text-white"
-                        >
-                          {example}
-                        </button>
-                      ))}
-                    </div>
                     <div className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-3 text-sm leading-6 text-slate-300">
-                      {searchMeta.note}
+                      Richer trade/generic/supplier/category lookup has been moved to the dedicated Search / product lookup workspace so the live counter stays focused on scanning and adding lines.
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button className={secondaryButtonClass} type="button" onClick={() => setWorkspaceView("search")}>
+                        Open dedicated lookup
+                      </button>
+                      <button className={secondaryButtonClass} type="button" onClick={() => setWorkspaceView("maintenance")}>
+                        Open pricing / entry
+                      </button>
                     </div>
                   </div>
 
@@ -2016,7 +2086,7 @@ export default function PosPage() {
                       </div>
                     </div>
 
-                    <div className="border-t border-slate-200 bg-slate-50/90 px-4 py-4">
+                    <div className="sticky bottom-2 z-10 border-t border-slate-200 bg-slate-50/95 px-4 py-4 shadow-[0_-14px_28px_rgba(15,23,42,0.08)]">
                       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
                         <div className="space-y-3">
                           <div className="rounded-[22px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
@@ -2365,21 +2435,163 @@ export default function PosPage() {
             </aside>
           </div>
         </section>
-
-        <section
+        ) : workspaceView === "search" ? (
+          <section className={cn(surfaceClass, "p-4 lg:p-5")}>
+            <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  Search / product lookup
+                </p>
+                <h2 className="text-2xl font-semibold text-slate-950">
+                  Richer lookup stays off the cashier bill.
+                </h2>
+                <p className="max-w-3xl text-sm leading-6 text-slate-600">
+                  Trade, generic, supplier/company shell, and category/form lookup live here so the counter can stay barcode-first and narrow.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button className={secondaryButtonClass} type="button" onClick={() => setWorkspaceView("cashier")}>
+                  Back to cashier
+                </button>
+                <button className={secondaryButtonClass} type="button" onClick={() => setWorkspaceView("maintenance")}>
+                  Open pricing / entry
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)_340px]">
+              <section className={cn(mutedSurfaceClass, "space-y-4 p-4")}>
+                <input className={inputClass} placeholder={searchMeta.placeholder} value={catalogSearch} onChange={(e) => setCatalogSearch(e.target.value)} />
+                <div className="flex flex-wrap gap-2">
+                  {(Object.entries(searchModeMeta) as Array<[CatalogSearchMode, { label: string }]>).map(([mode, meta]) => (
+                    <SearchModeButton key={mode} active={catalogSearchMode === mode} label={meta.label} onClick={() => setCatalogSearchMode(mode)} />
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {searchCategoryExamples.map((example) => (
+                    <button key={example} type="button" onClick={() => { setCatalogSearchMode("category"); setCatalogSearch(example); }} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold tracking-[0.16em] text-slate-600 transition hover:border-slate-300 hover:text-slate-900">
+                      {example}
+                    </button>
+                  ))}
+                </div>
+                <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-600 shadow-sm">
+                  {searchMeta.note}
+                </div>
+              </section>
+              <section className={cn(mutedSurfaceClass, "p-4")}>
+                <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Runtime results</p>
+                    <h3 className="mt-1 text-lg font-semibold text-slate-950">{visibleCatalogOptions.length} pack / lot results</h3>
+                  </div>
+                  <button className={secondaryButtonClass} type="button" onClick={loadContextAndCatalog} disabled={!workspaceReady}>
+                    Refresh lookup
+                  </button>
+                </div>
+                <div className="mt-4 grid gap-3 xl:grid-cols-2">
+                  {visibleSearchResults.length ? visibleSearchResults.map((option) => {
+                    const isSelected = option.key === selectedCatalogKey;
+                    return (
+                      <button key={option.key} type="button" onClick={() => setSelectedCatalogKey(option.key)} className={cn("rounded-[22px] border p-4 text-left shadow-sm transition", isSelected ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50")}> 
+                        <p className="text-sm font-semibold text-slate-950">{option.label}</p>
+                        <p className="mt-2 text-sm leading-6 text-slate-500">{option.subtitle}</p>
+                      </button>
+                    );
+                  }) : (
+                    <div className="xl:col-span-2">
+                      <EmptyPanel title="No lookup results" body="Refresh the runtime, widen the search term, or switch search mode. Supplier/category search remains an honest shell until indexed fields exist." />
+                    </div>
+                  )}
+                </div>
+              </section>
+              <aside className={cn(mutedSurfaceClass, "p-4")}>
+                {selectedCatalogContext ? (
+                  <div className="space-y-3">
+                    <p className="text-lg font-semibold text-slate-950">{selectedCatalogContext.pack.product.nameEn}</p>
+                    <p className="text-sm text-slate-500">{selectedCatalogContext.pack.product.nameAr} · Pack {selectedCatalogContext.pack.packCode}</p>
+                    <CompactInfoCard label="Barcode" value={selectedCatalogContext.pack.packBarcode ?? selectedCatalogContext.pack.product.barcode ?? "Runtime not exposed"} tone="sky" />
+                    <CompactInfoCard label="Lot / expiry" value={`${selectedCatalogContext.lot.batchNo} · ${formatDateLabel(selectedCatalogContext.lot.expiryDate)}`} tone="amber" />
+                    <CompactInfoCard label="Sellability" value={selectedCatalogContext.pack.packSellability ?? selectedCatalogContext.lot.status ?? "Runtime status pending"} supporting={`${selectedCatalogContext.lot.sellableQuantity} sellable`} tone="emerald" />
+                    <div className="flex flex-wrap gap-2">
+                      <button className={primaryButtonClass} type="button" onClick={() => setWorkspaceView("cashier")}>Use at counter</button>
+                      <button className={secondaryButtonClass} type="button" onClick={() => setWorkspaceView("maintenance")}>Open pricing / entry</button>
+                    </div>
+                  </div>
+                ) : (
+                  <EmptyPanel title="No result selected" body="Choose a runtime result to preview it here, then send it back to the counter or into pricing / entry." />
+                )}
+              </aside>
+            </div>
+          </section>
+        ) : workspaceView === "maintenance" ? (
+          <section className={cn(surfaceClass, "p-4 lg:p-5")}>
+            <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  Pricing / product entry / classification
+                </p>
+                <h2 className="text-2xl font-semibold text-slate-950">
+                  Product maintenance stays off the live bill.
+                </h2>
+                <p className="max-w-3xl text-sm leading-6 text-slate-600">
+                  Pricing review, category examples, dosage-form examples, and product-entry scaffolding live here without crowding the cashier counter.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button className={secondaryButtonClass} type="button" onClick={() => setWorkspaceView("cashier")}>Back to cashier</button>
+                <button className={secondaryButtonClass} type="button" onClick={() => setWorkspaceView("search")}>Open lookup</button>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_1fr]">
+              <section className={cn(mutedSurfaceClass, "space-y-4 p-4")}>
+                {focusedProductSnapshot ? (
+                  <>
+                    <p className="text-lg font-semibold text-slate-950">{focusedProductSnapshot.title}</p>
+                    <p className="text-sm text-slate-500">{focusedProductSnapshot.subtitle}</p>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <CompactInfoCard label="Pack / barcode" value={focusedProductSnapshot.packCode} supporting={focusedProductSnapshot.barcode} tone="sky" />
+                      <CompactInfoCard label="Batch / expiry" value={focusedProductSnapshot.batch} supporting={`Expiry ${focusedProductSnapshot.expiryLabel}`} tone="amber" />
+                      <CompactInfoCard label="Current sellability" value={focusedProductSnapshot.sellability} supporting={focusedProductSnapshot.stockLabel} tone="emerald" />
+                      <CompactInfoCard label="Metadata honesty" value="Pending richer catalog payload" supporting={focusedProductSnapshot.runtimeHonesty} />
+                    </div>
+                  </>
+                ) : (
+                  <EmptyPanel title="No product in focus" body="Select a lookup result or invoice row first so this separated pricing / entry workspace has real product context." />
+                )}
+              </section>
+              <section className={cn(mutedSurfaceClass, "space-y-4 p-4")}>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Trade / commercial name</p><input className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none" value={focusedProductSnapshot?.title ?? ""} readOnly /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Before-tax price</p><input className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none" value={maintenanceUnitPrice} readOnly /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tax rate</p><input className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none" value={`${maintenanceTaxRate}%`} readOnly /></label>
+                  <label className={metricCardClass}><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Pack / lot context</p><input className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none" value={focusedProductSnapshot?.batch ?? ""} readOnly /></label>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Classification examples</p>
+                  <div className="flex flex-wrap gap-2">{maintenanceCategories.map((category) => (<span key={category} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold tracking-[0.16em] text-slate-600">{category}</span>))}</div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Dosage form examples</p>
+                  <div className="flex flex-wrap gap-2">{dosageFormExamples.map((form) => (<span key={form} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold tracking-[0.16em] text-slate-600">{form}</span>))}</div>
+                </div>
+                <Notice title="Persistence scope" body="This slice separates pricing / entry from selling, but it does not fake backend save flows that are not wired yet." tone="info" />
+              </section>
+            </div>
+          </section>
+        ) : (
+          <section
           id="secondary-workspace"
           className={cn(surfaceClass, "p-4 lg:p-5")}
         >
           <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-1.5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Secondary workflows
+                Transaction lookup / returns
               </p>
               <h2 className="text-2xl font-semibold text-slate-950">
-                Lookup and bounded returns stay real, but secondary.
+                Finalized-sale lookup and bounded returns are separated from selling.
               </h2>
               <p className="max-w-3xl text-sm leading-6 text-slate-600">
-                The accepted 8.30C-R1 return-success proof remains intact here.
+                The accepted finalized-return proof remains here without crowding the cashier counter.
                 This lane is intentionally subordinate to the sales counter
                 above.
               </p>
@@ -2944,6 +3156,7 @@ export default function PosPage() {
             </div>
           )}
         </section>
+        )}
       </div>
     </main>
   );
