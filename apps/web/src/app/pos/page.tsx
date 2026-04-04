@@ -23,11 +23,27 @@ type PosContextResponse = {
 type CatalogPack = {
   packId: string;
   packCode: string;
-  product: { nameEn: string; nameAr: string };
+  packBarcode?: string | null;
+  packStatus?: string | null;
+  packSellability?: string | null;
+  unitsPerPack?: number | null;
+  product: {
+    id?: string;
+    nameEn: string;
+    nameAr: string;
+    barcode?: string | null;
+    isActive?: boolean;
+  };
   lots: Array<{
     lotBatchId: string;
     batchNo: string;
+    expiryDate?: string | null;
+    status?: string | null;
+    isSellable?: boolean;
+    onHandQuantity?: number;
     sellableQuantity: number;
+    quarantinedQuantity?: number;
+    expiredQuantity?: number;
   }>;
 };
 
@@ -65,9 +81,22 @@ type PosCartSession = {
     taxRate: number | null;
     productPack?: {
       code: string;
-      product: { nameEn: string; nameAr: string };
+      packBarcode?: string | null;
+      packStatus?: string | null;
+      packSellability?: string | null;
+      unitsPerPack?: number | null;
+      product: {
+        nameEn: string;
+        nameAr: string;
+        barcode?: string | null;
+      };
     };
-    lotBatch?: { batchNo: string } | null;
+    lotBatch?: {
+      batchNo: string;
+      expiryDate?: string | null;
+      status?: string | null;
+      sellableQuantity?: number;
+    } | null;
   }>;
 };
 
@@ -152,6 +181,17 @@ type LineEditState = {
   unitPrice: number;
   discount: number;
   taxRate: number;
+};
+type FocusedProductSnapshot = {
+  title: string;
+  subtitle: string;
+  batch: string;
+  expiryLabel: string;
+  barcode: string;
+  packCode: string;
+  sellability: string;
+  stockLabel: string;
+  runtimeHonesty: string;
 };
 type StatusTone = "emerald" | "amber" | "rose" | "slate" | "sky";
 type OperatorActionState =
@@ -252,6 +292,17 @@ function formatDateTime(value?: string | null) {
   return new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
     timeStyle: "short",
+  }).format(date);
+}
+
+function formatDateLabel(value?: string | null) {
+  if (!value) return "Not exposed";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-JO", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   }).format(date);
 }
 
@@ -490,6 +541,7 @@ export default function PosPage() {
 
   const [cartSession, setCartSession] = useState<PosCartSession | null>(null);
   const [lineEdits, setLineEdits] = useState<Record<string, LineEditState>>({});
+  const [focusedInvoiceLineId, setFocusedInvoiceLineId] = useState("");
   const [selectedCatalogKey, setSelectedCatalogKey] = useState("");
   const [newLineQty, setNewLineQty] = useState(1);
   const [newLinePrice, setNewLinePrice] = useState(0);
@@ -584,13 +636,15 @@ export default function PosPage() {
             pack.product.nameEn,
             pack.product.nameAr,
             pack.packCode,
+            pack.packBarcode ?? "",
+            pack.product.barcode ?? "",
             lot.batchNo,
           ].some((value) => value.toLowerCase().includes(search));
         })
         .map((lot) => ({
           key: `${pack.packId}::${lot.lotBatchId}`,
           label: `${pack.product.nameEn} · Pack ${pack.packCode}`,
-          subtitle: `Batch ${lot.batchNo} · ${lot.sellableQuantity} sellable`,
+          subtitle: `Batch ${lot.batchNo} · ${lot.sellableQuantity} sellable · Exp ${formatDateLabel(lot.expiryDate)}`,
         })),
     );
   }, [catalogSearch, catalog]);
@@ -633,16 +687,36 @@ export default function PosPage() {
         const fallbackLot = fallbackPack?.lots.find(
           (lot) => lot.lotBatchId === line.lotBatchId,
         );
+        const resolvedPack =
+          line.productPack ??
+          (fallbackPack
+            ? {
+                code: fallbackPack.packCode,
+                packBarcode:
+                  fallbackPack.packBarcode ?? fallbackPack.product.barcode ?? null,
+                packStatus: fallbackPack.packStatus ?? null,
+                packSellability: fallbackPack.packSellability ?? null,
+                unitsPerPack: fallbackPack.unitsPerPack ?? null,
+                product: {
+                  ...fallbackPack.product,
+                  barcode: fallbackPack.product.barcode ?? null,
+                },
+              }
+            : undefined);
+        const resolvedLot =
+          line.lotBatch ??
+          (fallbackLot
+            ? {
+                batchNo: fallbackLot.batchNo,
+                expiryDate: fallbackLot.expiryDate ?? null,
+                status: fallbackLot.status ?? null,
+                sellableQuantity: fallbackLot.sellableQuantity,
+              }
+            : null);
         return {
           ...line,
-          productPack:
-            line.productPack ??
-            (fallbackPack
-              ? { code: fallbackPack.packCode, product: fallbackPack.product }
-              : undefined),
-          lotBatch:
-            line.lotBatch ??
-            (fallbackLot ? { batchNo: fallbackLot.batchNo } : null),
+          productPack: resolvedPack,
+          lotBatch: resolvedLot,
           beforeTaxTotal,
           taxValue,
           unitAfterTax: line.unitPrice * (1 + taxRate / 100),
@@ -652,12 +726,33 @@ export default function PosPage() {
     [catalog, safeCartLines],
   );
 
-  const focusedProductSnapshot = useMemo(() => {
+  const focusedInvoiceRow = useMemo(
+    () =>
+      invoiceRows.find((line) => line.id === focusedInvoiceLineId) ??
+      invoiceRows[invoiceRows.length - 1] ??
+      null,
+    [focusedInvoiceLineId, invoiceRows],
+  );
+
+  const focusedProductSnapshot = useMemo<FocusedProductSnapshot | null>(() => {
     if (selectedCatalogContext) {
       return {
         title: selectedCatalogContext.pack.product.nameEn,
         subtitle: `${selectedCatalogContext.pack.product.nameAr} · Pack ${selectedCatalogContext.pack.packCode}`,
         batch: selectedCatalogContext.lot.batchNo,
+        expiryLabel: formatDateLabel(selectedCatalogContext.lot.expiryDate),
+        barcode:
+          selectedCatalogContext.pack.packBarcode ??
+          selectedCatalogContext.pack.product.barcode ??
+          "Current runtime not exposed",
+        packCode: selectedCatalogContext.pack.packCode,
+        sellability:
+          selectedCatalogContext.pack.packSellability ??
+          selectedCatalogContext.lot.status ??
+          "Runtime status not exposed",
+        stockLabel: `${selectedCatalogContext.lot.sellableQuantity} sellable / ${selectedCatalogContext.lot.onHandQuantity ?? selectedCatalogContext.lot.sellableQuantity} on hand`,
+        runtimeHonesty:
+          "Generic, supplier/company, and dosage-form fields are not exposed by the current POS runtime yet.",
       };
     }
 
@@ -666,20 +761,42 @@ export default function PosPage() {
         title: selectedReturnSourceLine.productPack.product.nameEn,
         subtitle: `${selectedReturnSourceLine.productPack.product.nameAr} · Return source line`,
         batch: selectedReturnSourceLine.lotBatch?.batchNo ?? "-",
+        expiryLabel: "Return source runtime does not expose expiry here",
+        barcode: "Return source runtime does not expose barcode here",
+        packCode: "Return source pack context only",
+        sellability: `Remaining eligible qty ${selectedReturnSourceLine.remainingQty}`,
+        stockLabel: `Sold ${selectedReturnSourceLine.quantity} · Returned ${selectedReturnSourceLine.alreadyReturnedQty}`,
+        runtimeHonesty:
+          "Return detail keeps the legally relevant source-line relationship visible, but it does not expose full catalog metadata.",
       };
     }
 
-    if (safeCartLines[0]?.productPack) {
+    if (focusedInvoiceRow?.productPack) {
       return {
-        title: safeCartLines[0].productPack.product.nameEn,
-        subtitle: `${safeCartLines[0].productPack.product.nameAr} · Active sale line`,
-        batch: safeCartLines[0].lotBatch?.batchNo ?? "-",
+        title: focusedInvoiceRow.productPack.product.nameEn,
+        subtitle: `${focusedInvoiceRow.productPack.product.nameAr} · Active sale line`,
+        batch: focusedInvoiceRow.lotBatch?.batchNo ?? "-",
+        expiryLabel: formatDateLabel(focusedInvoiceRow.lotBatch?.expiryDate),
+        barcode:
+          focusedInvoiceRow.productPack.packBarcode ??
+          focusedInvoiceRow.productPack.product.barcode ??
+          "Current runtime not exposed",
+        packCode: focusedInvoiceRow.productPack.code,
+        sellability:
+          focusedInvoiceRow.productPack.packSellability ??
+          focusedInvoiceRow.lotBatch?.status ??
+          "Runtime status not exposed",
+        stockLabel:
+          focusedInvoiceRow.lotBatch?.sellableQuantity !== undefined
+            ? `${focusedInvoiceRow.lotBatch.sellableQuantity} sellable in current lot view`
+            : "Sellable lot quantity is not returned on this sale line payload",
+        runtimeHonesty:
+          "Active ingredient, supplier, and dosage-form fields still depend on backend catalog expansion, so the cashier surface labels those gaps honestly.",
       };
     }
 
     return null;
-  }, [safeCartLines, selectedCatalogContext, selectedReturnSourceLine]);
-
+  }, [focusedInvoiceRow, selectedCatalogContext, selectedReturnSourceLine]);
   async function apiRequest<T>(
     path: string,
     init?: RequestInit,
@@ -701,7 +818,10 @@ export default function PosPage() {
     return (await response.json()) as T;
   }
 
-  function bindCart(session: PosCartSession) {
+  function bindCart(
+    session: PosCartSession,
+    preferredLineId?: string | null,
+  ) {
     const normalizedLines = Array.isArray(session.lines) ? session.lines : [];
     setCartSession({ ...session, lines: normalizedLines });
     const edits: Record<string, LineEditState> = {};
@@ -714,6 +834,11 @@ export default function PosPage() {
       };
     }
     setLineEdits(edits);
+    const nextFocusedLineId =
+      preferredLineId && normalizedLines.some((line) => line.id === preferredLineId)
+        ? preferredLineId
+        : normalizedLines[normalizedLines.length - 1]?.id ?? "";
+    setFocusedInvoiceLineId(nextFocusedLineId);
   }
 
   function resetReturnWorkspace() {
@@ -727,6 +852,7 @@ export default function PosPage() {
     setFinalizedReturnSummary(null);
     setReturnError(null);
     setSecondaryPane("lookup");
+    setFocusedInvoiceLineId("");
   }
 
   function scrollToSection(sectionId: string) {
@@ -858,7 +984,7 @@ export default function PosPage() {
             registerId,
             legalEntityId: legalEntityId || undefined,
             currency: "JOD",
-            notes: "Stage 8.31A sales counter shell",
+            notes: "Stage 8.31B Jordan cashier counter shell",
           }),
         },
       );
@@ -869,13 +995,17 @@ export default function PosPage() {
     }
   }
 
-  async function openCartSession(cartSessionId: string) {
+  async function openCartSession(
+    cartSessionId: string,
+    preferredLineId?: string | null,
+  ) {
     setCartError(null);
     try {
       bindCart(
         await apiRequest<PosCartSession>(
           `/pos/operational/cart-sessions/${cartSessionId}`,
         ),
+        preferredLineId,
       );
     } catch (error) {
       setCartError((error as Error).message);
@@ -914,7 +1044,7 @@ export default function PosPage() {
           }),
         },
       );
-      await openCartSession(cartSession.id);
+      await openCartSession(cartSession.id, null);
       setStatusMessage("Sale line added.");
     } catch (error) {
       setCartError((error as Error).message);
@@ -935,6 +1065,7 @@ export default function PosPage() {
             body: JSON.stringify(edit),
           },
         ),
+        lineId,
       );
       setStatusMessage("Sale line updated.");
     } catch (error) {
@@ -953,6 +1084,7 @@ export default function PosPage() {
             method: "DELETE",
           },
         ),
+        focusedInvoiceLineId === lineId ? null : focusedInvoiceLineId,
       );
       setStatusMessage("Sale line removed.");
     } catch (error) {
@@ -979,6 +1111,7 @@ export default function PosPage() {
         await apiRequest<PosCartSession>(
           `/pos/operational/cart-sessions/${cartSession.id}`,
         ),
+        focusedInvoiceLineId,
       );
       await refreshFinalizedSales();
       setStatusMessage("Cash sale finalized.");
@@ -1156,21 +1289,26 @@ export default function PosPage() {
   const searchMeta = searchModeMeta[catalogSearchMode];
   const pharmacistAlerts = [
     {
-      title: "Non-blocking pharmacist guidance",
+      title: "Pharmacist review lane",
       body: focusedProductSnapshot
-        ? `${focusedProductSnapshot.title} is in focus. Composition, indication, and interaction content are not exposed by the current runtime, so this lane remains guidance-only in Stage 8.31A.`
-        : "This lane reserves visible space for future interaction, duplication, and safety prompts. Stage 8.31A only adds the bounded non-blocking shell.",
+        ? `${focusedProductSnapshot.title} is in focus. ${focusedProductSnapshot.runtimeHonesty}`
+        : "This lane stays visible but secondary. It reserves space for pharmacist review cues without interrupting checkout.",
       tone: "sky" as const,
     },
     {
-      title: "Batch-aware soft check",
+      title: "Batch and expiry awareness",
       body: focusedProductSnapshot
-        ? `Batch ${focusedProductSnapshot.batch} stays visible for operator verification without blocking the sale flow.`
-        : "Lot and batch verification stays in the sale-line context once a product is selected.",
+        ? `Batch ${focusedProductSnapshot.batch} · Expiry ${focusedProductSnapshot.expiryLabel}. This remains an operator/pharmacist cue, not a hard clinical stop.`
+        : "Batch and expiry visibility appears here once a pack or sale line is in focus.",
       tone: "amber" as const,
     },
+    {
+      title: "Compliance guardrail",
+      body:
+        "Tax-code, JoFotara, controlled-substance, and legal hard-stop behavior are still pending backend compliance work. This cashier surface does not fake those completions.",
+      tone: "info" as const,
+    },
   ];
-
   return (
     <main
       className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.14),_transparent_22%),linear-gradient(180deg,_#f8fafc_0%,_#eef6ff_48%,_#ecfeff_100%)] text-slate-950"
@@ -1179,12 +1317,11 @@ export default function PosPage() {
       }}
     >
       <div className="mx-auto max-w-[1560px] space-y-4 px-4 py-4 lg:px-6 lg:py-5">
-        <header className={cn(surfaceClass, "p-4 lg:p-5")}>
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="min-w-0 flex-1 space-y-2.5">
+        <header className={cn(surfaceClass, "space-y-3 p-4 lg:p-4")}>
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0 flex-1 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <ToneBadge tone="emerald">Stage 8.31A</ToneBadge>
-                <ToneBadge tone="slate">Sales counter shell</ToneBadge>
+                <ToneBadge tone="emerald">Jordan pharmacy cashier</ToneBadge>
                 <ToneBadge
                   tone={
                     workspaceReady
@@ -1204,14 +1341,12 @@ export default function PosPage() {
                   <ToneBadge tone="sky">Return proof preserved</ToneBadge>
                 ) : null}
               </div>
-              <div className="space-y-1.5">
-                <h1 className="text-xl font-semibold tracking-tight text-slate-950 lg:text-[1.65rem]">
-                  Invoice-first pharmacy counter.
+              <div className="space-y-1">
+                <h1 className="text-xl font-semibold tracking-tight text-slate-950 lg:text-[1.55rem]">
+                  Cashier lane first. Lookup, returns, and setup stay behind it.
                 </h1>
-                <p className="max-w-4xl text-sm leading-6 text-slate-600">
-                  Selling dominates the route now: scan/search lives next to the
-                  invoice, line items read like bill rows, totals stay decisive,
-                  and lookup/returns/utilities move into a secondary lane.
+                <p className="max-w-5xl text-sm leading-6 text-slate-600">
+                  The selling face is now anchored around scan or search, compact invoice rows, and a decisive JOD totals footer. Any runtime or compliance gap is labeled honestly instead of being faked.
                 </p>
               </div>
             </div>
@@ -1237,19 +1372,19 @@ export default function PosPage() {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
             <CompactInfoCard
               label="Operator"
-              value={operatorAuthenticated ? "Authenticated" : "Needs sign-in"}
+              value={operatorAuthenticated ? email : "Needs sign-in"}
               supporting={
                 operatorAuthenticated
-                  ? "Session token loaded for this counter."
-                  : "Diagnostics stay collapsed until needed."
+                  ? "Active operator session is loaded for this counter."
+                  : "Diagnostics stay collapsed until the operator actually needs them."
               }
               tone={operatorAuthenticated ? "emerald" : "rose"}
             />
             <CompactInfoCard
-              label="Counter"
+              label="Register strip"
               value={
                 activeRegister
                   ? `${activeRegister.code} · ${activeRegister.nameEn}`
@@ -1259,42 +1394,30 @@ export default function PosPage() {
               tone={workspaceReady ? "emerald" : "amber"}
             />
             <CompactInfoCard
-              label="Active invoice"
-              value={
-                cartSession?.fiscalSaleDocument?.documentNo ??
-                cartSession?.sessionNumber ??
-                "No open invoice"
-              }
+              label="Shift / session"
+              value={cartSession?.sessionNumber ?? "No active counter session"}
               supporting={
-                cartSession ? cartSession.state : "Start or resume a sale"
+                cartSession
+                  ? `Invoice state ${cartSession.state}`
+                  : "Shift runtime is not wired yet, so the UI shows the live register session honestly."
               }
               tone={cartSession ? stateTone(cartSession.state) : "slate"}
             />
             <CompactInfoCard
-              label="Secondary workflow"
-              value={
-                selectedSaleDetail?.documentNo ??
-                returnSession?.returnNumber ??
-                "Lookup idle"
-              }
-              supporting={
-                returnFocusMode
-                  ? "Return work is available without taking over the page."
-                  : "Lookup and returns stay compact until needed."
-              }
-              tone={returnFocusMode ? "sky" : "slate"}
-            />
-            <CompactInfoCard
               label="Runtime"
               value={runtimeLabel}
-              supporting={workspaceLabel}
+              supporting={
+                workspaceReady
+                  ? "Tax-code, JoFotara, and controlled-substance policy remain pending backend compliance wiring."
+                  : workspaceLabel
+              }
               tone={workspaceReady ? "emerald" : "amber"}
             />
           </div>
 
           <details
             id="utility-diagnostics"
-            className="mt-3 rounded-[18px] border border-slate-200/80 bg-white/80 px-4 py-3 text-sm text-slate-600 shadow-sm"
+            className="rounded-[18px] border border-slate-200/80 bg-white/80 px-4 py-3 text-sm text-slate-600 shadow-sm"
           >
             <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               Utility setup and diagnostics
@@ -1309,8 +1432,7 @@ export default function PosPage() {
                     Operator sign-in defaults
                   </h3>
                   <p className="text-sm text-slate-500">
-                    Visible on demand so setup never competes with the selling
-                    surface.
+                    Visible on demand so setup never competes with the selling surface.
                   </p>
                 </div>
                 <input
@@ -1367,15 +1489,13 @@ export default function PosPage() {
                   onChange={(e) => setToken(e.target.value)}
                 />
                 <p className="text-xs leading-5 text-slate-500">
-                  Technical token access remains available for troubleshooting,
-                  but the live token is now masked so diagnostics stay
-                  secondary.
+                  Technical token access remains available for troubleshooting, but the live token stays masked so diagnostics never become the page headline.
                 </p>
               </div>
             </div>
           </details>
 
-          <div className="mt-3 space-y-3">
+          <div className="space-y-3">
             {contextError ? (
               <Notice title="Setup blocked" body={contextError} tone="error" />
             ) : null}
@@ -1393,10 +1513,10 @@ export default function PosPage() {
           <div className="grid gap-4 xl:grid-cols-[1.58fr_0.8fr]">
             <div className="space-y-4">
               <section className="rounded-[30px] bg-slate-950 px-5 py-5 text-white shadow-[0_30px_70px_rgba(15,23,42,0.24)]">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-                  <div className="space-y-1.5">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="space-y-2">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-300">
-                      Active invoice
+                      Active invoice lane
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-2xl font-semibold text-white">
@@ -1413,13 +1533,11 @@ export default function PosPage() {
                       )}
                     </div>
                     <p className="max-w-2xl text-sm leading-6 text-slate-300">
-                      The counter opens around the invoice, not around setup
-                      cards. Scan or search near the bill, add lines, then
-                      settle totals from the same surface.
+                      Scanner or search entry, pack or lot selection, invoice rows, and totals all stay in the same selling lane so the operator never feels dropped into an admin dashboard.
                     </p>
                   </div>
 
-                  <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[420px]">
+                  <div className="grid gap-2 sm:grid-cols-2 xl:min-w-[460px] xl:grid-cols-4">
                     <div className="rounded-[20px] border border-white/10 bg-white/5 px-4 py-3">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                         Branch / register
@@ -1427,7 +1545,7 @@ export default function PosPage() {
                       <p className="mt-1.5 text-sm font-semibold text-white">
                         {activeRegister
                           ? `${activeBranch?.name ?? "Branch"} · ${activeRegister.code}`
-                          : (activeBranch?.name ?? "Not loaded")}
+                          : activeBranch?.name ?? "Not loaded"}
                       </p>
                     </div>
                     <div className="rounded-[20px] border border-white/10 bg-white/5 px-4 py-3">
@@ -1436,6 +1554,14 @@ export default function PosPage() {
                       </p>
                       <p className="mt-1.5 text-sm font-semibold text-white">
                         {safeOpenCarts.length}
+                      </p>
+                    </div>
+                    <div className="rounded-[20px] border border-white/10 bg-white/5 px-4 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                        Tax visible
+                      </p>
+                      <p className="mt-1.5 text-sm font-semibold text-white">
+                        {formatMoney(cartSession?.taxTotal ?? 0, cartSession?.currency ?? "JOD")}
                       </p>
                     </div>
                     <div className="rounded-[20px] border border-emerald-400/30 bg-emerald-500/10 px-4 py-3">
@@ -1452,7 +1578,7 @@ export default function PosPage() {
                   </div>
                 </div>
 
-                <div className="mt-5 grid gap-4 xl:grid-cols-[1.3fr_0.9fr]">
+                <div className="mt-5 grid gap-4 xl:grid-cols-[1.25fr_0.95fr]">
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <ToneBadge tone="emerald">Barcode-first entry</ToneBadge>
@@ -1495,27 +1621,26 @@ export default function PosPage() {
                         </button>
                       ))}
                     </div>
-                    <p className="text-xs leading-5 text-slate-300">
+                    <div className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-3 text-sm leading-6 text-slate-300">
                       {searchMeta.note}
-                    </p>
+                    </div>
                   </div>
 
                   <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
                     <div className="space-y-3">
                       <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                          Selected pack and lot
+                          Selling step
                         </p>
-                        <p className="mt-2 text-sm leading-6 text-slate-300">
-                          Scanner-friendly entry stays tied to the invoice area
-                          instead of living in a detached admin card.
+                        <h3 className="mt-2 text-lg font-semibold text-white">
+                          Select pack and lot, then push it straight into the bill.
+                        </h3>
+                        <p className="mt-1.5 text-sm leading-6 text-slate-300">
+                          Pack or lot choice stays in the cashier lane, not in a detached admin detour.
                         </p>
                       </div>
                       <select
-                        className={cn(
-                          inputClass,
-                          "border-white/10 bg-white/95",
-                        )}
+                        className={cn(inputClass, "border-white/10 bg-white/95")}
                         value={selectedCatalogKey}
                         onChange={(e) => setSelectedCatalogKey(e.target.value)}
                         disabled={!cartSession || !isCartMutable}
@@ -1528,12 +1653,9 @@ export default function PosPage() {
                           >{`${option.label} · ${option.subtitle}`}</option>
                         ))}
                       </select>
-                      <div className="grid gap-3 md:grid-cols-[0.7fr_0.9fr_auto]">
+                      <div className="grid gap-3 md:grid-cols-[0.65fr_0.9fr_auto]">
                         <input
-                          className={cn(
-                            inputClass,
-                            "border-white/10 bg-white/95",
-                          )}
+                          className={cn(inputClass, "border-white/10 bg-white/95")}
                           min={1}
                           step={1}
                           type="number"
@@ -1544,10 +1666,7 @@ export default function PosPage() {
                           disabled={!cartSession || !isCartMutable}
                         />
                         <input
-                          className={cn(
-                            inputClass,
-                            "border-white/10 bg-white/95",
-                          )}
+                          className={cn(inputClass, "border-white/10 bg-white/95")}
                           min={0}
                           step={0.01}
                           type="number"
@@ -1566,39 +1685,38 @@ export default function PosPage() {
                           Add line
                         </button>
                       </div>
-                      <p className="text-xs leading-5 text-slate-400">
-                        {visibleCatalogOptions.length} sellable pack/lot option
-                        {visibleCatalogOptions.length === 1 ? "" : "s"} in
-                        scope.
-                      </p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <CompactInfoCard
+                          label="Selected barcode"
+                          value={
+                            selectedCatalogContext?.pack.packBarcode ??
+                            selectedCatalogContext?.pack.product.barcode ??
+                            "Awaiting selection"
+                          }
+                          supporting={
+                            selectedCatalogContext
+                              ? `Pack ${selectedCatalogContext.pack.packCode}`
+                              : `${visibleCatalogOptions.length} sellable pack/lot options in current scope.`
+                          }
+                          tone={selectedCatalogContext ? "emerald" : "slate"}
+                        />
+                        <CompactInfoCard
+                          label="Lot / expiry"
+                          value={
+                            selectedCatalogContext
+                              ? `${selectedCatalogContext.lot.batchNo} · ${formatDateLabel(selectedCatalogContext.lot.expiryDate)}`
+                              : "Select a lot first"
+                          }
+                          supporting={
+                            selectedCatalogContext
+                              ? `${selectedCatalogContext.lot.sellableQuantity} sellable · ${selectedCatalogContext.pack.packSellability ?? selectedCatalogContext.lot.status ?? "runtime status pending"}`
+                              : "Expiry, sellability, and barcode stay visible here once the lot is selected."
+                          }
+                          tone={selectedCatalogContext ? "amber" : "slate"}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </section>
-
-              <section className={cn(mutedSurfaceClass, "p-4")}>
-                <div className="flex flex-col gap-2 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
-                  <div className="space-y-1.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">
-                      Soft pharmacist alerts lane
-                    </p>
-                    <h3 className="text-lg font-semibold text-slate-950">
-                      Visible guidance without stopping the sale.
-                    </h3>
-                  </div>
-                  <ToneBadge tone="sky">
-                    UI scaffold only where backend truth is absent
-                  </ToneBadge>
-                </div>
-                <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                  {pharmacistAlerts.map((alert) => (
-                    <Notice
-                      key={alert.title}
-                      title={alert.title}
-                      body={alert.body}
-                      tone="info"
-                    />
-                  ))}
                 </div>
               </section>
 
@@ -1677,16 +1795,26 @@ export default function PosPage() {
                               discount: line.discount,
                               taxRate: line.taxRate ?? 0,
                             };
+                            const isFocused = line.id === focusedInvoiceRow?.id;
                             return (
                               <div
                                 key={line.id}
-                                className="border-b border-slate-200 px-4 py-4 last:border-b-0"
+                                className={cn(
+                                  "border-b border-slate-200 px-4 py-3 last:border-b-0",
+                                  isFocused && "bg-emerald-50/55",
+                                )}
+                                onClick={() => setFocusedInvoiceLineId(line.id)}
                               >
-                                <div className="grid grid-cols-[0.55fr_2.35fr_1.1fr_0.7fr_1fr_0.7fr_1fr_1fr] items-start gap-3">
+                                <div className="grid grid-cols-[0.55fr_2.5fr_1.15fr_0.7fr_1fr_0.75fr_1fr_1fr] items-start gap-3">
                                   <div>
                                     <p className="text-sm font-semibold text-slate-950">
                                       {line.lineNo}
                                     </p>
+                                    {isFocused ? (
+                                      <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">
+                                        Focused
+                                      </p>
+                                    ) : null}
                                   </div>
                                   <div className="space-y-1.5">
                                     <div className="flex flex-wrap items-center gap-2">
@@ -1701,10 +1829,10 @@ export default function PosPage() {
                                       ) : null}
                                     </div>
                                     <p className="text-xs leading-5 text-slate-500">
-                                      {line.productPack?.product.nameAr ??
-                                        "منتج"}{" "}
-                                      · Strength / dosage context is only shown
-                                      when the current runtime exposes it.
+                                      {line.productPack?.product.nameAr ?? "منتج"} · Barcode {line.productPack?.packBarcode ?? line.productPack?.product.barcode ?? "runtime not exposed"}
+                                    </p>
+                                    <p className="text-xs leading-5 text-slate-500">
+                                      Generic / active ingredient and dosage form are not exposed by the current POS runtime yet.
                                     </p>
                                   </div>
                                   <div>
@@ -1712,7 +1840,10 @@ export default function PosPage() {
                                       {line.lotBatch?.batchNo ?? "-"}
                                     </p>
                                     <p className="mt-1 text-xs text-slate-500">
-                                      Batch visible at line level
+                                      Exp {formatDateLabel(line.lotBatch?.expiryDate)}
+                                    </p>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                      {line.productPack?.packSellability ?? line.lotBatch?.status ?? "Lot status not exposed"}
                                     </p>
                                   </div>
                                   <div className="text-right text-sm font-semibold text-slate-950">
@@ -1726,23 +1857,15 @@ export default function PosPage() {
                                       )}
                                     </p>
                                     <p className="mt-1 text-xs text-slate-500">
-                                      Line base{" "}
-                                      {formatMoney(
-                                        line.beforeTaxTotal,
-                                        cartSession.currency,
-                                      )}
+                                      Base {formatMoney(line.beforeTaxTotal, cartSession.currency)}
                                     </p>
                                   </div>
                                   <div className="text-right">
                                     <p className="text-sm font-semibold text-slate-950">{`${line.taxRate ?? 0}%`}</p>
                                     <p className="mt-1 text-xs text-slate-500">
-                                      {formatMoney(
-                                        line.taxValue,
-                                        cartSession.currency,
-                                      )}
+                                      {formatMoney(line.taxValue, cartSession.currency)}
                                     </p>
                                   </div>
-
                                   <div className="text-right">
                                     <p className="text-sm font-semibold text-slate-950">
                                       {formatMoney(
@@ -1762,119 +1885,121 @@ export default function PosPage() {
                                       )}
                                     </p>
                                     <p className="mt-1 text-xs text-slate-500">
-                                      Discount{" "}
-                                      {formatMoney(
-                                        line.discount,
-                                        cartSession.currency,
-                                      )}
+                                      Discount {formatMoney(line.discount, cartSession.currency)}
                                     </p>
                                   </div>
                                 </div>
 
-                                {isCartMutable ? (
-                                  <div className="mt-3 grid gap-2 xl:grid-cols-[0.7fr_0.9fr_0.9fr_0.8fr_auto_auto]">
-                                    <label className={metricCardClass}>
-                                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                        Qty
-                                      </p>
-                                      <input
-                                        className="mt-1.5 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                                        type="number"
-                                        min={1}
-                                        step={1}
-                                        value={edit.quantity}
-                                        onChange={(e) =>
-                                          setLineEdits((cur) => ({
-                                            ...cur,
-                                            [line.id]: {
-                                              ...edit,
-                                              quantity:
-                                                Number(e.target.value) || 1,
-                                            },
-                                          }))
-                                        }
-                                      />
-                                    </label>
-                                    <label className={metricCardClass}>
-                                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                        Before tax
-                                      </p>
-                                      <input
-                                        className="mt-1.5 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                                        type="number"
-                                        min={0}
-                                        step={0.01}
-                                        value={edit.unitPrice}
-                                        onChange={(e) =>
-                                          setLineEdits((cur) => ({
-                                            ...cur,
-                                            [line.id]: {
-                                              ...edit,
-                                              unitPrice:
-                                                Number(e.target.value) || 0,
-                                            },
-                                          }))
-                                        }
-                                      />
-                                    </label>
-                                    <label className={metricCardClass}>
-                                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                        Discount
-                                      </p>
-                                      <input
-                                        className="mt-1.5 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                                        type="number"
-                                        min={0}
-                                        step={0.01}
-                                        value={edit.discount}
-                                        onChange={(e) =>
-                                          setLineEdits((cur) => ({
-                                            ...cur,
-                                            [line.id]: {
-                                              ...edit,
-                                              discount:
-                                                Number(e.target.value) || 0,
-                                            },
-                                          }))
-                                        }
-                                      />
-                                    </label>
-                                    <label className={metricCardClass}>
-                                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                        Tax %
-                                      </p>
-                                      <input
-                                        className="mt-1.5 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                                        type="number"
-                                        min={0}
-                                        step={0.01}
-                                        value={edit.taxRate}
-                                        onChange={(e) =>
-                                          setLineEdits((cur) => ({
-                                            ...cur,
-                                            [line.id]: {
-                                              ...edit,
-                                              taxRate:
-                                                Number(e.target.value) || 0,
-                                            },
-                                          }))
-                                        }
-                                      />
-                                    </label>
-                                    <button
-                                      className={secondaryButtonClass}
-                                      type="button"
-                                      onClick={() => updateCartLine(line.id)}
-                                    >
-                                      Update line
-                                    </button>
-                                    <button
-                                      className="inline-flex items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
-                                      type="button"
-                                      onClick={() => removeCartLine(line.id)}
-                                    >
-                                      Remove line
-                                    </button>
+                                {isCartMutable && isFocused ? (
+                                  <div className="mt-3 rounded-[20px] border border-emerald-200 bg-white px-3 py-3 shadow-sm">
+                                    <div className="grid gap-2 xl:grid-cols-[0.65fr_0.9fr_0.8fr_0.75fr_auto_auto]">
+                                      <label className={metricCardClass}>
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                          Qty
+                                        </p>
+                                        <input
+                                          className="mt-1.5 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                                          type="number"
+                                          min={1}
+                                          step={1}
+                                          value={edit.quantity}
+                                          onChange={(e) =>
+                                            setLineEdits((cur) => ({
+                                              ...cur,
+                                              [line.id]: {
+                                                ...edit,
+                                                quantity:
+                                                  Number(e.target.value) || 1,
+                                              },
+                                            }))
+                                          }
+                                        />
+                                      </label>
+                                      <label className={metricCardClass}>
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                          Before tax
+                                        </p>
+                                        <input
+                                          className="mt-1.5 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                                          type="number"
+                                          min={0}
+                                          step={0.01}
+                                          value={edit.unitPrice}
+                                          onChange={(e) =>
+                                            setLineEdits((cur) => ({
+                                              ...cur,
+                                              [line.id]: {
+                                                ...edit,
+                                                unitPrice:
+                                                  Number(e.target.value) || 0,
+                                              },
+                                            }))
+                                          }
+                                        />
+                                      </label>
+                                      <label className={metricCardClass}>
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                          Discount
+                                        </p>
+                                        <input
+                                          className="mt-1.5 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                                          type="number"
+                                          min={0}
+                                          step={0.01}
+                                          value={edit.discount}
+                                          onChange={(e) =>
+                                            setLineEdits((cur) => ({
+                                              ...cur,
+                                              [line.id]: {
+                                                ...edit,
+                                                discount:
+                                                  Number(e.target.value) || 0,
+                                              },
+                                            }))
+                                          }
+                                        />
+                                      </label>
+                                      <label className={metricCardClass}>
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                          Tax %
+                                        </p>
+                                        <input
+                                          className="mt-1.5 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                                          type="number"
+                                          min={0}
+                                          step={0.01}
+                                          value={edit.taxRate}
+                                          onChange={(e) =>
+                                            setLineEdits((cur) => ({
+                                              ...cur,
+                                              [line.id]: {
+                                                ...edit,
+                                                taxRate:
+                                                  Number(e.target.value) || 0,
+                                              },
+                                            }))
+                                          }
+                                        />
+                                      </label>
+                                      <button
+                                        className={secondaryButtonClass}
+                                        type="button"
+                                        onClick={() => updateCartLine(line.id)}
+                                      >
+                                        Update line
+                                      </button>
+                                      <button
+                                        className="inline-flex items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+                                        type="button"
+                                        onClick={() => removeCartLine(line.id)}
+                                      >
+                                        Remove line
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : isCartMutable ? (
+                                  <div className="mt-2 text-xs text-slate-500">
+                                    Select this row to adjust quantity, before-tax price, discount, or tax rate.
                                   </div>
                                 ) : null}
                               </div>
@@ -2091,12 +2216,10 @@ export default function PosPage() {
                     Drug quick info
                   </p>
                   <h3 className="text-lg font-semibold text-slate-950">
-                    Bounded adjacent knowledge slot.
+                    Bounded adjacent runtime view.
                   </h3>
                   <p className="text-sm leading-6 text-slate-600">
-                    This panel acknowledges where composition and use cues
-                    belong without pretending the backend already exposes full
-                    clinical content.
+                    This slot stays compact and honest. It shows runtime-backed pack, barcode, expiry, and stock cues now, while clearly labeling missing clinical data.
                   </p>
                 </div>
                 <div className="mt-4 space-y-3">
@@ -2110,25 +2233,61 @@ export default function PosPage() {
                       </p>
                       <div className="mt-3 grid gap-2 sm:grid-cols-2">
                         <CompactInfoCard
-                          label="Composition / active ingredient"
-                          value="Awaiting backend truth"
-                          supporting="Stage 8.31A only reserves the quick-info surface."
+                          label="Pack / barcode"
+                          value={focusedProductSnapshot.packCode}
+                          supporting={focusedProductSnapshot.barcode}
                           tone="sky"
                         />
                         <CompactInfoCard
-                          label="Use / indication"
-                          value="Awaiting backend truth"
-                          supporting={`Current visible batch: ${focusedProductSnapshot.batch}`}
+                          label="Batch / expiry"
+                          value={focusedProductSnapshot.batch}
+                          supporting={`Expiry ${focusedProductSnapshot.expiryLabel}`}
                           tone="amber"
+                        />
+                        <CompactInfoCard
+                          label="Current sellability"
+                          value={focusedProductSnapshot.sellability}
+                          supporting={focusedProductSnapshot.stockLabel}
+                          tone="emerald"
+                        />
+                        <CompactInfoCard
+                          label="Composition / use"
+                          value="Pending backend catalog truth"
+                          supporting={focusedProductSnapshot.runtimeHonesty}
+                          tone="slate"
                         />
                       </div>
                     </div>
                   ) : (
                     <EmptyPanel
                       title="No medicine in focus"
-                      body="Once the operator highlights or adds a line, this quick-info slot will stay adjacent to the counter surface."
+                      body="Once the operator highlights a row or selects a pack, this quick-info slot stays adjacent to the cashier surface without pretending clinical completeness."
                     />
                   )}
+                </div>
+              </section>
+
+              <section className={cn(mutedSurfaceClass, "p-4")}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">
+                      Pharmacist guidance lane
+                    </p>
+                    <h3 className="text-lg font-semibold text-slate-950">
+                      Visible, secondary, and non-blocking.
+                    </h3>
+                  </div>
+                  <ToneBadge tone="sky">Guidance scaffold only</ToneBadge>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {pharmacistAlerts.map((alert) => (
+                    <Notice
+                      key={alert.title}
+                      title={alert.title}
+                      body={alert.body}
+                      tone="info"
+                    />
+                  ))}
                 </div>
               </section>
 
@@ -2789,3 +2948,16 @@ export default function PosPage() {
     </main>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
