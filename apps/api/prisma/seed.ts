@@ -94,13 +94,13 @@ async function main() {
     where: { id: '22222222-2222-4222-8222-222222222222' },
     update: {
       name: 'Main Branch',
-      location: 'Riyadh',
+      location: 'Amman',
     },
     create: {
       id: '22222222-2222-4222-8222-222222222222',
       tenantId: tenant.id,
       name: 'Main Branch',
-      location: 'Riyadh',
+      location: 'Amman',
     },
   });
 
@@ -252,9 +252,10 @@ async function main() {
     update: {
       nameAr: 'المورد الطبي الأول',
       nameEn: 'First Medical Supplier',
-      contactName: 'ORION Supply Team',
+      contactName: 'ORION Jordan Supply Team',
       email: 'supply1@orion.local',
-      phone: '+966500000001',
+      phone: '+962790000001',
+      address: 'Amman Industrial Estate',
       preferredPaymentTerm: 'NET 30',
       isActive: true,
     },
@@ -263,10 +264,10 @@ async function main() {
       code: 'SUP-ORION-001',
       nameAr: 'المورد الطبي الأول',
       nameEn: 'First Medical Supplier',
-      contactName: 'ORION Supply Team',
+      contactName: 'ORION Jordan Supply Team',
       email: 'supply1@orion.local',
-      phone: '+966500000001',
-      address: 'Riyadh Industrial Zone',
+      phone: '+962790000001',
+      address: 'Amman Industrial Estate',
       preferredPaymentTerm: 'NET 30',
       isActive: true,
     },

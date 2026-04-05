@@ -16,7 +16,7 @@ const withPWA = withPWAInit({
 const nextConfig = {
   reactStrictMode: true,
   async rewrites() {
-    const upstream = process.env.ORION_API_UPSTREAM ?? 'http://127.0.0.1:3001';
+    const upstream = process.env.ORION_API_UPSTREAM ?? 'http://127.0.0.1:3211';
     return [
       {
         source: '/api/:path*',

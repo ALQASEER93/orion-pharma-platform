@@ -83,7 +83,9 @@ export function resolveOrionDatabaseUrl(repoRoot) {
 
   const sqliteDir = resolve(repoRoot, '.orion');
   mkdirSync(sqliteDir, { recursive: true });
-  const sqliteFile = resolve(sqliteDir, 'dev.db');
+  const sqliteFile = process.env.ORION_SQLITE_FILE
+    ? resolve(repoRoot, process.env.ORION_SQLITE_FILE)
+    : resolve(sqliteDir, 'stage834_local.db');
   return toSqliteUrl(sqliteFile);
 }
 

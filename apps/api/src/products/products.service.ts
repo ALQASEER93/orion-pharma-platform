@@ -138,7 +138,10 @@ export class ProductsService {
         },
       });
     } catch (error) {
-      this.rethrowUniqueConflict(error, 'Product barcode already exists in tenant.');
+      this.rethrowUniqueConflict(
+        error,
+        'Product barcode already exists in tenant.',
+      );
       throw error;
     }
   }
@@ -154,7 +157,10 @@ export class ProductsService {
         },
       });
     } catch (error) {
-      this.rethrowUniqueConflict(error, 'Product barcode already exists in tenant.');
+      this.rethrowUniqueConflict(
+        error,
+        'Product barcode already exists in tenant.',
+      );
       throw error;
     }
   }
@@ -851,7 +857,32 @@ export class ProductsService {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     ) {
-      throw new ConflictException(message);
+      throw new ConflictException(
+        this.resolveUniqueConflictMessage(error.meta?.target, message),
+      );
     }
+  }
+
+  private resolveUniqueConflictMessage(
+    target: unknown,
+    fallback: string,
+  ) {
+    const targets = Array.isArray(target)
+      ? target
+          .filter((value): value is string => typeof value === 'string')
+          .map((value) => value.toLowerCase())
+      : [];
+
+    if (targets.includes('barcode')) {
+      return 'Product barcode already exists in tenant.';
+    }
+    if (targets.includes('code')) {
+      return 'Pack code already exists in tenant.';
+    }
+    if (targets.includes('batchno') || targets.includes('batch_no')) {
+      return 'Batch number already exists for the selected product pack.';
+    }
+
+    return fallback;
   }
 }
