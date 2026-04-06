@@ -1,8 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getApiBase } from "../../lib/api-base";
+import { useOperatorSession } from "../../lib/operator-session";
 
 type PosContextResponse = {
   tenantId: string;
@@ -701,12 +702,12 @@ function SearchModeButton({
 
 export default function PosPage() {
   const baseUrl = useMemo(() => getApiBase(), []);
+  const operatorSession = useOperatorSession({ requireRegister: true });
   const [tenantId, setTenantId] = useState(defaultTenant);
   const [branchId, setBranchId] = useState(defaultBranch);
   const [registerId, setRegisterId] = useState("");
   const [legalEntityId, setLegalEntityId] = useState("");
   const [email, setEmail] = useState("admin@orion.local");
-  const [password, setPassword] = useState("Admin@123");
   const [token, setToken] = useState("");
 
   const [context, setContext] = useState<PosContextResponse | null>(null);
@@ -877,6 +878,49 @@ export default function PosPage() {
     setNewLinePrice(selectedCatalogContext.pack.product.defaultSalePrice ?? 0);
   }, [selectedCatalogContext]);
 
+  useEffect(() => {
+    if (operatorSession.status === "ready") {
+      setTenantId(operatorSession.tenantId);
+      setBranchId(operatorSession.branchId);
+      setRegisterId(operatorSession.registerId ?? "");
+      setLegalEntityId(operatorSession.legalEntityId ?? "");
+      setEmail(operatorSession.user?.email ?? operatorSession.email);
+      setToken(operatorSession.accessToken);
+      setContextError(null);
+      return;
+    }
+
+    if (operatorSession.status === "error") {
+      setContextError(operatorSession.error);
+    }
+  }, [
+    operatorSession.accessToken,
+    operatorSession.branchId,
+    operatorSession.email,
+    operatorSession.error,
+    operatorSession.legalEntityId,
+    operatorSession.registerId,
+    operatorSession.status,
+    operatorSession.tenantId,
+    operatorSession.user,
+  ]);
+
+  useEffect(() => {
+    if (operatorSession.status !== "ready") {
+      return;
+    }
+    if (!token || !branchId) {
+      return;
+    }
+    void loadContextAndCatalog();
+  }, [
+    branchId,
+    operatorSession.accessToken,
+    operatorSession.registerId,
+    operatorSession.status,
+    token,
+  ]);
+
   const invoiceRows = useMemo(
     () =>
       safeCartLines.map((line) => {
@@ -964,7 +1008,7 @@ export default function PosPage() {
           "Runtime status not exposed",
         stockLabel: `${selectedCatalogContext.lot.sellableQuantity} sellable / ${selectedCatalogContext.lot.onHandQuantity ?? selectedCatalogContext.lot.sellableQuantity} on hand`,
         runtimeHonesty:
-          "Live selling still reflects the current catalog/runtime view. Historical finalized rows now switch to immutable transaction snapshots.",
+          "The counter uses the current sellable pack and batch. Finalized bills keep their saved item name and batch details.",
       };
     }
 
@@ -980,7 +1024,7 @@ export default function PosPage() {
         sellability: `Remaining eligible qty ${selectedReturnSourceLine.remainingQty}`,
         stockLabel: `Sold ${selectedReturnSourceLine.quantity} · Returned ${selectedReturnSourceLine.alreadyReturnedQty}`,
         runtimeHonesty:
-          "Return selection now reads the finalized sale snapshot first, so later catalog edits do not rename this source line.",
+          "Returns use the saved sale snapshot first, so later product edits do not rename the source line.",
       };
     }
 
@@ -1011,8 +1055,8 @@ export default function PosPage() {
               : "Sellable lot quantity is not returned on this sale line payload",
         runtimeHonesty:
           cartSession?.state === "FINALIZED"
-            ? "Closed-bill rows now keep immutable transaction names, pack, barcode, and batch cues from finalization time."
-            : "Active invoice lines still read the current runtime catalog so the cashier sees live sellable truth.",
+            ? "Closed bills keep the saved item name, pack, barcode, and batch from the time of sale."
+            : "Open sale lines continue to show the current sellable product details for the cashier.",
       };
     }
 
@@ -1027,7 +1071,7 @@ export default function PosPage() {
     headers.set("Content-Type", "application/json");
     headers.set("x-tenant-id", tenantId);
     if (!skipAuth) {
-      if (!token) throw new Error("Bearer token is required.");
+      if (!token) throw new Error("Session credential is required.");
       headers.set("Authorization", `Bearer ${token}`);
     }
     const response = await fetch(`${baseUrl}${path}`, { ...init, headers });
@@ -1107,7 +1151,7 @@ export default function PosPage() {
 
   function handleHeaderSecondaryAction() {
     if (!workspaceReady) {
-      scrollToSection("utility-diagnostics");
+      scrollToSection("support-panel");
       return;
     }
     if (returnFocusMode) {
@@ -1120,9 +1164,9 @@ export default function PosPage() {
 
   const headerPrimaryLabel =
     operatorActionState === "setup"
-      ? "Authenticate operator"
+      ? "Reconnect counter session"
       : operatorActionState === "load-workspace"
-        ? "Load workspace"
+        ? "Open selling counter"
         : operatorActionState === "resume-sale"
           ? "Resume current sale"
           : operatorActionState === "return-mode"
@@ -1130,7 +1174,7 @@ export default function PosPage() {
             : "Start new sale";
 
   const headerSecondaryLabel = !workspaceReady
-    ? "Open setup tools"
+    ? "Open support tools"
     : returnFocusMode
       ? "Open returns workspace"
       : "Open product lookup";
@@ -1138,25 +1182,14 @@ export default function PosPage() {
   async function performLogin() {
     setContextError(null);
     try {
-      const payload = await apiRequest<{ access_token: string }>(
-        "/auth/login",
-        {
-          method: "POST",
-          body: JSON.stringify({ email, password, tenantId }),
-        },
-        true,
-      );
-      setToken(payload.access_token);
-      setStatusMessage("Operator session authenticated successfully.");
+      await operatorSession.refreshSession();
+      setStatusMessage("Counter session refreshed for the local runtime.");
     } catch (error) {
       setContextError((error as Error).message);
     }
   }
 
-  async function login(event: FormEvent) {
-    event.preventDefault();
-    await performLogin();
-  }
+
 
   async function loadSuppliers() {
     try {
@@ -1275,10 +1308,10 @@ export default function PosPage() {
       }
       setMaintenanceSuccess(
         maintenanceForm.productId
-          ? "Product maintenance was persisted and rebound to the live runtime."
-          : "New product truth was created, stocked, and bound to the live runtime.",
+          ? "Product record updated and returned to the selling counter."
+          : "New product record created, stocked, and made available at the counter.",
       );
-      setStatusMessage("Product truth persisted through the current architecture.");
+      setStatusMessage("Product record saved and returned to the counter.");
       setWorkspaceView("maintenance");
     } catch (error) {
       setMaintenanceError((error as Error).message);
@@ -1332,7 +1365,7 @@ export default function PosPage() {
         `/pos/operational/finalized-sales?branchId=${encodeURIComponent(branchId)}&registerId=${encodeURIComponent(resolvedRegister)}&search=${encodeURIComponent(salesSearch)}`,
       );
       setFinalizedSales(Array.isArray(sales) ? sales : []);
-      setStatusMessage("Workspace loaded from the accepted backend runtime with product truth and maintenance persistence.");
+      setStatusMessage("Counter loaded with current products, open sales, and recent returns for this branch.");
     } catch (error) {
       setContextError((error as Error).message);
     }
@@ -1679,9 +1712,9 @@ export default function PosPage() {
       tone: "amber" as const,
     },
     {
-      title: "Compliance guardrail",
+      title: "Pending regulatory integrations",
       body:
-        "Tax-code, JoFotara, controlled-substance, and legal hard-stop behavior are still pending backend compliance work. This cashier surface does not fake those completions.",
+        "Tax-code, JoFotara, controlled-substance, and legal hard-stop behavior still need dedicated integration work. This cashier surface stays honest about what is live today.",
       tone: "info" as const,
     },
   ];
@@ -1733,7 +1766,7 @@ export default function PosPage() {
             : cartSession.state
           : "Ready"
       : operatorAuthenticated
-        ? "Load workspace"
+        ? "Open selling counter"
         : "Auth required";
   const workspaceModeLabel =
     workspaceView === "cashier"
@@ -1781,14 +1814,14 @@ export default function PosPage() {
             <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
               <div className="min-w-0 space-y-1">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-300">
-                  Pharmacy cashier / accounting counter
+                  Pharmacy selling counter
                 </p>
                 <div className="flex flex-col gap-1 xl:flex-row xl:items-end xl:justify-between">
                   <h1 className="text-[1.4rem] font-semibold tracking-[0.01em] text-slate-50 lg:text-[1.75rem]">
-                    Classic Pharmacy Cashier Counter
+                    Daily pharmacy cashier counter
                   </h1>
                   <p className="max-w-3xl text-xs leading-5 text-slate-400">
-                    Thin operational chrome only. The live invoice stays primary; lookup, pricing, and returns remain purpose-built side workspaces.
+                    Keep selling first. The live invoice stays central while lookup, product prep, and returns stay available when needed.
                   </p>
                 </div>
               </div>
@@ -1868,49 +1901,58 @@ export default function PosPage() {
             </div>
 
             <details
-              id="utility-diagnostics"
+              id="support-panel"
               className="rounded-[8px] border border-slate-800 bg-[#10151c] px-3 py-3 text-sm text-slate-300"
             >
               <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Utility setup and diagnostics
+                Support tools and branch routing
               </summary>
               <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                <form
-                  className="space-y-3 rounded-[8px] border border-slate-800 bg-[#151b22] p-3"
-                  onSubmit={login}
-                >
+                <div className="space-y-3 rounded-[8px] border border-slate-800 bg-[#151b22] p-3">
                   <div className="space-y-1">
                     <h3 className="text-sm font-semibold text-slate-100">
-                      Operator sign-in defaults
+                      Resolved counter context
                     </h3>
                     <p className="text-xs leading-5 text-slate-400">
-                      Setup remains subordinate until the counter actually needs it.
+                      Switch the branch or register by name when support needs to redirect the counter. Raw identifiers stay below as read-only support data.
                     </p>
                   </div>
-                  <input className={inputClass} placeholder="Tenant ID" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
-                  <input className={inputClass} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  <input className={inputClass} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                  <button className={primaryButtonClass} type="submit">Sign in</button>
-                </form>
+                  <select className={inputClass} value={branchId} onChange={(e) => { const nextBranch = e.target.value; setBranchId(nextBranch); operatorSession.setActiveBranch(nextBranch); }}>
+                    {(operatorSession.branches.length ? operatorSession.branches : context?.branches ?? []).map((item) => (
+                      <option key={item.id} value={item.id}>{item.name}</option>
+                    ))}
+                  </select>
+                  <select className={inputClass} value={registerId} onChange={(e) => { const nextRegister = e.target.value; setRegisterId(nextRegister); operatorSession.setActiveRegister(nextRegister); }}>
+                    <option value="">Choose register</option>
+                    {(context?.registers ?? operatorSession.registers).filter((item) => item.branchId === branchId).map((item) => (
+                      <option key={item.id} value={item.id}>{item.code} · {item.nameEn}</option>
+                    ))}
+                  </select>
+                  <button className={secondaryButtonClass} type="button" onClick={performLogin}>Reconnect local session</button>
+                </div>
 
                 <div className="space-y-3 rounded-[8px] border border-slate-800 bg-[#151b22] p-3">
                   <div className="space-y-1">
-                    <h3 className="text-sm font-semibold text-slate-100">Advanced overrides</h3>
-                    <p className="text-xs leading-5 text-slate-400">Used only for branch, register, or token troubleshooting.</p>
+                    <h3 className="text-sm font-semibold text-slate-100">Support context</h3>
+                    <p className="text-xs leading-5 text-slate-400">Visible for support only. The operator flow itself no longer asks for manual system values.</p>
                   </div>
-                  <input className={inputClass} placeholder="Branch ID" value={branchId} onChange={(e) => setBranchId(e.target.value)} />
-                  <input className={inputClass} placeholder="Register ID" value={registerId} onChange={(e) => setRegisterId(e.target.value)} />
-                  <input className={inputClass} placeholder="Technical bearer token (advanced only)" type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} />
-                  <p className="text-xs leading-5 text-slate-500">The live token stays masked. Diagnostics never become the counter headline.</p>
+                  <div className="space-y-2 font-mono text-xs leading-5 text-slate-400">
+                    <p>Operator: {email}</p>
+                    <p>Tenant: {tenantId}</p>
+                    <p>Branch: {branchId}</p>
+                    <p>Register: {registerId || "not selected"}</p>
+                    <p>Legal entity: {legalEntityId || "not selected"}</p>
+                  </div>
+                  <p className="text-xs leading-5 text-slate-500">The secure session credential stays hidden from the operator surface and refreshes through the local session action above.</p>
                 </div>
               </div>
             </details>
 
             {contextError ? (
-              <Notice title="Setup blocked" body={contextError} tone="error" />
+              <Notice title="Support action blocked" body={contextError} tone="error" />
             ) : null}
             {statusMessage ? (
-              <Notice title="Latest operation" body={statusMessage} tone="success" />
+              <Notice title="Latest update" body={statusMessage} tone="success" />
             ) : null}
           </section>
         </header>
@@ -1938,7 +1980,7 @@ export default function PosPage() {
                         {invoiceReference}
                       </h2>
                       <p className="text-xs leading-5 text-slate-400">
-                        Search or scan, bind the correct pack and lot, post the line into the live invoice, then close the bill from the cashier footer.
+                        Scan or search, confirm the correct pack and batch, then add the line and close the sale from the counter footer.
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -2012,7 +2054,7 @@ export default function PosPage() {
                     </button>
                   </div>
                   <div className="flex flex-col gap-2 px-4 py-2.5 text-[11px] uppercase tracking-[0.16em] text-slate-500 lg:flex-row lg:items-center lg:justify-between">
-                    <p>Lookup and pricing stay outside the live invoice lane so the counter remains narrow and operational.</p>
+                    <p>Lookup and product prep stay nearby without taking over the live selling lane.</p>
                     <div className="flex flex-wrap gap-2">
                       <button
                         className={secondaryButtonClass}
@@ -2442,7 +2484,7 @@ export default function PosPage() {
                       Quick info
                     </p>
                     <h3 className="text-lg font-semibold text-slate-50">
-                      Runtime-backed cues only.
+                      Current selling cues only.
                     </h3>
                   </div>
                   {selectedCatalogContext ? (
@@ -2473,7 +2515,7 @@ export default function PosPage() {
                     </ul>
                   )}
                   <p className="mt-3 text-xs leading-5 text-slate-500">
-                    Honest only: runtime-backed where available, no fake supplier or compliance claims where the current model does not support them.
+                    Honest only: live data where available, and no fake supplier or regulatory claims where the current model does not support them.
                   </p>
                 </section>
 
@@ -2521,10 +2563,10 @@ export default function PosPage() {
                   Lookup bench / product search
                 </p>
                 <h2 className="text-2xl font-semibold text-slate-50">
-                  Dedicated lookup bench for runtime-backed trade, generic, supplier, and category search.
+                  Dedicated lookup bench for trade name, generic name, supplier, and category search.
                 </h2>
                 <p className="max-w-3xl text-sm leading-6 text-slate-400">
-                  This workspace stays separate from the cashier while exposing richer lookup identity from the live runtime-backed product truth.
+                  This workspace stays separate from the cashier while exposing richer lookup identity from the live product catalog and saved sale records.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -2559,7 +2601,7 @@ export default function PosPage() {
               <section className={cn(mutedSurfaceClass, "p-4")}>
                 <div className="flex items-center justify-between gap-3 border-b border-slate-700/90 pb-4">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Runtime lookup results</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Lookup panel results</p>
                     <h3 className="mt-1 text-lg font-semibold text-slate-50">{visibleCatalogOptions.length} pack / lot results</h3>
                   </div>
                   <button className={secondaryButtonClass} type="button" onClick={loadContextAndCatalog} disabled={!workspaceReady}>
@@ -2578,7 +2620,7 @@ export default function PosPage() {
                     );
                   }) : (
                     <div className="xl:col-span-2">
-                      <EmptyPanel title="No lookup results" body="The runtime does not have a matching pack / lot record for the current search. Adjust the search term, refresh the workspace, or create the product truth from the pricing desk." />
+                      <EmptyPanel title="No lookup results" body="No matching pack or batch was found for this search. Adjust the term, refresh the workspace, or prepare the product from the pricing desk." />
                     </div>
                   )}
                 </div>
@@ -2598,7 +2640,7 @@ export default function PosPage() {
                     </div>
                   </div>
                 ) : (
-                  <EmptyPanel title="No result selected" body="Choose a runtime result to preview it here, then send it back to the counter or into pricing / entry." />
+                  <EmptyPanel title="No result selected" body="Choose a result to preview it here, then send it back to the counter or into pricing." />
                 )}
               </aside>
             </div>
@@ -2608,13 +2650,13 @@ export default function PosPage() {
             <div className="flex flex-col gap-4 border-b border-slate-700/90 pb-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-1.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Pricing desk / product entry / classification
+                  Product desk / pricing / classification
                 </p>
                 <h2 className="text-2xl font-semibold text-slate-50">
-                  Separate pricing desk for real maintenance, classification, and persistence work.
+                  Separate product desk for pricing, classification, and stock preparation.
                 </h2>
                 <p className="max-w-3xl text-sm leading-6 text-slate-400">
-                  This workspace saves through the current backend architecture and keeps the cashier screen focused on selling.
+                  This desk saves the product record and returns the cashier screen to selling.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -2626,10 +2668,10 @@ export default function PosPage() {
             <div className="mt-4 grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
               <section className={cn(mutedSurfaceClass, "space-y-4 p-4")}>
                 <div className="space-y-1.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Runtime focus</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Selected product</p>
                   <h3 className="text-lg font-semibold text-slate-50">{selectedCatalogContext ? (selectedCatalogContext.pack.product.tradeNameEn ?? selectedCatalogContext.pack.product.nameEn) : "New maintenance record"}</h3>
                   <p className="text-sm leading-6 text-slate-400">
-                    {selectedCatalogContext ? "The selected runtime product stays visible here while you edit fields, pricing, classification, and branch stock truth." : "Start a new product record here or open a runtime result first to edit an existing record."}
+                    {selectedCatalogContext ? "The selected product stays visible here while you update pricing, classification, and branch stock." : "Start a new product record here or open an existing result first."}
                   </p>
                 </div>
                 {selectedCatalogContext ? (
@@ -2640,7 +2682,7 @@ export default function PosPage() {
                     <CompactInfoCard label="Sellable stock" value={`${selectedCatalogContext.lot.sellableQuantity}`} supporting={`Expiry ${formatDateLabel(selectedCatalogContext.lot.expiryDate)}`} tone="emerald" />
                   </div>
                 ) : (
-                  <EmptyPanel title="No runtime product selected" body="Use the lookup bench to open an existing product or start a new record directly from this desk." />
+                  <EmptyPanel title="No product selected" body="Use the lookup bench to open an existing product or start a new record directly from this desk." />
                 )}
                 <div className="space-y-2">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Classification examples</p>
@@ -2650,7 +2692,7 @@ export default function PosPage() {
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Dosage form examples</p>
                   <div className="flex flex-wrap gap-2">{dosageFormExamples.map((form) => (<button key={form} type="button" onClick={() => updateMaintenanceField("dosageFormName", form)} className="rounded-[8px] border border-sky-900/40 bg-[#10151d] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300 transition hover:border-sky-700/50 hover:text-slate-100">{form}</button>))}</div>
                 </div>
-                <Notice title="Persistence scope" body="Save now updates product truth, pack / lot anchors, and branch stock through the current architecture. Tax readiness remains a modeling field only; it does not claim live fiscal integration." tone="info" />
+                <Notice title="Persistence scope" body="Save now updates the product record, pack and batch anchors, and branch stock. The tax code stays informational only in this local stage." tone="info" />
               </section>
               <section className={cn(mutedSurfaceClass, "space-y-4 p-4")}>
                 {maintenanceError ? (
@@ -2693,13 +2735,13 @@ export default function PosPage() {
           <div className="flex flex-col gap-4 border-b border-slate-700/90 pb-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-1.5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Returns desk / transaction lookup
+                Returns and sale lookup
               </p>
               <h2 className="text-2xl font-semibold text-slate-50">
-                Returns stay on their own desk with source-sale lookup and bounded refund execution.
+                Returns stay on their own desk so the selling counter stays clear.
               </h2>
               <p className="max-w-3xl text-sm leading-6 text-slate-400">
-                Finalized-return proof remains intact here while the sell counter stays focused on live billing.
+                Finalized returns remain traceable here while the counter stays focused on live selling.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -2736,7 +2778,7 @@ export default function PosPage() {
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                       <div>
                         <p className="text-sm font-semibold">
-                          Return source selected: {selectedSaleDetail.documentNo}
+                          Selected source sale: {selectedSaleDetail.documentNo}
                         </p>
                         <p className="mt-1 text-sm text-sky-200">
                           The lookup list remains the selection surface. Switch to
@@ -3322,6 +3364,10 @@ export default function PosPage() {
     </main>
   );
 }
+
+
+
+
 
 
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { pageHelpRegistry } from "@/lib/help-registry";
+import { useOperatorSession } from "@/lib/operator-session";
 import {
   hasProductsMessageContract,
   resolveProductsCriticalMessage,
@@ -567,12 +568,12 @@ const uiCopy: Record<
   EN: {
     languageName: "English",
     toggleLabel: "Arabic",
-    productsWorkspace: "Products Workspace",
-    serverBackedTruth: "Server-backed truth",
+    productsWorkspace: "Product preparation desk",
+    serverBackedTruth: "Catalog status",
     synced: "Synced",
     startHere: "Start here",
-    workingDraftTruth: "Working draft truth",
-    barcodeFlow: "Barcode flow",
+    workingDraftTruth: "Current preparation",
+    barcodeFlow: "Barcode handling",
     scanFirst: "1. Scan first.",
     scanWedge: "2. If the scanner types as a keyboard wedge, keep the cursor in the barcode field.",
     manualFallback: "3. Manual typing is the fallback only.",
@@ -580,11 +581,11 @@ const uiCopy: Record<
     openWorkingDraft: "Open working draft",
     hideHelp: "Hide help",
     openHelp: "Open help",
-    openSupportPanel: "Open support panel",
-    closeSupportPanel: "Close support panel",
+    openSupportPanel: "Open activity panel",
+    closeSupportPanel: "Close activity panel",
     startBarcodeCapture: "Start barcode capture",
-    refreshTruth: "Refresh truth",
-    refreshWorkspace: "Products workspace refreshed from the server.",
+    refreshTruth: "Refresh list",
+    refreshWorkspace: "Product preparation desk refreshed.",
     workingDraft: "Working draft",
     unsavedChanges: "Unsaved changes",
     noMissingRequirements: "No missing requirements",
@@ -650,12 +651,12 @@ const uiCopy: Record<
   AR: {
     languageName: "العربية",
     toggleLabel: "English",
-    productsWorkspace: "مساحة المنتجات",
-    serverBackedTruth: "حقيقة من الخادم",
+    productsWorkspace: "منضدة تجهيز الأصناف",
+    serverBackedTruth: "حالة الفهرس",
     synced: "تمت المزامنة",
     startHere: "ابدأ هنا",
-    workingDraftTruth: "حقيقة المسودة العاملة",
-    barcodeFlow: "مسار الباركود",
+    workingDraftTruth: "التحضير الحالي",
+    barcodeFlow: "التعامل مع الباركود",
     scanFirst: "1. امسح أولاً.",
     scanWedge: "2. إذا كانت أداة المسح تكتب كلوحة مفاتيح، اترك المؤشر داخل حقل الباركود.",
     manualFallback: "3. الإدخال اليدوي هو الخيار الاحتياطي فقط.",
@@ -663,11 +664,11 @@ const uiCopy: Record<
     openWorkingDraft: "فتح المسودة العاملة",
     hideHelp: "إخفاء المساعدة",
     openHelp: "فتح المساعدة",
-    openSupportPanel: "فتح لوحة الدعم",
-    closeSupportPanel: "إغلاق لوحة الدعم",
+    openSupportPanel: "فتح لوحة النشاط",
+    closeSupportPanel: "إغلاق لوحة النشاط",
     startBarcodeCapture: "بدء التقاط الباركود",
-    refreshTruth: "تحديث الحقيقة",
-    refreshWorkspace: "تم تحديث مساحة المنتجات من الخادم.",
+    refreshTruth: "تحديث القائمة",
+    refreshWorkspace: "تم تحديث منضدة تجهيز الأصناف.",
     workingDraft: "المسودة العاملة",
     unsavedChanges: "تغييرات غير محفوظة",
     noMissingRequirements: "لا توجد متطلبات مفقودة",
@@ -760,8 +761,8 @@ function localizeTruthNote(note: string, language: UiLanguage) {
   const map: Record<string, string> = {
     "No sensitive token is written to the URL.":
       "لا يُكتب أي رمز حساس داخل عنوان URL.",
-    "Working draft, worklists, and action log are server-backed for the active tenant.":
-      "المسودة العاملة وقوائم العمل وسجل الإجراءات مدعومة من الخادم للمستأجر النشط.",
+    "Working draft, worklists, and action log are shared for the active branch.":
+      "المسودة العاملة وقوائم العمل وسجل الإجراءات مشتركة للفرع النشط.",
     "Mutating actions require a fresh concurrency marker so stale writes cannot silently overwrite teammate changes.":
       "تتطلب إجراءات التعديل علامة تزامن حديثة حتى لا تكتب البيانات القديمة فوق عمل الفريق بصمت.",
     "View-only preferences such as density or sort can remain local on this device.":
@@ -1797,6 +1798,7 @@ function toDraftConcurrencyPayload(draft: DraftPayload) {
 }
 
 export default function ProductsPage() {
+  const operatorSession = useOperatorSession();
   const [session, setSession] = useState<SessionPayload | null>(null);
   const [workspace, setWorkspace] = useState<WorkspaceResponse | null>(null);
   const [query, setQuery] = useState("");
@@ -1843,56 +1845,35 @@ export default function ProductsPage() {
   }, [language]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function bootstrapSession() {
-      setBusyAction("session");
+    if (operatorSession.status === "ready") {
+      setSession({
+        accessToken: operatorSession.accessToken,
+        tenantId: operatorSession.tenantId,
+        branchId: operatorSession.branchId,
+        apiBase: operatorSession.apiBase,
+        user: operatorSession.user,
+      });
       setError(null);
-
-      try {
-        const response = await fetch("/api/orion-session", {
-          cache: "no-store",
-        });
-        const payload = (await response.json().catch(() => null)) as
-          | SessionPayload
-          | { message?: string }
-          | null;
-
-        if (!response.ok || payload == null || !("accessToken" in payload)) {
-          throw new Error(
-            payload && "message" in payload && payload.message
-              ? payload.message
-              : languageRef.current === "AR"
-                ? "تعذر فتح جلسة مساحة عمل المنتجات."
-                : "Unable to open the products workspace session.",
-          );
-        }
-
-        if (!cancelled) {
-          setSession(payload);
-        }
-      } catch (sessionError) {
-        if (!cancelled) {
-          setError(
-            sessionError instanceof Error
-              ? sessionError.message
-              : languageRef.current === "AR"
-                ? "تعذر فتح جلسة مساحة عمل المنتجات."
-                : "Unable to open the products workspace session.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setBusyAction(null);
-        }
-      }
+      return;
     }
 
-    void bootstrapSession();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (operatorSession.status === "error") {
+      setSession(null);
+      setBusyAction(null);
+      setError(operatorSession.error);
+      return;
+    }
+
+    setBusyAction("session");
+  }, [
+    operatorSession.accessToken,
+    operatorSession.apiBase,
+    operatorSession.branchId,
+    operatorSession.error,
+    operatorSession.status,
+    operatorSession.tenantId,
+    operatorSession.user,
+  ]);
 
   useEffect(() => {
     if (!session) return;
@@ -1939,7 +1920,7 @@ export default function ProductsPage() {
             message:
               languageRef.current === "AR"
                 ? "تم تحميل مساحة المنتجات المدعومة من الخادم."
-                : "Products workspace refreshed from the server.",
+                : "Product preparation desk refreshed.",
           });
         }
       } catch (refreshError) {
@@ -2259,7 +2240,7 @@ export default function ProductsPage() {
       await refreshWorkspace(
         language === "AR"
           ? "تم حفظ المسودة العاملة على الخادم."
-          : "Working draft saved to the server.",
+          : "Current preparation saved.",
       );
     });
   }
@@ -2535,11 +2516,11 @@ export default function ProductsPage() {
           action === "QUEUE"
             ? language === "AR"
               ? "تمت إضافة المجموعة المحددة إلى قائمة الانتظار على الخادم."
-              : "Selected set queued on the server."
+              : "Selected records added to the queue."
             : action === "PRIORITIZE"
               ? language === "AR"
                 ? "تم تعليم المجموعة المحددة كأولوية على الخادم."
-                : "Selected set marked priority on the server."
+                : "Selected records marked as priority."
               : action === "MARK_REVIEWED"
                 ? language === "AR"
                   ? "تم تعليم المجموعة المحددة كمراجَعة."
@@ -2590,7 +2571,7 @@ export default function ProductsPage() {
         message:
           language === "AR"
             ? "تم حفظ قائمة العمل على الخادم."
-            : "Worklist saved on the server.",
+            : "Worklist saved.",
       });
       openInspector("worklists");
     });
@@ -2820,7 +2801,7 @@ export default function ProductsPage() {
                   <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-amber-200">
                     {language === "AR"
                       ? "عقد الرسائل من الخادم"
-                      : "Server message contract"}
+                      : "Saved guidance"}
                   </span>
                 ) : null}
                 {workspace ? (
@@ -2944,11 +2925,11 @@ export default function ProductsPage() {
                 <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-sm text-slate-300">
                   {workspace?.truthMode === "SERVER_BACKED"
                     ? language === "AR"
-                      ? "حفظ آمن على مستوى المستأجر"
-                      : "Tenant-safe persistence"
+                      ? "محفوظة لهذا الفرع"
+                      : "Saved for this branch"
                     : language === "AR"
-                      ? "تحميل الجلسة"
-                      : "Session loading"}
+                      ? "تجهيز الجلسة"
+                      : "Preparing session"}
                 </span>
               </div>
               <p className="mt-3 text-sm leading-6 text-slate-300">
@@ -3105,7 +3086,7 @@ export default function ProductsPage() {
                     void refreshWorkspace(
                       language === "AR"
                         ? "تم تحديث مساحة العمل إلى أحدث حقيقة على الخادم."
-                        : "Workspace refreshed to latest server truth.",
+                        : "Preparation desk refreshed with the latest saved changes.",
                     )
                   }
                   type="button"
@@ -4464,8 +4445,8 @@ export default function ProductsPage() {
                               "سياق مراجعة محفوظ ومدعوم من الخادم.",
                             ) ||
                               (language === "AR"
-                                ? "سياق مراجعة محفوظ ومدعوم من الخادم."
-                                : "Saved server-backed review context.")}
+                                ? "سياق مراجعة محفوظ للفرع الحالي."
+                                : "Saved review context for the active branch.")}
                           </p>
                           <p className="mt-2 text-xs text-slate-500">
                             {filterLabels[language][worklist.filter]} ·{" "}
@@ -4503,8 +4484,8 @@ export default function ProductsPage() {
                 {(workspace?.history ?? []).length === 0 ? (
                   <div className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-5 text-sm text-slate-300">
                     {language === "AR"
-                      ? "لا توجد إدخالات في سجل الإجراءات المدعوم من الخادم بعد."
-                      : "No server-backed action log entries yet."}
+                      ? "لا توجد إدخالات في سجل الإجراءات المشتركة بعد."
+                      : "No shared action log entries yet."}
                   </div>
                 ) : (
                   workspace?.history.map((entry) => (
@@ -4637,10 +4618,11 @@ export default function ProductsPage() {
 
         <section className="rounded-[24px] border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-300">
           {language === "AR"
-            ? "تفضيلات العرض محلية فقط بطبيعتها: الكثافة والترتيب. أما حقيقة المنتج ودورة الحالة وقوائم العمل والعلامات وسجل الإجراءات فهي مدعومة من الخادم للمستأجر النشط."
-            : "Preferences here are local-only by design: density and sort. Product truth, lifecycle, worklists, flags, and action log are server-backed for the active tenant."}
+            ? "تبقى تفضيلات العرض على هذا الجهاز مثل الكثافة والترتيب، بينما حالة الصنف وقوائم العمل والعلامات وسجل الإجراءات تبقى مشتركة للفرع الحالي."
+            : "Display preferences such as density and sort stay on this device, while product status, worklists, flags, and the action log stay shared for the active branch."}
         </section>
       </div>
     </main>
   );
 }
+
