@@ -68,6 +68,25 @@ type CatalogPack = {
   }>;
 };
 
+type TransactionLineSnapshot = {
+  productId: string | null;
+  productPackId?: string;
+  lotBatchId?: string | null;
+  displayNameEn: string;
+  displayNameAr: string;
+  genericNameEn?: string | null;
+  genericNameAr?: string | null;
+  strengthLabel?: string | null;
+  dosageFormNameEn?: string | null;
+  dosageFormNameAr?: string | null;
+  barcodeUsed?: string | null;
+  sellableCode?: string | null;
+  packLabel?: string | null;
+  batchNo?: string | null;
+  expiryDate?: string | null;
+  taxProfileCode?: string | null;
+};
+
 type PosCartSession = {
   id: string;
   sessionNumber: string;
@@ -107,9 +126,21 @@ type PosCartSession = {
       packSellability?: string | null;
       unitsPerPack?: number | null;
       product: {
+        id?: string;
         nameEn: string;
         nameAr: string;
+        tradeNameEn?: string | null;
+        tradeNameAr?: string | null;
+        genericNameEn?: string | null;
+        genericNameAr?: string | null;
         barcode?: string | null;
+        strength?: string | null;
+        packSize?: string | null;
+        taxProfileCode?: string | null;
+        dosageForm?: {
+          nameEn: string;
+          nameAr: string;
+        } | null;
       };
     };
     lotBatch?: {
@@ -117,7 +148,9 @@ type PosCartSession = {
       expiryDate?: string | null;
       status?: string | null;
       sellableQuantity?: number;
+      isSellable?: boolean;
     } | null;
+    fiscalSaleLine?: TransactionLineSnapshot | null;
   }>;
 };
 
@@ -133,6 +166,15 @@ type FinalizedSaleSummary = {
     paymentMethod: string;
     finalizedAt?: string | null;
     referenceCode?: string | null;
+  }>;
+  lines?: Array<{
+    id: string;
+    lineNo: number;
+    quantity: number;
+    displayNameEn: string;
+    displayNameAr: string;
+    sellableCode?: string | null;
+    batchNo?: string | null;
   }>;
 };
 
@@ -162,8 +204,8 @@ type FinalizedSaleDetail = {
     taxRate: number | null;
     alreadyReturnedQty: number;
     remainingQty: number;
-    productPack: { product: { nameEn: string; nameAr: string } };
-    lotBatch: { batchNo: string } | null;
+    lineTotal: number;
+    transactionSnapshot: TransactionLineSnapshot;
   }>;
 };
 
@@ -427,6 +469,45 @@ function formatDateLabel(value?: string | null) {
     month: "short",
     year: "numeric",
   }).format(date);
+}
+
+function buildPackLabel(packCode?: string | null, packSize?: string | null) {
+  const segments = [
+    packCode ? `Pack ${packCode}` : null,
+    packSize ?? null,
+  ].filter((value): value is string => Boolean(value));
+  return segments.length ? segments.join(" · ") : "Pack not exposed";
+}
+
+function resolveCartLineSnapshot(
+  line: PosCartSession["lines"][number],
+): TransactionLineSnapshot | null {
+  if (line.fiscalSaleLine) {
+    return line.fiscalSaleLine;
+  }
+  if (!line.productPack) {
+    return null;
+  }
+
+  const product = line.productPack.product;
+  return {
+    productId: product.id ?? null,
+    productPackId: line.productPackId,
+    lotBatchId: line.lotBatchId,
+    displayNameEn: product.tradeNameEn ?? product.nameEn,
+    displayNameAr: product.tradeNameAr ?? product.nameAr,
+    genericNameEn: product.genericNameEn ?? null,
+    genericNameAr: product.genericNameAr ?? null,
+    strengthLabel: product.strength ?? null,
+    dosageFormNameEn: product.dosageForm?.nameEn ?? null,
+    dosageFormNameAr: product.dosageForm?.nameAr ?? null,
+    barcodeUsed: line.productPack.packBarcode ?? product.barcode ?? null,
+    sellableCode: line.productPack.code,
+    packLabel: buildPackLabel(line.productPack.code, product.packSize ?? null),
+    batchNo: line.lotBatch?.batchNo ?? null,
+    expiryDate: line.lotBatch?.expiryDate ?? null,
+    taxProfileCode: product.taxProfileCode ?? null,
+  };
 }
 
 function stateTone(state?: string | null): StatusTone {
@@ -766,7 +847,13 @@ export default function PosPage() {
     return sales.filter((sale) => {
       const sessionNumber = sale.posCartSession?.sessionNumber ?? "";
       const paymentMethod = sale.paymentFinalizations?.[0]?.paymentMethod ?? "";
-      return [sale.documentNo, sessionNumber, paymentMethod, sale.state].some(
+      const linePreview = (sale.lines ?? []).flatMap((line) => [
+        line.displayNameEn,
+        line.displayNameAr,
+        line.sellableCode ?? "",
+        line.batchNo ?? "",
+      ]);
+      return [sale.documentNo, sessionNumber, paymentMethod, sale.state, ...linePreview].some(
         (value) => value.toLowerCase().includes(search),
       );
     });
@@ -829,12 +916,19 @@ export default function PosPage() {
                 expiryDate: fallbackLot.expiryDate ?? null,
                 status: fallbackLot.status ?? null,
                 sellableQuantity: fallbackLot.sellableQuantity,
+                isSellable: fallbackLot.isSellable,
               }
             : null);
+        const resolvedSnapshot = resolveCartLineSnapshot({
+          ...line,
+          productPack: resolvedPack,
+          lotBatch: resolvedLot,
+        });
         return {
           ...line,
           productPack: resolvedPack,
           lotBatch: resolvedLot,
+          transactionSnapshot: resolvedSnapshot,
           beforeTaxTotal,
           taxValue,
           unitAfterTax: line.unitPrice * (1 + taxRate / 100),
@@ -855,8 +949,8 @@ export default function PosPage() {
   const focusedProductSnapshot = useMemo<FocusedProductSnapshot | null>(() => {
     if (selectedCatalogContext) {
       return {
-        title: selectedCatalogContext.pack.product.nameEn,
-        subtitle: `${selectedCatalogContext.pack.product.nameAr} · Pack ${selectedCatalogContext.pack.packCode}`,
+        title: selectedCatalogContext.pack.product.tradeNameEn ?? selectedCatalogContext.pack.product.nameEn,
+        subtitle: `${selectedCatalogContext.pack.product.nameAr} · ${buildPackLabel(selectedCatalogContext.pack.packCode, selectedCatalogContext.pack.product.packSize ?? null)}`,
         batch: selectedCatalogContext.lot.batchNo,
         expiryLabel: formatDateLabel(selectedCatalogContext.lot.expiryDate),
         barcode:
@@ -870,51 +964,60 @@ export default function PosPage() {
           "Runtime status not exposed",
         stockLabel: `${selectedCatalogContext.lot.sellableQuantity} sellable / ${selectedCatalogContext.lot.onHandQuantity ?? selectedCatalogContext.lot.sellableQuantity} on hand`,
         runtimeHonesty:
-          "Generic, supplier/company, and dosage-form fields are not exposed by the current POS runtime yet.",
+          "Live selling still reflects the current catalog/runtime view. Historical finalized rows now switch to immutable transaction snapshots.",
       };
     }
 
     if (selectedReturnSourceLine) {
+      const snapshot = selectedReturnSourceLine.transactionSnapshot;
       return {
-        title: selectedReturnSourceLine.productPack.product.nameEn,
-        subtitle: `${selectedReturnSourceLine.productPack.product.nameAr} · Return source line`,
-        batch: selectedReturnSourceLine.lotBatch?.batchNo ?? "-",
-        expiryLabel: "Return source runtime does not expose expiry here",
-        barcode: "Return source runtime does not expose barcode here",
-        packCode: "Return source pack context only",
+        title: snapshot.displayNameEn,
+        subtitle: `${snapshot.displayNameAr} · Return source snapshot`,
+        batch: snapshot.batchNo ?? "-",
+        expiryLabel: formatDateLabel(snapshot.expiryDate),
+        barcode: snapshot.barcodeUsed ?? "Barcode not saved",
+        packCode: snapshot.sellableCode ?? "Pack not saved",
         sellability: `Remaining eligible qty ${selectedReturnSourceLine.remainingQty}`,
         stockLabel: `Sold ${selectedReturnSourceLine.quantity} · Returned ${selectedReturnSourceLine.alreadyReturnedQty}`,
         runtimeHonesty:
-          "Return detail keeps the legally relevant source-line relationship visible, but it does not expose full catalog metadata.",
+          "Return selection now reads the finalized sale snapshot first, so later catalog edits do not rename this source line.",
       };
     }
 
-    if (focusedInvoiceRow?.productPack) {
+    if (focusedInvoiceRow?.transactionSnapshot) {
+      const snapshot = focusedInvoiceRow.transactionSnapshot;
       return {
-        title: focusedInvoiceRow.productPack.product.nameEn,
-        subtitle: `${focusedInvoiceRow.productPack.product.nameAr} · Active sale line`,
-        batch: focusedInvoiceRow.lotBatch?.batchNo ?? "-",
-        expiryLabel: formatDateLabel(focusedInvoiceRow.lotBatch?.expiryDate),
+        title: snapshot.displayNameEn,
+        subtitle: `${snapshot.displayNameAr} · ${cartSession?.state === "FINALIZED" ? "Finalized snapshot" : "Active sale line"}`,
+        batch: snapshot.batchNo ?? focusedInvoiceRow.lotBatch?.batchNo ?? "-",
+        expiryLabel: formatDateLabel(snapshot.expiryDate ?? focusedInvoiceRow.lotBatch?.expiryDate),
         barcode:
-          focusedInvoiceRow.productPack.packBarcode ??
-          focusedInvoiceRow.productPack.product.barcode ??
+          snapshot.barcodeUsed ??
+          focusedInvoiceRow.productPack?.packBarcode ??
+          focusedInvoiceRow.productPack?.product.barcode ??
           "Current runtime not exposed",
-        packCode: focusedInvoiceRow.productPack.code,
+        packCode: snapshot.sellableCode ?? focusedInvoiceRow.productPack?.code ?? "Pack not exposed",
         sellability:
-          focusedInvoiceRow.productPack.packSellability ??
-          focusedInvoiceRow.lotBatch?.status ??
-          "Runtime status not exposed",
+          cartSession?.state === "FINALIZED"
+            ? `Finalized line snapshot · tax ${snapshot.taxProfileCode ?? "not tagged"}`
+            : focusedInvoiceRow.productPack?.packSellability ??
+              focusedInvoiceRow.lotBatch?.status ??
+              "Runtime status not exposed",
         stockLabel:
-          focusedInvoiceRow.lotBatch?.sellableQuantity !== undefined
-            ? `${focusedInvoiceRow.lotBatch.sellableQuantity} sellable in current lot view`
-            : "Sellable lot quantity is not returned on this sale line payload",
+          cartSession?.state === "FINALIZED"
+            ? `Saved batch ${snapshot?.batchNo ?? "-"} · ${snapshot.strengthLabel ?? "Strength not saved"}`
+            : focusedInvoiceRow.lotBatch?.sellableQuantity !== undefined
+              ? `${focusedInvoiceRow.lotBatch.sellableQuantity} sellable in current lot view`
+              : "Sellable lot quantity is not returned on this sale line payload",
         runtimeHonesty:
-          "Active ingredient, supplier, and dosage-form fields still depend on backend catalog expansion, so the cashier surface labels those gaps honestly.",
+          cartSession?.state === "FINALIZED"
+            ? "Closed-bill rows now keep immutable transaction names, pack, barcode, and batch cues from finalization time."
+            : "Active invoice lines still read the current runtime catalog so the cashier sees live sellable truth.",
       };
     }
 
     return null;
-  }, [focusedInvoiceRow, selectedCatalogContext, selectedReturnSourceLine]);
+  }, [cartSession?.state, focusedInvoiceRow, selectedCatalogContext, selectedReturnSourceLine]);
   async function apiRequest<T>(
     path: string,
     init?: RequestInit,
@@ -1649,15 +1752,22 @@ export default function PosPage() {
     : cartSession?.sessionNumber ?? "No active shift";
   const selectedPackLabel = selectedCatalogContext
     ? `${selectedCatalogContext.pack.product.nameEn} · Pack ${selectedCatalogContext.pack.packCode}`
-    : focusedInvoiceRow?.productPack
-      ? `${focusedInvoiceRow.productPack.product.nameEn} · Pack ${focusedInvoiceRow.productPack.code}`
-      : "No pack selected";
+    : focusedInvoiceRow?.transactionSnapshot
+      ? `${focusedInvoiceRow.transactionSnapshot.displayNameEn} · ${focusedInvoiceRow.transactionSnapshot.packLabel ?? focusedInvoiceRow.transactionSnapshot.sellableCode ?? "Pack not saved"}`
+      : focusedInvoiceRow?.productPack
+        ? `${focusedInvoiceRow.productPack.product.nameEn} · Pack ${focusedInvoiceRow.productPack.code}`
+        : "No pack selected";
   const selectedLotLabel = selectedCatalogContext
     ? selectedCatalogContext.lot.batchNo
-    : focusedInvoiceRow?.lotBatch?.batchNo ?? "No lot selected";
+    : focusedInvoiceRow?.transactionSnapshot?.batchNo ??
+      focusedInvoiceRow?.lotBatch?.batchNo ??
+      "No lot selected";
   const selectedExpiryLabel = selectedCatalogContext
     ? formatDateLabel(selectedCatalogContext.lot.expiryDate)
-    : formatDateLabel(focusedInvoiceRow?.lotBatch?.expiryDate);
+    : formatDateLabel(
+        focusedInvoiceRow?.transactionSnapshot?.expiryDate ??
+          focusedInvoiceRow?.lotBatch?.expiryDate,
+      );
   return (
     <main
       className="min-h-screen bg-[#0f1318] text-slate-100"
@@ -1944,6 +2054,7 @@ export default function PosPage() {
                           taxRate: line.taxRate ?? 0,
                         };
                         const isFocused = line.id === focusedInvoiceRow?.id;
+                        const snapshot = line.transactionSnapshot;
                         return (
                           <div
                             key={line.id}
@@ -1959,7 +2070,8 @@ export default function PosPage() {
                               <div className="space-y-1">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <p className="text-sm font-semibold text-slate-100">
-                                    {line.productPack?.product.nameEn ??
+                                    {snapshot?.displayNameEn ??
+                                      line.productPack?.product.nameEn ??
                                       "Product pack"}
                                   </p>
                                   {isFocused ? (
@@ -1967,32 +2079,37 @@ export default function PosPage() {
                                   ) : null}
                                 </div>
                                 <p className="text-xs text-slate-400">
-                                  {line.productPack?.product.nameAr ?? "منتج"}
+                                  {snapshot?.displayNameAr ??
+                                    line.productPack?.product.nameAr ??
+                                    "منتج"}
                                 </p>
                                 <p className="text-[11px] text-slate-500">
-                                  Generic / active ingredient stays honest: not
-                                  exposed on the current POS runtime payload.
+                                  {snapshot?.genericNameEn ??
+                                    "Generic not saved on this line."}
                                 </p>
                               </div>
                               <div className="space-y-1">
                                 <p className="text-sm font-semibold text-slate-100">
-                                  {line.productPack?.code
-                                    ? "Pack " + line.productPack.code
-                                    : "Runtime not exposed"}
+                                  {snapshot?.packLabel ??
+                                    (line.productPack?.code
+                                      ? "Pack " + line.productPack.code
+                                      : "Runtime not exposed")}
                                 </p>
                                 <p className="text-xs text-slate-400">
-                                  {line.productPack?.unitsPerPack
-                                    ? String(line.productPack.unitsPerPack) +
-                                      " units per pack"
-                                    : "Strength/form pending runtime"}
+                                  {snapshot?.strengthLabel
+                                    ? `${snapshot.strengthLabel} · ${snapshot.dosageFormNameEn ?? "Form not saved"}`
+                                    : line.productPack?.unitsPerPack
+                                      ? String(line.productPack.unitsPerPack) +
+                                        " units per pack"
+                                      : "Strength/form pending runtime"}
                                 </p>
                               </div>
                               <div className="space-y-1">
                                 <p className="text-sm font-semibold text-slate-100">
-                                  {line.lotBatch?.batchNo ?? "-"}
+                                  {snapshot?.batchNo ?? "-"}
                                 </p>
                                 <p className="text-xs text-slate-400">
-                                  Exp {formatDateLabel(line.lotBatch?.expiryDate)}
+                                  Exp {formatDateLabel(snapshot?.expiryDate ?? line.lotBatch?.expiryDate)}
                                 </p>
                               </div>
                               <div className="text-right text-sm font-semibold text-slate-100">
@@ -2614,27 +2731,74 @@ export default function PosPage() {
           {secondaryPane === "lookup" ? (
             <div className="mt-4 space-y-4">
               {selectedSaleDetail ? (
-                <div className="rounded-[8px] border border-sky-400/30 bg-sky-500/10 px-4 py-4 text-sky-100">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                      <p className="text-sm font-semibold">
-                        Return source selected: {selectedSaleDetail.documentNo}
-                      </p>
-                      <p className="mt-1 text-sm text-sky-200">
-                        The lookup list remains the selection surface. Switch to
-                        the return tab only when you want to execute the bounded
-                        refund flow.
+                <>
+                  <div className="rounded-[8px] border border-sky-400/30 bg-sky-500/10 px-4 py-4 text-sky-100">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold">
+                          Return source selected: {selectedSaleDetail.documentNo}
+                        </p>
+                        <p className="mt-1 text-sm text-sky-200">
+                          The lookup list remains the selection surface. Switch to
+                          the return tab only when you want to execute the bounded
+                          refund flow.
+                        </p>
+                      </div>
+                      <button
+                        className={secondaryButtonClass}
+                        type="button"
+                        onClick={() => setSecondaryPane("return")}
+                      >
+                        Open return workflow
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className={cn(mutedSurfaceClass, "p-4")}>
+                    <div className="flex flex-col gap-2 border-b border-slate-700/90 pb-4 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          Transaction snapshot
+                        </p>
+                        <h3 className="mt-1 text-lg font-semibold text-slate-50">
+                          Finalized line truth for {selectedSaleDetail.documentNo}
+                        </h3>
+                      </div>
+                      <p className="text-sm text-slate-400">
+                        These lines stay anchored to finalized-sale snapshots, not later catalog edits.
                       </p>
                     </div>
-                    <button
-                      className={secondaryButtonClass}
-                      type="button"
-                      onClick={() => setSecondaryPane("return")}
-                    >
-                      Open return workflow
-                    </button>
+                    <div className="mt-4 grid gap-2">
+                      {safeSelectedSaleLines.map((line) => (
+                        <div key={line.id} className="rounded-[8px] border border-slate-700 bg-[#11161d] p-3">
+                          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="space-y-1.5">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <ToneBadge tone="slate">Line {line.lineNo}</ToneBadge>
+                                <ToneBadge tone="amber">Batch {line.transactionSnapshot.batchNo ?? "-"}</ToneBadge>
+                              </div>
+                              <p className="text-sm font-semibold text-slate-50">
+                                {line.transactionSnapshot.displayNameEn}
+                              </p>
+                              <p className="text-xs text-slate-400">
+                                {line.transactionSnapshot.displayNameAr} · {line.transactionSnapshot.genericNameEn ?? "Generic not saved"}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {line.transactionSnapshot.packLabel ?? line.transactionSnapshot.sellableCode ?? "Pack not saved"} · Barcode {line.transactionSnapshot.barcodeUsed ?? "not saved"} · Exp {formatDateLabel(line.transactionSnapshot.expiryDate)}
+                              </p>
+                            </div>
+                            <div className="grid gap-1.5 sm:grid-cols-4 lg:min-w-[420px]">
+                              <MetricPill label="Qty" value={line.quantity} />
+                              <MetricPill label="Returned" value={line.alreadyReturnedQty} />
+                              <MetricPill label="Remaining" value={line.remainingQty} tone="emerald" />
+                              <MetricPill label="Line total" value={formatMoney(line.lineTotal, selectedSaleDetail.currency)} />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                </>
               ) : null}
 
               <div className={cn(mutedSurfaceClass, "p-4")}>
@@ -2702,6 +2866,15 @@ export default function PosPage() {
                                 Session{" "}
                                 {sale.posCartSession?.sessionNumber ?? "-"}
                               </p>
+                              {sale.lines?.length ? (
+                                <div className="mt-2 space-y-1 text-xs text-slate-300">
+                                  {sale.lines.map((line) => (
+                                    <p key={line.id}>
+                                      Line {line.lineNo}: {line.displayNameEn} · {line.sellableCode ?? "Pack not saved"} · Batch {line.batchNo ?? "-"} · Qty {line.quantity}
+                                    </p>
+                                  ))}
+                                </div>
+                              ) : null}
                             </div>
                           </div>
                           <div className="space-y-1 text-left lg:text-right">
@@ -2908,6 +3081,7 @@ export default function PosPage() {
                   <div className="mt-4 grid gap-2">
                     {safeSelectedSaleLines.map((line) => {
                       const isSelected = line.id === returnSourceLineId;
+                      const snapshot = line.transactionSnapshot;
                       return (
                         <button
                           key={line.id}
@@ -2932,7 +3106,7 @@ export default function PosPage() {
                                   Line {line.lineNo}
                                 </ToneBadge>
                                 <ToneBadge tone="amber">
-                                  Batch {line.lotBatch?.batchNo ?? "-"}
+                                  Batch {snapshot?.batchNo ?? "-"}
                                 </ToneBadge>
                                 {isSelected ? (
                                   <ToneBadge tone="emerald">
@@ -2942,11 +3116,10 @@ export default function PosPage() {
                               </div>
                               <div>
                                 <p className="text-sm font-semibold text-slate-50">
-                                  {line.productPack.product.nameEn}
+                                  {snapshot.displayNameEn}
                                 </p>
                                 <p className="text-xs text-slate-400">
-                                  {line.productPack.product.nameAr} · Returnable
-                                  sale line
+                                  {snapshot.displayNameAr} · {snapshot.sellableCode ?? "Sellable code not saved"}
                                 </p>
                               </div>
                             </div>
@@ -2993,15 +3166,14 @@ export default function PosPage() {
                             Selected return source
                           </p>
                           <p className="mt-1.5 text-sm font-semibold text-slate-50">
-                            {
-                              selectedReturnSourceLine.productPack.product
-                                .nameEn
-                            }{" "}
-                            · Batch{" "}
-                            {selectedReturnSourceLine.lotBatch?.batchNo ?? "-"}
+                            {selectedReturnSourceLine.transactionSnapshot.displayNameEn} · Batch{" "}
+                            {selectedReturnSourceLine.transactionSnapshot.batchNo ?? "-"}
                           </p>
                           <p className="mt-1 text-xs text-slate-400">
-                            Source sale {selectedSaleDetail.documentNo}
+                            {selectedReturnSourceLine.transactionSnapshot.displayNameAr} · {selectedReturnSourceLine.transactionSnapshot.sellableCode ?? "Sellable code not saved"}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Barcode {selectedReturnSourceLine.transactionSnapshot.barcodeUsed ?? "not saved"} · Exp {formatDateLabel(selectedReturnSourceLine.transactionSnapshot.expiryDate)}
                           </p>
                         </div>
                         <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[280px]">
@@ -3150,6 +3322,21 @@ export default function PosPage() {
     </main>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -173,6 +173,31 @@ describe('PosOperationalCoreService', () => {
           discount: 0,
           taxRate: 0,
           lineTotal: 20,
+          productPack: {
+            id: 'pack-1',
+            code: 'PACK-SNAPSHOT',
+            barcode: 'SNAP-123',
+            unitsPerPack: 1,
+            product: {
+              id: 'product-1',
+              nameEn: 'Panadol Snapshot',
+              nameAr: 'بنادول محفوظ',
+              tradeNameEn: 'Panadol Cold & Flu',
+              tradeNameAr: 'بنادول كولد أند فلو',
+              genericNameEn: 'Paracetamol',
+              genericNameAr: 'باراسيتامول',
+              barcode: 'PRODUCT-123',
+              strength: '500mg',
+              packSize: '20 tabs',
+              taxProfileCode: 'READINESS_STANDARD',
+              dosageForm: { nameEn: 'Tablet', nameAr: 'أقراص' },
+            },
+          },
+          lotBatch: {
+            id: 'lot-1',
+            batchNo: 'LOT-SNAPSHOT',
+            expiryDate: new Date('2027-12-31T00:00:00.000Z'),
+          },
         },
       ],
     });
@@ -232,6 +257,31 @@ describe('PosOperationalCoreService', () => {
         }),
       }),
     );
+    expect(prisma.fiscalSaleDocument.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          lines: {
+            create: [
+              expect.objectContaining({
+                productId: 'product-1',
+                displayNameEn: 'Panadol Cold & Flu',
+                displayNameAr: 'بنادول كولد أند فلو',
+                genericNameEn: 'Paracetamol',
+                genericNameAr: 'باراسيتامول',
+                strengthLabel: '500mg',
+                dosageFormNameEn: 'Tablet',
+                dosageFormNameAr: 'أقراص',
+                barcodeUsed: 'SNAP-123',
+                sellableCode: 'PACK-SNAPSHOT',
+                packLabel: 'Pack PACK-SNAPSHOT · 20 tabs',
+                batchNoSnapshot: 'LOT-SNAPSHOT',
+                taxProfileCode: 'READINESS_STANDARD',
+              }),
+            ],
+          },
+        }),
+      }),
+    );
   });
 
   it('blocks duplicate finalize attempts on the same cart', async () => {
@@ -274,6 +324,31 @@ describe('PosOperationalCoreService', () => {
           discount: 0,
           taxRate: 0,
           lineTotal: 30,
+          productPack: {
+            id: 'pack-1',
+            code: 'PACK-SNAPSHOT',
+            barcode: 'SNAP-123',
+            unitsPerPack: 1,
+            product: {
+              id: 'product-1',
+              nameEn: 'Panadol Snapshot',
+              nameAr: 'بنادول محفوظ',
+              tradeNameEn: 'Panadol Cold & Flu',
+              tradeNameAr: 'بنادول كولد أند فلو',
+              genericNameEn: 'Paracetamol',
+              genericNameAr: 'باراسيتامول',
+              barcode: 'PRODUCT-123',
+              strength: '500mg',
+              packSize: '20 tabs',
+              taxProfileCode: 'READINESS_STANDARD',
+              dosageForm: { nameEn: 'Tablet', nameAr: 'أقراص' },
+            },
+          },
+          lotBatch: {
+            id: 'lot-1',
+            batchNo: 'LOT-SNAPSHOT',
+            expiryDate: new Date('2027-12-31T00:00:00.000Z'),
+          },
         },
       ],
     });

@@ -1,0 +1,14 @@
+ALTER TABLE "fiscal_sale_document_lines" ADD COLUMN "product_id" TEXT;
+ALTER TABLE "fiscal_sale_document_lines" ADD COLUMN "display_name_en" TEXT;
+ALTER TABLE "fiscal_sale_document_lines" ADD COLUMN "display_name_ar" TEXT;
+ALTER TABLE "fiscal_sale_document_lines" ADD COLUMN "generic_name_en" TEXT;
+ALTER TABLE "fiscal_sale_document_lines" ADD COLUMN "generic_name_ar" TEXT;
+ALTER TABLE "fiscal_sale_document_lines" ADD COLUMN "strength_label" TEXT;
+ALTER TABLE "fiscal_sale_document_lines" ADD COLUMN "dosage_form_name_en" TEXT;
+ALTER TABLE "fiscal_sale_document_lines" ADD COLUMN "dosage_form_name_ar" TEXT;
+ALTER TABLE "fiscal_sale_document_lines" ADD COLUMN "barcode_used" TEXT;
+ALTER TABLE "fiscal_sale_document_lines" ADD COLUMN "sellable_code" TEXT;
+ALTER TABLE "fiscal_sale_document_lines" ADD COLUMN "pack_label" TEXT;
+ALTER TABLE "fiscal_sale_document_lines" ADD COLUMN "batch_no_snapshot" TEXT;
+ALTER TABLE "fiscal_sale_document_lines" ADD COLUMN "expiry_date_snapshot" TIMESTAMP;
+ALTER TABLE "fiscal_sale_document_lines" ADD COLUMN "tax_profile_code" TEXT;

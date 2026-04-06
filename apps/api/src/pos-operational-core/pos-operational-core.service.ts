@@ -138,10 +138,29 @@ export class PosOperationalCoreService {
             productPack: {
               select: {
                 code: true,
+                barcode: true,
+                status: true,
+                sellability: true,
+                unitsPerPack: true,
                 product: {
                   select: {
+                    id: true,
                     nameEn: true,
                     nameAr: true,
+                    tradeNameEn: true,
+                    tradeNameAr: true,
+                    genericNameEn: true,
+                    genericNameAr: true,
+                    barcode: true,
+                    strength: true,
+                    packSize: true,
+                    taxProfileCode: true,
+                    dosageForm: {
+                      select: {
+                        nameEn: true,
+                        nameAr: true,
+                      },
+                    },
                   },
                 },
               },
@@ -149,6 +168,27 @@ export class PosOperationalCoreService {
             lotBatch: {
               select: {
                 batchNo: true,
+                expiryDate: true,
+                status: true,
+                isSellable: true,
+              },
+            },
+            fiscalSaleLine: {
+              select: {
+                productId: true,
+                displayNameEn: true,
+                displayNameAr: true,
+                genericNameEn: true,
+                genericNameAr: true,
+                strengthLabel: true,
+                dosageFormNameEn: true,
+                dosageFormNameAr: true,
+                barcodeUsed: true,
+                sellableCode: true,
+                packLabel: true,
+                batchNoSnapshot: true,
+                expiryDateSnapshot: true,
+                taxProfileCode: true,
               },
             },
           },
@@ -311,7 +351,48 @@ export class PosOperationalCoreService {
     return this.prisma.$transaction(async (tx) => {
       const session = await tx.posCartSession.findFirst({
         where: { id: input.cartSessionId, tenantId: input.tenantId },
-        include: { lines: true },
+        include: {
+          lines: {
+            include: {
+              productPack: {
+                select: {
+                  id: true,
+                  code: true,
+                  barcode: true,
+                  unitsPerPack: true,
+                  product: {
+                    select: {
+                      id: true,
+                      nameEn: true,
+                      nameAr: true,
+                      tradeNameEn: true,
+                      tradeNameAr: true,
+                      genericNameEn: true,
+                      genericNameAr: true,
+                      barcode: true,
+                      strength: true,
+                      packSize: true,
+                      taxProfileCode: true,
+                      dosageForm: {
+                        select: {
+                          nameEn: true,
+                          nameAr: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              lotBatch: {
+                select: {
+                  id: true,
+                  batchNo: true,
+                  expiryDate: true,
+                },
+              },
+            },
+          },
+        },
       });
       if (!session) {
         throw new NotFoundException('POS cart session not found in tenant.');
@@ -376,18 +457,35 @@ export class PosOperationalCoreService {
           inventoryAnchorReferenceId: session.id,
           createdByUserId: input.createdBy ?? session.createdBy ?? null,
           lines: {
-            create: session.lines.map((line) => ({
-              tenantId: input.tenantId,
-              lineNo: line.lineNo,
-              productPackId: line.productPackId,
-              lotBatchId: line.lotBatchId,
-              quantity: line.quantity,
-              unitPrice: line.unitPrice,
-              discount: line.discount,
-              taxRate: line.taxRate,
-              lineTotal: line.lineTotal,
-              referenceKey: `POS_CART_LINE:${line.id}`,
-            })),
+            create: session.lines.map((line) => {
+              const snapshot = this.buildSaleLineSnapshot(line);
+              return {
+                tenantId: input.tenantId,
+                lineNo: line.lineNo,
+                productPackId: line.productPackId,
+                lotBatchId: line.lotBatchId,
+                productId: snapshot.productId,
+                displayNameEn: snapshot.displayNameEn,
+                displayNameAr: snapshot.displayNameAr,
+                genericNameEn: snapshot.genericNameEn,
+                genericNameAr: snapshot.genericNameAr,
+                strengthLabel: snapshot.strengthLabel,
+                dosageFormNameEn: snapshot.dosageFormNameEn,
+                dosageFormNameAr: snapshot.dosageFormNameAr,
+                barcodeUsed: snapshot.barcodeUsed,
+                sellableCode: snapshot.sellableCode,
+                packLabel: snapshot.packLabel,
+                batchNoSnapshot: snapshot.batchNoSnapshot,
+                expiryDateSnapshot: snapshot.expiryDateSnapshot,
+                taxProfileCode: snapshot.taxProfileCode,
+                quantity: line.quantity,
+                unitPrice: line.unitPrice,
+                discount: line.discount,
+                taxRate: line.taxRate,
+                lineTotal: line.lineTotal,
+                referenceKey: `POS_CART_LINE:${line.id}`,
+              };
+            }),
           },
         },
         include: { lines: true },
@@ -1228,6 +1326,91 @@ export class PosOperationalCoreService {
     return `${prefix}-${new Date().getUTCFullYear()}-${sequenceNumber
       .toString()
       .padStart(6, '0')}`;
+  }
+
+  private buildSaleLineSnapshot(line: {
+    productPack: {
+      id: string;
+      code: string;
+      barcode: string | null;
+      unitsPerPack: number;
+      product: {
+        id: string;
+        nameEn: string;
+        nameAr: string;
+        tradeNameEn: string | null;
+        tradeNameAr: string | null;
+        genericNameEn: string | null;
+        genericNameAr: string | null;
+        barcode: string;
+        strength: string;
+        packSize: string;
+        taxProfileCode: string | null;
+        dosageForm: {
+          nameEn: string;
+          nameAr: string;
+        } | null;
+      };
+    };
+    lotBatch: {
+      id: string;
+      batchNo: string;
+      expiryDate: Date | null;
+    };
+  }) {
+    const product = line.productPack.product;
+    const displayNameEn = this.resolveDisplayName(
+      product.tradeNameEn,
+      product.nameEn,
+    );
+    const displayNameAr = this.resolveDisplayName(
+      product.tradeNameAr,
+      product.nameAr,
+    );
+
+    return {
+      productId: product.id,
+      displayNameEn,
+      displayNameAr,
+      genericNameEn: this.normalizeOptional(product.genericNameEn),
+      genericNameAr: this.normalizeOptional(product.genericNameAr),
+      strengthLabel: this.normalizeOptional(product.strength),
+      dosageFormNameEn: this.normalizeOptional(product.dosageForm?.nameEn),
+      dosageFormNameAr: this.normalizeOptional(product.dosageForm?.nameAr),
+      barcodeUsed: this.normalizeOptional(line.productPack.barcode ?? product.barcode),
+      sellableCode: this.normalizeOptional(line.productPack.code),
+      packLabel: this.buildPackLabel({
+        packCode: line.productPack.code,
+        packSize: product.packSize,
+        unitsPerPack: line.productPack.unitsPerPack,
+      }),
+      batchNoSnapshot: this.normalizeOptional(line.lotBatch.batchNo),
+      expiryDateSnapshot: line.lotBatch.expiryDate ?? null,
+      taxProfileCode: this.normalizeOptional(product.taxProfileCode),
+    };
+  }
+
+  private resolveDisplayName(preferred: string | null | undefined, fallback: string) {
+    return preferred?.trim() || fallback;
+  }
+
+  private buildPackLabel(input: {
+    packCode: string;
+    packSize: string;
+    unitsPerPack: number;
+  }) {
+    const segments = [
+      input.packCode ? `Pack ${input.packCode}` : null,
+      this.normalizeOptional(input.packSize),
+      input.unitsPerPack > 1 ? `${input.unitsPerPack} units` : null,
+    ].filter((value): value is string => Boolean(value));
+
+    return segments.length > 0 ? segments.join(' · ') : null;
+  }
+
+  private normalizeOptional(value: string | null | undefined) {
+    const normalized = value?.trim();
+    return normalized ? normalized : null;
   }
 
   private assertPositiveInt(value: number, field: string) {

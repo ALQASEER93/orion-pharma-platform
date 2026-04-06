@@ -406,10 +406,58 @@ export class PosOperationalCoreController {
             referenceCode: true,
           },
         },
+        lines: {
+          orderBy: { lineNo: 'asc' },
+          take: 2,
+          select: {
+            id: true,
+            lineNo: true,
+            quantity: true,
+            displayNameEn: true,
+            displayNameAr: true,
+            sellableCode: true,
+            batchNoSnapshot: true,
+            productPack: {
+              select: {
+                code: true,
+                product: {
+                  select: {
+                    nameEn: true,
+                    nameAr: true,
+                  },
+                },
+              },
+            },
+            lotBatch: {
+              select: {
+                batchNo: true,
+              },
+            },
+          },
+        },
       },
       orderBy: [{ finalizedAt: 'desc' }, { createdAt: 'desc' }],
       take: 80,
-    });
+    }).then((sales) =>
+      sales.map((sale) => ({
+        ...sale,
+        lines: sale.lines.map((line) => ({
+          id: line.id,
+          lineNo: line.lineNo,
+          quantity: line.quantity,
+          displayNameEn:
+            line.displayNameEn ??
+            line.productPack?.product.nameEn ??
+            'Product pack',
+          displayNameAr:
+            line.displayNameAr ??
+            line.productPack?.product.nameAr ??
+            'منتج',
+          sellableCode: line.sellableCode ?? line.productPack?.code ?? null,
+          batchNo: line.batchNoSnapshot ?? line.lotBatch?.batchNo ?? null,
+        })),
+      })),
+    );
   }
 
   @Get('finalized-sales/:id')
@@ -453,8 +501,22 @@ export class PosOperationalCoreController {
           select: {
             id: true,
             lineNo: true,
+            productId: true,
             productPackId: true,
             lotBatchId: true,
+            displayNameEn: true,
+            displayNameAr: true,
+            genericNameEn: true,
+            genericNameAr: true,
+            strengthLabel: true,
+            dosageFormNameEn: true,
+            dosageFormNameAr: true,
+            barcodeUsed: true,
+            sellableCode: true,
+            packLabel: true,
+            batchNoSnapshot: true,
+            expiryDateSnapshot: true,
+            taxProfileCode: true,
             quantity: true,
             unitPrice: true,
             taxRate: true,
@@ -466,8 +528,23 @@ export class PosOperationalCoreController {
                 barcode: true,
                 product: {
                   select: {
+                    id: true,
                     nameEn: true,
                     nameAr: true,
+                    tradeNameEn: true,
+                    tradeNameAr: true,
+                    genericNameEn: true,
+                    genericNameAr: true,
+                    barcode: true,
+                    strength: true,
+                    packSize: true,
+                    taxProfileCode: true,
+                    dosageForm: {
+                      select: {
+                        nameEn: true,
+                        nameAr: true,
+                      },
+                    },
                   },
                 },
               },
@@ -521,8 +598,10 @@ export class PosOperationalCoreController {
       ...sale,
       lines: sale.lines.map((line) => {
         const alreadyReturnedQty = returnedBySourceLine.get(line.id) ?? 0;
+        const snapshot = this.buildSaleLineSnapshot(line);
         return {
           ...line,
+          transactionSnapshot: snapshot,
           alreadyReturnedQty,
           remainingQty: Math.max(line.quantity - alreadyReturnedQty, 0),
         };
@@ -597,6 +676,92 @@ export class PosOperationalCoreController {
       notes: dto.notes,
       createdBy: request.user?.sub,
     });
+  }
+
+  private buildSaleLineSnapshot(line: {
+    productId: string | null;
+    productPackId: string;
+    lotBatchId: string | null;
+    displayNameEn: string | null;
+    displayNameAr: string | null;
+    genericNameEn: string | null;
+    genericNameAr: string | null;
+    strengthLabel: string | null;
+    dosageFormNameEn: string | null;
+    dosageFormNameAr: string | null;
+    barcodeUsed: string | null;
+    sellableCode: string | null;
+    packLabel: string | null;
+    batchNoSnapshot: string | null;
+    expiryDateSnapshot: Date | null;
+    taxProfileCode: string | null;
+    productPack: {
+      code: string;
+      barcode: string | null;
+      product: {
+        id: string;
+        nameEn: string;
+        nameAr: string;
+        tradeNameEn: string | null;
+        tradeNameAr: string | null;
+        genericNameEn: string | null;
+        genericNameAr: string | null;
+        strength: string | null;
+        packSize: string | null;
+        taxProfileCode: string | null;
+        dosageForm: {
+          nameEn: string;
+          nameAr: string;
+        } | null;
+        barcode: string | null;
+      };
+    };
+    lotBatch: {
+      batchNo: string;
+      expiryDate: Date | null;
+    } | null;
+  }) {
+    const displayNameEn =
+      line.displayNameEn ??
+      line.productPack.product.tradeNameEn ??
+      line.productPack.product.nameEn;
+    const displayNameAr =
+      line.displayNameAr ??
+      line.productPack.product.tradeNameAr ??
+      line.productPack.product.nameAr;
+    const packLabel =
+      line.packLabel ??
+      (
+        [line.sellableCode ?? line.productPack.code, line.productPack.product.packSize]
+          .filter((value): value is string => Boolean(value))
+          .join(' · ') || null
+      );
+
+    return {
+      productId: line.productId ?? line.productPack.product.id,
+      productPackId: line.productPackId,
+      lotBatchId: line.lotBatchId,
+      displayNameEn,
+      displayNameAr,
+      genericNameEn: line.genericNameEn ?? line.productPack.product.genericNameEn,
+      genericNameAr: line.genericNameAr ?? line.productPack.product.genericNameAr,
+      strengthLabel: line.strengthLabel ?? line.productPack.product.strength,
+      dosageFormNameEn:
+        line.dosageFormNameEn ?? line.productPack.product.dosageForm?.nameEn ?? null,
+      dosageFormNameAr:
+        line.dosageFormNameAr ?? line.productPack.product.dosageForm?.nameAr ?? null,
+      barcodeUsed:
+        line.barcodeUsed ??
+        line.productPack.barcode ??
+        line.productPack.product.barcode ??
+        null,
+      sellableCode: line.sellableCode ?? line.productPack.code,
+      packLabel,
+      batchNo: line.batchNoSnapshot ?? line.lotBatch?.batchNo ?? null,
+      expiryDate: line.expiryDateSnapshot ?? line.lotBatch?.expiryDate ?? null,
+      taxProfileCode:
+        line.taxProfileCode ?? line.productPack.product.taxProfileCode ?? null,
+    };
   }
 }
 
