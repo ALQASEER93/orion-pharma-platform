@@ -23,13 +23,13 @@ export type PageHelpContent = {
 export const pageHelpRegistry: Record<string, PageHelpContent> = {
   products: {
     route: "/products",
-    pageName: "Products workspace",
+    pageName: "Product preparation desk",
     purpose:
-      "Prepare one working draft, compare it against reference products, and move the draft into real catalog states only when the server says it is ready.",
+      "Prepare one product record, compare it against current catalog items, and move it forward only after review is complete.",
     startHere: [
-      "Use Search to bring the product you want to work on into view.",
-      "Select one row to unlock action controls and context.",
-      "Open the Working draft panel when you need to save product details to the server.",
+      "Search for the product you want to prepare.",
+      "Select one row to open the related actions and review context.",
+      "Open the preparation panel when you need to save product details.",
     ],
     sections: [
       {
@@ -45,11 +45,11 @@ export const pageHelpRegistry: Record<string, PageHelpContent> = {
       {
         id: "draft",
         title: "Working draft",
-        summary: "Use this for editable product details only.",
+        summary: "Use this area for the editable preparation record.",
         details: [
-          "Draft fields save to the server for the active tenant.",
-          "Reference products are never edited from here.",
-          "Readiness is derived from required fields, not from cosmetic labels.",
+          "Prepared fields save for the active operating context.",
+          "Reference products stay read-only from this area.",
+          "Readiness follows the required fields, not decorative labels.",
         ],
       },
       {
@@ -75,18 +75,18 @@ export const pageHelpRegistry: Record<string, PageHelpContent> = {
       {
         id: "queues-history",
         title: "Worklists and action log",
-        summary: "Save repeatable review context and track server-backed actions.",
+        summary: "Save repeatable review context and track meaningful actions.",
         details: [
           "Saved worklists restore search, filter, selection, and focus.",
-          "Action log records meaningful server-backed workspace actions.",
-          "View preferences can stay local while product truth stays tenant-safe on the backend.",
+          "Action log records meaningful preparation actions.",
+          "View preferences can stay local while saved product changes remain protected.",
         ],
       },
     ],
     glossary: [
       {
         term: "Working draft",
-        meaning: "Editable product record used for tenant-safe preparation before catalog changes.",
+        meaning: "Editable preparation record before catalog changes are confirmed.",
       },
       {
         term: "Reference product",
@@ -112,12 +112,12 @@ export const pageHelpRegistry: Record<string, PageHelpContent> = {
       {
         term: "Saved worklist",
         meaning:
-          "Saved server-backed review context that restores search, filter, selected rows, and focus.",
+          "Saved review context that restores search, filter, selected rows, and focus.",
       },
     ],
     truthNotes: [
       "No sensitive token is written to the URL.",
-      "Working draft, worklists, and action log are server-backed for the active tenant.",
+      "Prepared records, worklists, and the action log are saved for the active operating context.",
       "Mutating actions require a fresh concurrency marker so stale writes cannot silently overwrite teammate changes.",
       "View-only preferences such as density or sort can remain local on this device.",
       "Reference products stay read-only in this workspace.",

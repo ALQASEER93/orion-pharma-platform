@@ -2,11 +2,14 @@ import { MedicationAccessMode, TrackingMode } from '@prisma/client';
 import {
   IsBoolean,
   IsEnum,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   MaxLength,
+  Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateProductDto {
   @IsString()
@@ -70,6 +73,12 @@ export class CreateProductDto {
   taxProfileCode?: string;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  defaultSalePrice?: number;
+
+  @IsOptional()
   @IsEnum(MedicationAccessMode)
   medicationAccessMode?: MedicationAccessMode;
 
@@ -87,6 +96,10 @@ export class CreateProductDto {
   @IsOptional()
   @IsUUID()
   dosageFormId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  supplierId?: string;
 
   @IsOptional()
   @IsUUID()
