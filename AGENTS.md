@@ -10,6 +10,8 @@ Keep strict ORION isolation. Do not import assumptions, workflows, or repo-scope
 - Use workspace-write and Auto-review/guardian approval when available.
 - Do not use Full Access / YOLO unless explicitly required, justified, and documented.
 - Keep Plan Mode limited to brief planning; continue execution in the same turn when appropriate.
+- Omar is not expected to run shell commands, create folders, inspect logs, merge PRs, or fix files manually. Codex must perform safe repo work itself and put reviewer evidence into the run ZIP plus `docs/_runs/LATEST.txt`.
+- PR #28 must remain Draft until the governance dry run and CI are clean; do not merge or mark ready from this governance cleanup stage.
 
 ## Local Skills
 
@@ -54,9 +56,12 @@ PASS requires actual verification. Use PARTIAL when useful assets are created bu
 
 Any user-visible UI change requires local preview, Browser Use/in-app browser if available, Chrome if available, walkthrough notes, screenshots, visible rejection/error state, console/network notes when available, preview URL, and UX clarity verdict. Docs/config/scripts-only work should state that no application UI files were touched.
 
+Browser Use is required only when UI/browser evidence is relevant. Do not start browser evidence for docs-only, hooks-only, or lint-only cleanup unless a UI file is changed.
+
 ## Hooks, Agents, MCP, And Plugins
 
 - Repo hook scripts live in `.codex/hooks/`; treat them as guardrails, not a security boundary.
+- Clearly separate hooks that are actually enabled in the active Codex session from repo-local hook proposals committed for future enablement.
 - Project custom agents live in `.codex/agents/`; they inherit ORION strict isolation and cannot claim PASS alone.
 - Subagents must have bounded ownership and structured findings; the parent agent consolidates and decides.
 - Run MCP diagnostics at major run start when available. Treat any MCP filesystem root outside this repository as unavailable for ORION.
@@ -65,6 +70,8 @@ Any user-visible UI change requires local preview, Browser Use/in-app browser if
 ## Approval Governance
 
 Minimize approval prompts, prefer Auto-review, use scoped approvals, batch side effects near the end, and document elevated actions in the run pack. Destructive actions are denied unless explicitly justified and approved. Never push to main, never force-push by default, and do not repeat PR comments.
+
+GitHub side effects must be batched near the end after local validation. PR comments should be single, concise, and useful.
 
 ## Scope Discipline
 

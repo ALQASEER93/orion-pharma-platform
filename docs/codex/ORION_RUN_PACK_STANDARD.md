@@ -4,6 +4,8 @@ Every meaningful ORION run creates:
 
 `docs/_runs/run_<timestamp>/`
 
+Codex must create the run folder, marker files, logs, JSON, ZIP archive, and `LATEST.txt` update automatically when safe. Omar should only need to send the final response, generated ZIP, and `LATEST.txt` value to the external reviewer.
+
 ## Minimum Structure
 - `artifacts/`
 - `logs/`
@@ -17,6 +19,8 @@ Every meaningful ORION run creates:
 - `known_limitations.md`
 - `docs/_runs/run_<timestamp>.zip`
 - `docs/_runs/LATEST.txt` updated to the latest run folder name
+
+If `artifacts/` or `logs/` has no real content, create `.keep.md` marker files inside those directories so the ZIP proves the expected structure.
 
 ## `verification.json` Fields
 - stage name

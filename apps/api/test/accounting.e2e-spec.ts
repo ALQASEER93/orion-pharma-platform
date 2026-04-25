@@ -608,8 +608,12 @@ describe('Accounting Foundation (e2e)', () => {
       .set('x-tenant-id', tenantId);
     expect(trialBalance.status).toBe(200);
     expect(trialBalance.body.fiscalPeriodId).toBe(period.id);
-    expect(trialBalance.body.payload.totalDebit).toBeCloseTo(
-      trialBalance.body.payload.totalCredit,
+    const trialBalancePayload = trialBalance.body.payload as {
+      totalCredit: number;
+      totalDebit: number;
+    };
+    expect(trialBalancePayload.totalDebit).toBeCloseTo(
+      trialBalancePayload.totalCredit,
       6,
     );
 

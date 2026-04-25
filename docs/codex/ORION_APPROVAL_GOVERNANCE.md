@@ -12,11 +12,13 @@
 - Never use Full Access or YOLO as the default.
 - Avoid network access unless a dependency or tooling check requires it and the risk is documented.
 - Record every elevated action in the run pack.
+- Codex performs safe commands and file changes itself; Omar should not be asked to run manual shell commands.
 
 ## Default Permission Posture
 - Use workspace-write.
 - Keep writable scope to the ORION repo.
 - Escalate only for push, PR, network, GUI, or operations blocked by sandbox.
+- If a UI trust/permission action is unavoidable, document it as `owner UI action needed` in known limitations.
 
 ## PASS/PARTIAL/FAIL
 - PASS: approvals were minimal, scoped, and documented.

@@ -40,7 +40,7 @@ function createPrismaMock() {
       create: jest.fn(),
       update: jest.fn(),
     },
-    $transaction: jest.fn(async (fn: (tx: any) => unknown) => fn(prisma)),
+    $transaction: jest.fn((fn: (tx: any) => unknown) => fn(prisma)),
   };
 
   return prisma;

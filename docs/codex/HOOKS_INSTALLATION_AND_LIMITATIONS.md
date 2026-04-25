@@ -2,6 +2,10 @@
 
 This repository contains proposed Codex hook guardrails under `.codex/hooks/` and `.codex/hooks.json`.
 
+Hooks must be reported in two separate categories:
+- enabled in the active Codex session
+- repo-local proposals committed for future enablement
+
 ## What The Hooks Guard
 - Destructive commands: `git reset --hard`, `git clean -fd`, `rm -rf`, `del /s /q`, recursive force removal, force push, push to main.
 - Deleting `docs/_runs`, migration history, or lockfiles without explanation.
@@ -17,6 +21,8 @@ This repository contains proposed Codex hook guardrails under `.codex/hooks/` an
 Project-level hook auto-enablement was not assumed in this Codex App session. Keep the scripts committed and enable them through the active Codex CLI/App hook configuration only after confirming the exact supported schema.
 
 Suggested config source is `.codex/hooks.json`. Suggested TOML is in `docs/codex/ORION_CODEX_CONFIG_SNIPPET.toml`.
+
+If enablement requires a trust prompt or UI permission, record it as `owner UI action needed` in the run pack. Do not ask Omar to run shell commands manually.
 
 ## Limitations
 - Hooks are guardrails, not a security boundary.

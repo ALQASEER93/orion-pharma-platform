@@ -23,7 +23,7 @@ function createPrismaMock() {
     lotBatch: { findFirst: jest.fn() },
     register: { findFirst: jest.fn() },
     inventoryLotBalance: { findMany: jest.fn() },
-    $transaction: jest.fn(async (fn: (trx: typeof tx) => unknown) => fn(tx)),
+    $transaction: jest.fn((fn: (trx: typeof tx) => unknown) => fn(tx)),
   };
 
   return { prisma, tx };

@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, SalesPaymentMethod } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AddPosCartLineInput } from './dto/add-pos-cart-line.input';
 import { AddPosReturnLineInput } from './dto/add-pos-return-line.input';
