@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "note": "Repo-local ORION hook proposal. Enable through Codex config only after confirming project hook support in the active Codex App/CLI session.",
+  "hooks": {
+    "PreToolUse": [".codex/hooks/pre_tool_use_policy.py"],
+    "PostToolUse": [".codex/hooks/post_tool_use_review.py"],
+    "PermissionRequest": [".codex/hooks/permission_request_policy.py"],
+    "Stop": [".codex/hooks/stop_continue.py"]
+  },
+  "supplemental_guards": [
+    ".codex/hooks/ui_evidence_guard.py",
+    ".codex/hooks/accounting_invariant_guard.py",
+    ".codex/hooks/run_pack_guard.py"
+  ]
+}

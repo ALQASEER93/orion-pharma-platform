@@ -1,36 +1,37 @@
 ---
 name: orion-merge-safe
-description: Guarded PR merge workflow requiring green checks, head SHA match, and post-merge RunPack verification.
+description: Guard ORION PR merges by requiring green checks, matching head SHA, validated run-pack evidence, no blockers, and post-merge verification plan.
 ---
 
 # ORION Merge Safe
 
-Use this skill when a PR is ready and you need a guarded merge with post-merge verification.
+## Trigger Conditions
+- User asks to merge an ORION PR.
+- A PR appears ready and needs final merge governance.
 
-## Goal
-- Merge only when required checks and local evidence pass.
+## Non-Goals
+- Do not implement missing features.
+- Do not override failing checks.
+- Do not merge without explicit merge intent.
 
-## Pre-merge requirements
-1. Confirm PR mergeability is clean.
-2. Confirm required checks are `SUCCESS` for the exact head commit.
-3. Confirm local RunPack gate is passing (`overall_pass=true`, `blockers=[]`).
+## ORION Constraints
+- Never merge unverified work.
+- Confirm PR head SHA matches the reviewed commit.
+- Run-pack evidence must be current and truthful.
 
-## Merge command
-- Use guarded merge with exact commit match:
-  - `gh pr merge <PR_NUMBER> --merge --delete-branch --match-head-commit <HEAD_SHA>`
+## Required Outputs
+- PR number/link, head SHA, check status, run-pack status, blockers, merge decision.
+- Post-merge verification notes if merge occurs.
 
-## Post-merge verification
-1. Checkout main and sync:
-   - `git checkout main`
-   - `git pull --ff-only`
-2. Run RunPack again:
-   - `pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/runpack.ps1`
-3. Validate latest post-merge run:
-   - `docs/_runs/LATEST.txt`
-   - `docs/_runs/run_<timestamp>/json/status.json`
-   - `docs/_runs/run_<timestamp>.zip`
+## PASS/PARTIAL/FAIL Rules
+- PASS: checks green, SHA matches, run-pack passes, blockers empty, merge performed only after explicit request.
+- PARTIAL: locally ready but external checks or permissions block merge.
+- FAIL: checks fail, SHA mismatch, stale evidence, or blockers remain.
 
-## Output
-- Merge commit SHA
-- Post-merge run name and zip path
-- `overall_pass` and blockers
+## Evidence Requirements
+- GitHub check output, run-pack gate output, clean branch status.
+- Merge action recorded in the run pack.
+
+## Examples
+- Use after a pushed governance PR is approved and checks are green.
+- Do not use during implementation or initial checkpoint creation.
