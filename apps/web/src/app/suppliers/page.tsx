@@ -1,7 +1,21 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { getApiBase } from '../../lib/api-base';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import {
+  EmptyState,
+  FieldLabel,
+  InputField,
+  OperatorFrame,
+  OperatorSupportPanel,
+  PrimaryButton,
+  SectionCard,
+  ShellNotice,
+} from '@/components/operator-shell';
+import {
+  buildOperatorHeaders,
+  useOperatorSession,
+} from '@/lib/operator-session';
+import { getApiBase } from '@/lib/api-base';
 
 type Supplier = {
   id: string;
@@ -36,175 +50,156 @@ const emptyForm: SupplierForm = {
 
 export default function SuppliersPage() {
   const baseUrl = useMemo(() => getApiBase(), []);
-  const [tenantId, setTenantId] = useState('11111111-1111-1111-1111-111111111111');
-  const [token, setToken] = useState('');
+  const session = useOperatorSession();
   const [query, setQuery] = useState('');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [form, setForm] = useState<SupplierForm>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  async function fetchSuppliers() {
-    if (!token) {
+  async function fetchSuppliers(currentQuery: string) {
+    if (session.status !== 'ready') {
       return;
     }
 
-    const response = await fetch(
-      `${baseUrl}/suppliers${query ? `?q=${encodeURIComponent(query)}` : ''}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'x-tenant-id': tenantId,
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${baseUrl}/suppliers${currentQuery ? `?q=${encodeURIComponent(currentQuery)}` : ''}`,
+        {
+          headers: buildOperatorHeaders(session),
+          cache: 'no-store',
         },
-      },
-    );
+      );
 
-    if (!response.ok) {
-      throw new Error(`Failed to load suppliers (${response.status})`);
+      if (!response.ok) {
+        throw new Error(`Failed to load suppliers (${response.status})`);
+      }
+
+      const data = (await response.json()) as Supplier[];
+      setSuppliers(Array.isArray(data) ? data : []);
+    } catch (requestError) {
+      setError((requestError as Error).message);
+    } finally {
+      setLoading(false);
     }
-
-    const data = (await response.json()) as Supplier[];
-    setSuppliers(data);
   }
 
   useEffect(() => {
-    fetchSuppliers().catch((e: Error) => setError(e.message));
+    if (session.status !== 'ready') {
+      return;
+    }
+    void fetchSuppliers(query);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, tenantId, query]);
+  }, [baseUrl, query, session.accessToken, session.status, session.tenantId]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    setStatusMessage(null);
+
+    if (session.status !== 'ready') {
+      setError('Operator session is not ready yet.');
+      return;
+    }
 
     const endpoint = editingId
       ? `${baseUrl}/suppliers/${editingId}`
       : `${baseUrl}/suppliers`;
     const method = editingId ? 'PATCH' : 'POST';
+
     const response = await fetch(endpoint, {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        'x-tenant-id': tenantId,
-      },
+      headers: buildOperatorHeaders(session),
       body: JSON.stringify(form),
     });
 
     if (!response.ok) {
-      setError(`Save failed (${response.status})`);
+      setError(`Supplier save failed (${response.status})`);
       return;
     }
 
     setForm(emptyForm);
     setEditingId(null);
-    await fetchSuppliers();
+    setStatusMessage(
+      editingId
+        ? 'Supplier details were updated.'
+        : 'Supplier added to the local operating list.',
+    );
+    await fetchSuppliers(query);
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 p-6 text-slate-100">
-      <section className="mx-auto max-w-5xl space-y-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
-        <h1 className="text-2xl font-semibold">Suppliers</h1>
-        <p className="text-sm text-slate-300">
-          Manage tenant suppliers for upcoming procurement flows.
-        </p>
+    <OperatorFrame
+      currentPath="/suppliers"
+      eyebrow="Supplier desk"
+      title="Trusted supplier records for daily procurement work"
+      description="راجع الموردين وحدث بياناتهم من سطح تشغيلي واضح، مع إبقاء السياق التقني محصوراً في لوحة المساندة فقط."
+      session={session}
+    >
+      {statusMessage ? (
+        <ShellNotice title="Updated" body={statusMessage} tone="success" />
+      ) : null}
+      {error ? <ShellNotice title="Action blocked" body={error} tone="error" /> : null}
 
-        <div className="grid gap-3 md:grid-cols-2">
-          <input
-            className="rounded border border-slate-700 bg-slate-950 p-2"
-            placeholder="Tenant ID"
-            value={tenantId}
-            onChange={(e) => setTenantId(e.target.value)}
-          />
-          <input
-            className="rounded border border-slate-700 bg-slate-950 p-2"
-            placeholder="Bearer token"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-          />
+      <SectionCard
+        title="Supplier list"
+        subtitle="Search by supplier code or Arabic / English name."
+      >
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+          <div className="space-y-2">
+            <FieldLabel htmlFor="supplier-search">Search suppliers</FieldLabel>
+            <InputField
+              id="supplier-search"
+              placeholder="Example: SUP-ORION or المورد الطبي"
+              value={query}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)}
+            />
+          </div>
+          <div className="rounded-3xl border border-slate-800 bg-slate-900/60 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+              Active branch
+            </p>
+            <p className="mt-2 text-lg font-semibold text-slate-50">
+              {session.branchName}
+            </p>
+            <p className="mt-1 text-sm text-slate-400">
+              Shared session context is applied automatically.
+            </p>
+          </div>
         </div>
 
-        <input
-          className="w-full rounded border border-slate-700 bg-slate-950 p-2"
-          placeholder="Search by code or AR/EN name"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-
-        <form className="grid gap-2 md:grid-cols-3" onSubmit={submit}>
-          <input
-            className="rounded border border-slate-700 bg-slate-950 p-2"
-            placeholder="Supplier code"
-            value={form.code}
-            onChange={(e) => setForm({ ...form, code: e.target.value })}
-          />
-          <input
-            className="rounded border border-slate-700 bg-slate-950 p-2"
-            placeholder="Arabic name"
-            value={form.nameAr}
-            onChange={(e) => setForm({ ...form, nameAr: e.target.value })}
-          />
-          <input
-            className="rounded border border-slate-700 bg-slate-950 p-2"
-            placeholder="English name"
-            value={form.nameEn}
-            onChange={(e) => setForm({ ...form, nameEn: e.target.value })}
-          />
-          <input
-            className="rounded border border-slate-700 bg-slate-950 p-2"
-            placeholder="Contact name"
-            value={form.contactName}
-            onChange={(e) => setForm({ ...form, contactName: e.target.value })}
-          />
-          <input
-            className="rounded border border-slate-700 bg-slate-950 p-2"
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-          />
-          <input
-            className="rounded border border-slate-700 bg-slate-950 p-2"
-            placeholder="Phone"
-            value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          />
-          <label className="flex items-center gap-2 md:col-span-3">
-            <input
-              checked={form.isActive}
-              onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-              type="checkbox"
-            />
-            Active supplier
-          </label>
-          <button className="rounded bg-cyan-700 p-2 font-medium text-white md:col-span-3" type="submit">
-            {editingId ? 'Update Supplier' : 'Create Supplier'}
-          </button>
-        </form>
-
-        {error ? <p className="text-sm text-rose-300">{error}</p> : null}
-
-        <div className="overflow-x-auto">
+        <div className="mt-5 overflow-hidden rounded-[24px] border border-slate-800">
           <table className="min-w-full text-sm">
-            <thead>
-              <tr className="text-left text-slate-300">
-                <th className="p-2">Code</th>
-                <th className="p-2">AR</th>
-                <th className="p-2">EN</th>
-                <th className="p-2">Contact</th>
-                <th className="p-2">Status</th>
-                <th className="p-2">Action</th>
+            <thead className="bg-slate-900/80 text-left text-slate-300">
+              <tr>
+                <th className="px-4 py-3">Code</th>
+                <th className="px-4 py-3">Arabic name</th>
+                <th className="px-4 py-3">English name</th>
+                <th className="px-4 py-3">Contact</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Action</th>
               </tr>
             </thead>
             <tbody>
               {suppliers.map((supplier) => (
-                <tr key={supplier.id} className="border-t border-slate-800">
-                  <td className="p-2">{supplier.code}</td>
-                  <td className="p-2">{supplier.nameAr}</td>
-                  <td className="p-2">{supplier.nameEn}</td>
-                  <td className="p-2">{supplier.contactName ?? '-'}</td>
-                  <td className="p-2">{supplier.isActive ? 'Active' : 'Inactive'}</td>
-                  <td className="p-2">
+                <tr key={supplier.id} className="border-t border-slate-800 bg-slate-950/50">
+                  <td className="px-4 py-3 font-medium text-slate-100">
+                    {supplier.code}
+                  </td>
+                  <td className="px-4 py-3">{supplier.nameAr}</td>
+                  <td className="px-4 py-3">{supplier.nameEn}</td>
+                  <td className="px-4 py-3">
+                    {supplier.contactName ?? supplier.phone ?? supplier.email ?? '-'}
+                  </td>
+                  <td className="px-4 py-3">
+                    {supplier.isActive ? 'Active / نشط' : 'Inactive / غير نشط'}
+                  </td>
+                  <td className="px-4 py-3">
                     <button
-                      className="rounded bg-slate-700 px-2 py-1"
+                      className="rounded-full border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:border-slate-500"
                       onClick={() => {
                         setEditingId(supplier.id);
                         setForm({
@@ -219,15 +214,133 @@ export default function SuppliersPage() {
                       }}
                       type="button"
                     >
-                      Edit
+                      Edit record
                     </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {!loading && suppliers.length === 0 ? (
+            <div className="p-4">
+              <EmptyState
+                title="No suppliers match this search"
+                body="Try a different name or code, or add the supplier from the form below."
+              />
+            </div>
+          ) : null}
         </div>
-      </section>
-    </main>
+      </SectionCard>
+
+      <SectionCard
+        title={editingId ? 'Update supplier details' : 'Add a supplier'}
+        subtitle="Fields use clear labels so the purchasing team can update records without guessing from placeholders."
+      >
+        <form className="grid gap-4 lg:grid-cols-2" onSubmit={submit}>
+          <div className="space-y-2">
+            <FieldLabel htmlFor="supplier-code">Supplier code</FieldLabel>
+            <InputField
+              id="supplier-code"
+              value={form.code}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setForm((current) => ({ ...current, code: event.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <FieldLabel htmlFor="supplier-contact">Contact name</FieldLabel>
+            <InputField
+              id="supplier-contact"
+              value={form.contactName}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setForm((current) => ({
+                  ...current,
+                  contactName: event.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <FieldLabel htmlFor="supplier-name-ar">Arabic supplier name</FieldLabel>
+            <InputField
+              id="supplier-name-ar"
+              value={form.nameAr}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setForm((current) => ({ ...current, nameAr: event.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <FieldLabel htmlFor="supplier-name-en">English supplier name</FieldLabel>
+            <InputField
+              id="supplier-name-en"
+              value={form.nameEn}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setForm((current) => ({ ...current, nameEn: event.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <FieldLabel htmlFor="supplier-email">Email</FieldLabel>
+            <InputField
+              id="supplier-email"
+              type="email"
+              value={form.email}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setForm((current) => ({ ...current, email: event.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <FieldLabel htmlFor="supplier-phone">Phone</FieldLabel>
+            <InputField
+              id="supplier-phone"
+              value={form.phone}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setForm((current) => ({ ...current, phone: event.target.value }))
+              }
+            />
+          </div>
+          <label className="flex items-center gap-3 rounded-3xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-sm text-slate-200 lg:col-span-2">
+            <input
+              checked={form.isActive}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setForm((current) => ({
+                  ...current,
+                  isActive: event.target.checked,
+                }))
+              }
+              type="checkbox"
+            />
+            Supplier is active and available for new purchase activity
+          </label>
+          <div className="flex flex-wrap gap-3 lg:col-span-2">
+            <PrimaryButton type="submit">
+              {editingId ? 'Save supplier changes' : 'Add supplier'}
+            </PrimaryButton>
+            {editingId ? (
+              <button
+                className="rounded-2xl border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-100"
+                onClick={() => {
+                  setEditingId(null);
+                  setForm(emptyForm);
+                }}
+                type="button"
+              >
+                Cancel editing
+              </button>
+            ) : null}
+          </div>
+        </form>
+      </SectionCard>
+
+      <OperatorSupportPanel
+        session={session}
+        onRefresh={() => {
+          setError(null);
+          void session.refreshSession();
+        }}
+      />
+    </OperatorFrame>
   );
 }

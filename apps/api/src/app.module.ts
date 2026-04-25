@@ -21,6 +21,11 @@ import { SalesModule } from './sales/sales.module';
 import { AccountingModule } from './accounting/accounting.module';
 import { ArModule } from './ar/ar.module';
 import { ApModule } from './ap/ap.module';
+import { InventoryFiscalFoundationModule } from './foundation/inventory-fiscal-foundation.module';
+import { InventoryLedgerModule } from './inventory-ledger/inventory-ledger.module';
+import { FiscalDocumentsModule } from './fiscal-documents/fiscal-documents.module';
+import { ProcurementReceivingModule } from './procurement-receiving/procurement-receiving.module';
+import { PosOperationalCoreModule } from './pos-operational-core/pos-operational-core.module';
 
 @Module({
   imports: [
@@ -30,6 +35,10 @@ import { ApModule } from './ap/ap.module';
     TaxonomyModule,
     ProductsModule,
     InventoryModule,
+    InventoryLedgerModule,
+    FiscalDocumentsModule,
+    ProcurementReceivingModule,
+    PosOperationalCoreModule,
     SuppliersModule,
     CustomersModule,
     PurchaseOrdersModule,
@@ -37,6 +46,7 @@ import { ApModule } from './ap/ap.module';
     ProcurementTransactionsModule,
     ProcurementReportsModule,
     SalesModule,
+    InventoryFiscalFoundationModule,
     AccountingModule,
     ArModule,
     ApModule,

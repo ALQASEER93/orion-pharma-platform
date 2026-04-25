@@ -55,4 +55,14 @@ export class QueryProductsDto {
   @IsOptional()
   @IsIn(['catalog', 'pos'])
   mode?: 'catalog' | 'pos';
+
+  @IsOptional()
+  @IsIn(['all', 'trade', 'generic', 'supplier', 'category', 'barcode'])
+  searchMode?:
+    | 'all'
+    | 'trade'
+    | 'generic'
+    | 'supplier'
+    | 'category'
+    | 'barcode';
 }

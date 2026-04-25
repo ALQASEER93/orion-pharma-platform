@@ -1,0 +1,32 @@
+# ORION Codex config snippet. Review before copying into user/session config.
+
+model = "gpt-5.5"
+reasoning_effort = "high"
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+
+[features]
+codex_hooks = true
+browser_use = true
+plugins = true
+multi_agent = true
+guardian_approval = true
+
+[orion]
+strict_isolation = true
+required_branch_prefix = "codex/"
+run_pack_root = "docs/_runs"
+preferred_permission_mode = "workspace-write"
+avoid_full_access_by_default = true
+
+[[hooks.pre_tool_use]]
+command = "python .codex/hooks/pre_tool_use_policy.py"
+
+[[hooks.post_tool_use]]
+command = "python .codex/hooks/post_tool_use_review.py"
+
+[[hooks.permission_request]]
+command = "python .codex/hooks/permission_request_policy.py"
+
+[[hooks.stop]]
+command = "python .codex/hooks/stop_continue.py"
