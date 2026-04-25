@@ -1,89 +1,42 @@
 ---
 name: orion-task-brief-checklist
-description: Standardize ORION task kickoff before any implementation. Use when starting a new ORION stage or bounded slice and you need to force an explicit brief covering scope, goal, constraints, validation, GitHub path, environment, integrations, output style, branch/window decision, backend-only vs UI declaration, and success bar before coding.
+description: Normalize a new ORION stage or bounded slice before implementation by locking scope, constraints, validation, branch, UI status, and success bar.
 ---
 
 # ORION Task Brief Checklist
 
-## Title
-- Build the task brief before coding.
+## Trigger Conditions
+- Start of any ORION stage, checkpoint, or bounded slice.
+- Dense prompt with branch, validation, integration, or evidence requirements.
+- Any task where backend-only versus UI scope changes the evidence bar.
 
-## When to use
-- Use at the start of any new ORION stage or sub-slice.
-- Use when the user gives dense constraints that must be normalized into a concrete execution brief.
-- Use when branch/window continuity matters.
+## Non-Goals
+- Do not implement features.
+- Do not replace validation, stage gate, UI evidence, or PR checkpoint skills.
+- Do not reopen a completed stage without a concrete contradiction.
 
-## When NOT to use
-- Do not use after implementation is already underway and the kickoff brief is already explicit.
-- Do not use for pure post-run reporting where the execution path is already fixed.
-- Do not use as a substitute for verification or stage closure.
+## ORION Constraints
+- ORION PHARMA only; no cross-project assumptions.
+- Feature branches must be `codex/*`.
+- Env vars must use `ORION_` unless they are documented third-party standards.
+- Shared imports must use `@orion/*`.
+- No fake PASS, no product expansion, no direct main work.
 
-## Required inputs
-- Stage name or bounded slice name.
-- Branch context: same branch or new branch.
-- Thread context: same window/thread or new one.
-- Scope boundaries.
-- Goal.
-- Constraints and explicit non-goals.
-- Validation requirements.
-- GitHub context if relevant.
-- Environment assumptions and blockers.
-- Integration boundaries.
-- Required final response shape.
+## Required Outputs
+- `Scope`, `Goal`, `Constraints`, `Validation`, `GitHub`, `Env`, `Integrations`, `Output Style`.
+- Stage name, branch decision, thread decision, backend-only or UI classification.
+- Explicit success bar before implementation.
 
-## Exact output contract
-- Emit a kickoff brief with these headings in this order:
-  1. `Scope`
-  2. `Goal`
-  3. `Constraints`
-  4. `Validation`
-  5. `GitHub`
-  6. `Env`
-  7. `Integrations`
-  8. `Output Style`
-- State the exact stage name.
-- State `same branch` or `new branch`.
-- State `same window/thread` or `new window/thread`.
-- State `backend-only` or `UI slice`.
-- State the success bar before coding starts.
+## PASS/PARTIAL/FAIL Rules
+- PASS: brief names exact scope, non-goals, validation, evidence, branch, and output shape.
+- PARTIAL: brief is usable but has documented unknowns.
+- FAIL: scope, branch, or success bar is ambiguous.
 
-## Failure conditions / stop conditions
-- Stop if the stage name is missing and cannot be inferred safely.
-- Stop if branch continuity is ambiguous and the task depends on existing local state.
-- Stop if the user is asking for execution but the success bar is still undefined.
-- Reject vague starts such as “continue” or “fix it” without reconstructing the brief.
+## Evidence Requirements
+- Record the brief in the run pack for major stages.
+- Preserve branch and git status proof when the branch decision matters.
 
-## ORION-specific rules
-- Keep strict ORION isolation.
-- Do not reopen a previously accepted stage unless a real contradiction is found.
-- Do not let “continue from latest state” bypass explicit scope and success criteria.
-- Call out whether the slice touches UI, because that changes evidence requirements.
-
-## Backend-only example
-- Example kickoff:
-  - `Scope`: Stage 8.xx backend-only acceptance closeout for inventory ledger service guards.
-  - `Goal`: Close missing test and migration proof gaps only.
-  - `Constraints`: No UI, no new workflows, same branch, same thread.
-  - `Validation`: API typecheck, focused specs, migration verification.
-  - `GitHub`: update existing PR only if commit is pushed.
-  - `Env`: local DB caveat must be logged if present.
-  - `Integrations`: no JoFotara, no accounting expansion.
-  - `Output Style`: PASS/PARTIAL/FAIL with run folder and zip.
-
-## UI-slice example
-- Example kickoff:
-  - `Scope`: POS thin UI acceptance closeout only.
-  - `Goal`: fix lock-state clarity and evidence naming.
-  - `Constraints`: same branch, same thread, no domain redesign.
-  - `Validation`: web typecheck/test/build, API smoke, local preview, Chrome if available, screenshots, walkthrough.
-  - `GitHub`: push checkpoint and update active PR.
-  - `Env`: note preview URL and auth/demo context.
-  - `Integrations`: real backend only, no mock path.
-  - `Output Style`: verdict plus exact preview URL, run folder, zip, PR impact.
-
-## Anti-patterns / forbidden shortcuts
-- Do not start coding before declaring the success bar.
-- Do not treat “same branch” as implied.
-- Do not omit backend-only vs UI classification.
-- Do not collapse validation into a generic “run tests”.
-- Do not accept hand-wavy goals such as “finish the stage”.
+## Examples
+- Use for a Codex governance pass before creating docs, skills, hooks, or agents.
+- Use for a POS UI slice before opening browser evidence requirements.
+- Do not use for a one-line status lookup.
