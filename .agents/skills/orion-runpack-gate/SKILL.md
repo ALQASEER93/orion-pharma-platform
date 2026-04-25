@@ -1,29 +1,40 @@
 ---
 name: orion-runpack-gate
-description: Execute and validate full RunPack artifacts, ensuring overall_pass true with no blockers before merge.
+description: Validate ORION run-pack completeness by checking run folder structure, verification.json, zip archive, LATEST truth, blockers, and verdict evidence.
 ---
 
-# ORION RunPack Gate
+# ORION Run Pack Gate
 
-Use this skill when you need to validate merge readiness using full repository evidence.
+## Trigger Conditions
+- Before reporting PASS/PARTIAL/FAIL for major ORION work.
+- Before merge readiness checks.
+- When validating `docs/_runs` evidence integrity.
 
-## Goal
-- Run full RunPack and confirm merge-gate status from produced artifacts.
+## Non-Goals
+- Do not invent missing verification.
+- Do not replace project tests.
+- Do not merge or push by itself.
 
-## Steps
-1. Execute:
-   - `pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/runpack.ps1`
-2. Read latest run name:
-   - `docs/_runs/LATEST.txt`
-3. Validate the latest run artifacts:
-   - `docs/_runs/run_<timestamp>/json/status.json`
-   - `docs/_runs/run_<timestamp>.zip`
-4. Enforce pass criteria:
-   - `overall_pass` must be `true`
-   - `blockers` must be an empty array
-   - zip file must exist
-   - `LATEST.txt` must match the validated run
+## ORION Constraints
+- Every meaningful run writes `docs/_runs/run_<timestamp>/`.
+- Zip archive must exist beside the run folder.
+- `docs/_runs/LATEST.txt` must match the current run when claiming current evidence.
 
-## Output
-- Report run name, zip path, `overall_pass`, and blockers.
-- If any criterion fails, stop and report blockers before merge.
+## Required Outputs
+- Run folder, zip path, LATEST value, verification status, blockers.
+- JSON status read result when present.
+- Verdict eligibility.
+
+## PASS/PARTIAL/FAIL Rules
+- PASS: folder, required files, `verification.json`, zip, and LATEST all match and blockers are empty.
+- PARTIAL: evidence exists but one non-critical external capability is unavailable and documented.
+- FAIL: missing run folder, missing zip, stale LATEST, or absent verification record.
+
+## Evidence Requirements
+- `json/verification.json`, validation log, known limitations, branch status, clean git proof.
+- If UI was touched, screenshots must be present.
+
+## Examples
+- Use before final response for this governance pass.
+- Use before guarded merge.
+- Do not use as proof that tests passed unless test logs exist.
