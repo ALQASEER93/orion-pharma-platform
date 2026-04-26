@@ -69,6 +69,10 @@ model Tenant {
   productWorkspaceDrafts ProductWorkspaceDraft[]
   productWorkspaceRecordStates ProductWorkspaceRecordState[]
   productWorkspaceWorklists ProductWorkspaceWorklist[]
+  legalEntities      LegalEntity[]
+  registers          Register[]
+  productPacks       ProductPack[]
+  lotBatches         LotBatch[]
 
   @@map("tenants")
 }
@@ -124,10 +128,12 @@ model Customer {
 model Branch {
   id        String   @id @default(uuid())
   tenantId  String   @map("tenant_id")
+  legalEntityId String? @map("legal_entity_id")
   name      String
   location  String
   createdAt DateTime @default(now()) @map("created_at")
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  legalEntity LegalEntity? @relation(fields: [legalEntityId], references: [id], onDelete: SetNull)
   users     User[]
   inventoryMovements InventoryMovement[]
   inventoryBalances  InventoryBalance[]
@@ -143,7 +149,9 @@ model Branch {
   pharmacistVerifications PharmacistVerification[]
   journalEntries     JournalEntry[]
   journalLines       JournalLine[]
+  registers          Register[]
 
+  @@index([tenantId, legalEntityId])
   @@map("branches")
 }
 
@@ -406,6 +414,26 @@ enum ApPaymentStatus {
   VOID
 }
 
+enum ProductPackStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+}
+
+enum ProductPackSellability {
+  UNKNOWN
+  READY
+  BLOCKED
+}
+
+enum LotBatchStatus {
+  RECEIVED
+  SELLABLE
+  QUARANTINED
+  EXPIRED
+  DEPLETED
+}
+
 model TherapeuticClass {
   id        String   @id @default(uuid())
   tenantId  String   @map("tenant_id")
@@ -499,6 +527,7 @@ model Product {
   prescriptionItems  PrescriptionItem[]
   workspaceCatalogDrafts ProductWorkspaceDraft[] @relation("WorkspaceCatalogProduct")
   workspaceBasedDrafts ProductWorkspaceDraft[] @relation("WorkspaceBasedProduct")
+  productPacks       ProductPack[]
 
   @@unique([tenantId, barcode])
   @@index([tenantId, nameEn])
@@ -507,6 +536,91 @@ model Product {
   @@index([tenantId, genericNameEn])
   @@index([tenantId, isActive, nameEn])
   @@map("products")
+}
+
+model LegalEntity {
+  id                 String     @id @default(uuid())
+  tenantId           String     @map("tenant_id")
+  code               String
+  nameAr             String     @map("name_ar")
+  nameEn             String     @map("name_en")
+  registrationNumber String?    @map("registration_number")
+  taxNumber          String?    @map("tax_number")
+  isActive           Boolean    @default(true) @map("is_active")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+  tenant             Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branches           Branch[]
+  registers          Register[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, isActive, nameEn])
+  @@map("legal_entities")
+}
+
+model Register {
+  id            String      @id @default(uuid())
+  tenantId      String      @map("tenant_id")
+  legalEntityId String      @map("legal_entity_id")
+  branchId      String      @map("branch_id")
+  code          String
+  nameAr        String      @map("name_ar")
+  nameEn        String      @map("name_en")
+  isActive      Boolean     @default(true) @map("is_active")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  legalEntity   LegalEntity @relation(fields: [legalEntityId], references: [id], onDelete: Restrict)
+  branch        Branch      @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, branchId, code])
+  @@index([tenantId, legalEntityId, isActive])
+  @@index([tenantId, branchId, isActive])
+  @@map("registers")
+}
+
+model ProductPack {
+  id           String                 @id @default(uuid())
+  tenantId     String                 @map("tenant_id")
+  productId    String                 @map("product_id")
+  code         String
+  barcode      String?
+  unitsPerPack Int                    @default(1) @map("units_per_pack")
+  status       ProductPackStatus      @default(DRAFT)
+  sellability  ProductPackSellability @default(UNKNOWN)
+  isDefault    Boolean                @default(false) @map("is_default")
+  createdAt    DateTime               @default(now()) @map("created_at")
+  updatedAt    DateTime               @updatedAt @map("updated_at")
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product      Product                @relation(fields: [productId], references: [id], onDelete: Restrict)
+  lotBatches   LotBatch[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, productId, status])
+  @@index([tenantId, productId, sellability])
+  @@map("product_packs")
+}
+
+model LotBatch {
+  id               String         @id @default(uuid())
+  tenantId         String         @map("tenant_id")
+  productPackId    String         @map("product_pack_id")
+  batchNo          String         @map("batch_no")
+  expiryDate       DateTime?      @map("expiry_date")
+  receivedOn       DateTime       @default(now()) @map("received_on")
+  status           LotBatchStatus @default(RECEIVED)
+  isSellable       Boolean        @default(true) @map("is_sellable")
+  quarantinedAt    DateTime?      @map("quarantined_at")
+  quarantineReason String?        @map("quarantine_reason")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  tenant           Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  productPack      ProductPack    @relation(fields: [productPackId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, productPackId, batchNo])
+  @@index([tenantId, status, expiryDate])
+  @@index([tenantId, isSellable, expiryDate])
+  @@map("lot_batches")
 }
 
 model ProductWorkspaceDraft {
@@ -1546,4 +1660,3 @@ model ProcurementAdjustmentLine {
   @@index([tenantId, productId])
   @@map("procurement_adjustment_lines")
 }
-
